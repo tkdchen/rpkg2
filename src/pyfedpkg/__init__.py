@@ -109,7 +109,15 @@ def _name_from_spec(spec):
     except OSError, e:
         raise FedpkgError(e)
     if error:
-        raise FedpkgError(error)
+        if sys.stdout.isatty():
+            sys.stderr.write(error)
+        else:
+            # Yes, we could wind up sending error output to stdout in the
+            # case of no local tty, but I don't have a better way to do this.
+            log.info(error)
+    if proc.returncode:
+        raise FedpkgError('Could not parse the spec, exited %s' %
+                          proc.returncode)
     return output.split()[0]
 
 def _run_command(cmd, shell=False, env=None, pipe=[], cwd=None):
