@@ -1396,7 +1396,7 @@ class PackageModule:
         files = os.listdir(self.path)
         # Search the files for the first one that ends with ".spec"
         for f in files:
-            if f.endswith('.spec'):
+            if f.endswith('.spec') and not f.startswith('.'):
                 return f
             if f == 'dead.package':
                 deadpackage = True
