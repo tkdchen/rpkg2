@@ -1058,8 +1058,9 @@ class PackageModule:
         # Create a list of "fedoras"
         fedoras = []
 
-        # Create a regex to find f## branches.  Works until Fedora 100
-        branchre = re.compile('f\d\d')
+        # Create a regex to find branches that exactly match f##.  Should not
+        # catch branches such as f14-foobar
+        branchre = 'f\d\d$'
 
         # Find the repo refs
         for ref in self.repo.refs:
@@ -1067,7 +1068,7 @@ class PackageModule:
             if type(ref) == git.refs.RemoteReference:
                 # grab the top level name
                 branch = ref.name.split('/')[1]
-                if branchre.match(branch):
+                if re.match(branchre, branch):
                     # Add it to the fedoras
                     fedoras.append(branch)
         if fedoras:
