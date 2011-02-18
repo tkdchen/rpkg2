@@ -874,11 +874,15 @@ def switch_branch(branch, path=None):
     if not branch in locals:
         # We need to create a branch
         log.debug('No local branch found, creating a new one')
-        if not 'origin/%s/master' % branch in remotes:
+        totrack = None
+        for remote in remotes:
+            if remote.endswith(branch) or remote.endswith(branch + '/master'):
+                totrack = remote
+                break
+        else:
             raise FedpkgError('Unknown remote branch %s' % branch)
         try:
-            log.info(repo.git.checkout('-b', branch, '--track',
-                                       'origin/%s/master' % branch))
+            log.info(repo.git.checkout('-b', branch, '--track', remote))
         except: # this needs to be finer grained I think...
             raise FedpkgError('Could not create branch %s' % branch)
     else:
