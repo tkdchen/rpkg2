@@ -1069,7 +1069,7 @@ class PackageModule:
             raise FedpkgError('Unable to find remote branch.  Use --dist')
         # Trim off the refs/heads so that we're just working with the branch
         # name
-        merge = merge.strip('refs/heads/')
+        merge = merge.replace('refs/heads/', '')
         # Search for one of our known branches, raise if we can't find one
         # to deal with
         if re.match(BRANCHRE, merge):
@@ -1092,15 +1092,20 @@ class PackageModule:
         # catch branches such as f14-foobar
         branchre = 'f\d\d$'
 
+        # Create another regex for the older style branches that have /master
+        oldbranchre = 'f\d\d\/master$'
+
         # Find the repo refs
         for ref in self.repo.refs:
             # Only find the remote refs
             if type(ref) == git.refs.RemoteReference:
-                # grab the top level name
-                branch = ref.name.split('/')[1]
-                if re.match(branchre, branch):
-                    # Add it to the fedoras
-                    fedoras.append(branch)
+                # Search for branch name by splitting off the remote
+                # part of the ref name and returning the rest.  This may
+                # fail if somebody names a remote with / in the name...
+                if re.match(branchre, ref.name.split('/', 1)[1]) or \
+                re.match(oldbranchre, ref.name.split('/', 1)[1]):
+                    # Add just the simple f## part to the list
+                    fedoras.append(ref.name.split('/')[1])
         if fedoras:
             # Sort the list
             fedoras.sort()
