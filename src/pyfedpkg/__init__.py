@@ -425,21 +425,15 @@ def clone(module, user, path=None, branch=None, bare_dir=None):
     else:
         giturl = ANONGITURL % {'module': module}
 
-    # do some branch name conversions
-    if branch:
-        remotere = 'f\d\d|el\d|olpc\d'
-        if re.match(remotere, branch):
-            branch = '%s/master' % branch
-
     # Create the command
     cmd = ['git', 'clone']
     # do the clone
     if branch and bare_dir:
-        log.debug('Cloning %s bare with branch %s' % (giturl, branch))
-        cmd.extend(['--branch', branch, '--bare', giturl, bare_dir])
+        raise FedpkgError('Cannot combine bare cloning with a branch')
     elif branch:
-        log.debug('Cloning %s with branch %s' % (giturl, branch))
-        cmd.extend(['--branch', branch, giturl])
+        # For now we have to use switch branch
+        log.debug('Cloning %s without a checkout' % giturl)
+        cmd.extend(['-n', giturl])
     elif bare_dir:
         log.debug('Cloning %s bare' % giturl)
         cmd.extend(['--bare', giturl, bare_dir])
@@ -447,6 +441,10 @@ def clone(module, user, path=None, branch=None, bare_dir=None):
         log.debug('Cloning %s' % giturl)
         cmd.extend([giturl])
     _run_command(cmd)
+
+    # Check if we're supposed to work on a branch and if so, switch_branch
+    if branch:
+        switch_branch(branch, path=os.path.join(path, module))
 
     # Set push.default to "tracking"
     if not bare_dir:
