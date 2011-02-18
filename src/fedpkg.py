@@ -141,7 +141,7 @@ class TaskWatcher(object):
             return koji.TASK_STATES[info['state']].lower()
 
 # Add a simple function to print usage, for the 'help' command
-def usage(args):
+def usage(args, parser):
     parser.print_help()
 
 # Define our stub functions
@@ -890,7 +890,7 @@ def parse_cmdline(generate_manpage = False):
     # Set up the various actions
     # Add help to -h and --help
     parser_help = subparsers.add_parser('help', help = 'Show usage')
-    parser_help.set_defaults(command = usage)
+    parser_help.set_defaults(command = lambda args: usage(args, parser=parser))
 
     # Add a common build parser to be used as a parent
     parser_build_common = subparsers.add_parser('build_common',
