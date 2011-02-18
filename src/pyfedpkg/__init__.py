@@ -502,6 +502,8 @@ def clone_with_dirs(module, user, path=None):
             branch_path = os.path.join(top_path, branch.split('/master')[0])
             branch_git = git.Git(branch_path)
             branch_git.config("--replace-all", "remote.origin.url", giturl)
+            # Remove the push.default setting when new branches are
+            # active upstream
             branch_git.config('--add', 'push.default', 'tracking')
         except (git.GitCommandError, OSError), e:
             raise FedpkgError('Could not locally clone %s from %s: %s' %
