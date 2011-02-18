@@ -42,7 +42,10 @@ TRACBASEURL = 'https://%(user)s:%(password)s@fedorahosted.org/rel-eng/login/xmlr
 UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff', 'bin',
               'tbz', 'tbz2', 'tgz', 'tlz', 'txz', 'pdf', 'rpm', 'jar', 'war',
               'db', 'cpio', 'jisp', 'egg', 'gem']
-BRANCHFILTER = 'f\d\d\/master|master|el\d\/master|olpc\d\/master'
+# Create a regex of branch names we can deal with
+BRANCHRE = 'f\d$|f\d\d$|el\d$|olpc\d$|master$'
+# Maintain a regex of old style of branch names with /master
+OLDBRANCHRE = 'f\d\/master$|f\d\d\/master$|el\d\/master$|olpc\d\/master$|master$'
 
 # Define our own error class
 class FedpkgError(Exception):
@@ -486,8 +489,10 @@ def clone_with_dirs(module, user, path=None):
     repo_git = git.Git(repo_path)
 
     # Get a branch listing
+    # combine the old and new regex for now
+    regex = BRANCHRE + '|' + OLDBRANCHRE
     branches = [x for x in repo_git.branch().split() if x != "*" and
-            re.match(BRANCHFILTER, x)]
+            re.match(regex, x)]
 
     for branch in branches:
         try:
@@ -1040,7 +1045,15 @@ class GitIgnore(object):
 # Create a class for package module
 class PackageModule:
     def _findbranch(self):
-        """Find the branch we're on"""
+        """Find the branch we're on.
+
+        The goal of this function is to catch if we are on a branch we
+
+        can make some assumptions about.  If it doesn't match our branch regex
+
+        then we raise and ask the user to specify.
+
+        """
 
         try:
             localbranch = self.repo.active_branch.name
@@ -1050,7 +1063,20 @@ class PackageModule:
             merge = self.repo.git.config('--get', 'branch.%s.merge' % localbranch)
         except git.errors.GitCommandError, e:
             raise FedpkgError('Unable to find remote branch.  Use --dist')
-        return(merge.split('/')[2])
+        # Trim off the refs/heads so that we're just working with the branch
+        # name
+        merge = merge.strip('refs/heads/')
+        # Search for one of our known branches, raise if we can't find one
+        # to deal with
+        if re.match(BRANCHRE, merge):
+            return merge
+        # Now check to see if it's an old style branch with /master
+        elif re.match(OLDBRANCHRE, merge):
+            # Trim off the master here and return it.
+            return merge.strip('/master')
+        else:
+            # We couldn't find anything to deal with, bitch about it.
+            raise FedpkgError('Unable to match a known branch name.  Use --dist')
 
     def _findmasterbranch(self):
         """Find the right "fedora" for master"""
