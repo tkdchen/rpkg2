@@ -1077,7 +1077,7 @@ class PackageModule:
         # Now check to see if it's an old style branch with /master
         elif re.match(OLDBRANCHRE, merge):
             # Trim off the master here and return it.
-            return merge.strip('/master')
+            return merge.replace('/master', '')
         else:
             # We couldn't find anything to deal with, bitch about it.
             raise FedpkgError('Unable to match a known branch name.  Use --dist')
@@ -1121,7 +1121,7 @@ class PackageModule:
                 # We couldn't hit koji, bail.
                 raise FedpkgError('Unable to query koji to find rawhide target')
             desttag = rawhidetarget['dest_tag_name']
-            return desttag.strip('dist-f')
+            return desttag.replace('dist-f', '')
 
     def _getlocalarch(self):
         """Get the local arch as defined by rpm"""
