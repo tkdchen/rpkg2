@@ -839,7 +839,7 @@ def sources(path, outdir=None):
         #output.close()
         # These options came from Makefile.common.
         # Probably need to support wget too
-        command = ['curl', '-H',  'Pragma:', '-o', file,  '-R', '-S',  '--fail',
+        command = ['curl', '-H',  'Pragma:', '-o', outfile,  '-R', '-S',  '--fail',
                    '--show-error', url]
         _run_command(command)
         if not _verify_file(outfile, csum, LOOKASIDEHASH):
