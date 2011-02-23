@@ -305,8 +305,8 @@ def _list_branches(path=None, repo=None):
             log.debug('Found local branch %s' % ref.name)
             locals.append(ref.name)
         elif type(ref) == git.RemoteReference:
-            if ref.name == 'origin/HEAD':
-                log.debug('Skipping remote branch alias origin/HEAD')
+            if ref.remote_head == 'HEAD':
+                log.debug('Skipping remote branch alias HEAD')
                 continue # Not useful in this context
             log.debug('Found remote branch %s' % ref.name)
             remotes.append(ref.name)
@@ -408,7 +408,7 @@ def clone(module, user, path=None, branch=None, bare_dir=None):
 
     path is the basedir to perform the clone in
 
-    branch is the name of a branch to checkout instead of origin/master
+    branch is the name of a branch to checkout instead of <remote>/master
 
     bare_dir is the name of a directory to make a bare clone too if this is a
     bare clone. None otherwise.
@@ -502,6 +502,8 @@ def clone_with_dirs(module, user, path=None):
             branch_path = os.path.join(top_path, branch.split('/master')[0])
             branch_git = git.Git(branch_path)
             branch_git.config("--replace-all", "remote.origin.url", giturl)
+            # Bad use of "origin" here, need to fix this when more than one
+            # remote is used.
             # Remove the push.default setting when new branches are
             # active upstream
             branch_git.config('--add', 'push.default', 'tracking')
@@ -850,11 +852,14 @@ def switch_branch(branch, path=None):
     """Switch the working branch
 
     Will create a local branch if one doesn't already exist,
-    based on origin/<branch>/master
+    based on <remote>/<branch>/master
 
     Logs output and returns nothing.
     """
 
+    # Currently this just grabs the first matching branch name from the first
+    # remote it finds.  When multiple remotes are in play this needs to get
+    # smarter
     if not path:
         path = os.getcwd()
 
@@ -1250,7 +1255,8 @@ class PackageModule:
                 if self.repo.git.rev_list('%s...%s' % (branch, merge)):
                     raise FedpkgError('There are unpushed changes in your repo')
             except git.errors.GitCommandError:
-                raise FedpkgError('You must provide a srpm or push your changes to origin.')
+                raise FedpkgError('You must provide a srpm or push your \
+                                   changes to the remote repo.')
             # Get the commit hash to build
             commit = self.repo.iter_commits().next().sha
             url = ANONGITURL % {'module': self.module} + '?#%s' % commit
