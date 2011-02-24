@@ -440,7 +440,7 @@ def clone(module, user, path=None, branch=None, bare_dir=None):
     else:
         log.debug('Cloning %s' % giturl)
         cmd.extend([giturl])
-    _run_command(cmd)
+    _run_command(cmd, cwd=path)
 
     # Check if we're supposed to work on a branch and if so, switch_branch
     if branch:
@@ -764,7 +764,7 @@ def retire(path, message=None):
 
     """
 
-    cmd = ['git', 'rm', '-rf', path]
+    cmd = ['git', 'rm', '-rf', '.']
     _run_command(cmd, cwd=path)
 
     if not message:
