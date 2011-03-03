@@ -1226,6 +1226,8 @@ class PackageModule:
 
         chain: A chain build set
 
+        arches: A set of arches to limit the scratch build for
+
         This function submits the task to koji and returns the taskID
 
         It is up to the client to wait or watch the task.
