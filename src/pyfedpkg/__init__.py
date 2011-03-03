@@ -1213,7 +1213,7 @@ class PackageModule:
             self.hashtype = 'md5'
  
     def build(self, skip_tag=False, scratch=False, background=False,
-              url=None, chain=None, arches=None):
+              url=None, chain=None, arches=None, sets=False):
         """Initiate a build of the module.  Available options are:
 
         skip_tag: Skip the tag action after the build
@@ -1227,6 +1227,8 @@ class PackageModule:
         chain: A chain build set
 
         arches: A set of arches to limit the scratch build for
+
+        sets: A boolean to let us know whether or not the chain has sets
 
         This function submits the task to koji and returns the taskID
 
@@ -1316,7 +1318,14 @@ class PackageModule:
         # Handle the chain build version
         if chain:
             log.debug('Adding %s to the chain' % url)
-            chain.append([url])
+            # If we're dealing with build sets the behaviour of the last
+            # package changes, and we add it to the last (potentially empty)
+            # set.  Otherwise the last package just gets added to the end of
+            # the chain.
+            if sets:
+                chain[-1].append(url)
+            else:
+                chain.append([url])
             # This next list comp is ugly, but it's how we properly get a :
             # put in between each build set
             cmd.extend(' : '.join([' '.join(sets) for sets in chain]).split())
