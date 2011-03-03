@@ -281,7 +281,7 @@ def _progress_callback(uploaded, total, piece, time, total_time):
     sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" % ('='*(int(percent_done*36)), percent_done_str, elapsed, data_done, speed))
     sys.stdout.flush()
 
-def build(args):
+def build(args, sets=False):
     # We may not actually nave an srpm arg if we come directly from the build task
     if hasattr(args, 'srpm') and args.srpm and not args.scratch:
         log.error('Non-scratch builds cannot be from srpms.')
@@ -331,7 +331,7 @@ def build(args):
     # Should also try this, again not sure what errors to catch
     try:
         task_id = mymodule.build(args.skip_tag, args.scratch, args.background,
-                                 url, chain, arches)
+                                 url, chain, arches, sets)
     except pyfedpkg.FedpkgError, e:
         log.error('Could not initiate build: %s' % e)
         sys.exit(1)
@@ -365,6 +365,7 @@ def chainbuild(args):
         log.error('Must provide at least one dependency build')
         sys.exit(1)
     # Break the chain up into sections
+    sets = False
     urls = []
     build_set = []
     log.debug('Processing chain %s' % ' '.join(args.package))
@@ -375,6 +376,7 @@ def chainbuild(args):
             urls.append(build_set)
             log.debug('Created a build set: %s' % ' '.join(build_set))
             build_set = []
+            sets = True
         else:
             # Figure out the scm url to build from package name
             try:
@@ -396,11 +398,15 @@ def chainbuild(args):
     if build_set:
         log.debug('Created a build set: %s' % ' '.join(build_set))
         urls.append(build_set)
+    # See if we ended in a : making our last build it's own group
+    if args.package[-1] == ':':
+        log.debug('Making the last build its own set.')
+        urls.append([])
     # pass it off to build
     args.chain = urls
     args.skip_tag = False
     args.scratch = False
-    build(args)
+    build(args, sets=sets)
 
 def getuser(user=None):
     if user:
