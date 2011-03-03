@@ -1801,12 +1801,8 @@ class PackageModule:
                             "%s-%s-%s.src.rpm" % (self.module,
                                                   self.ver, self.rel))
         # See if we need to build the srpm
-        if not os.path.exists(self.srpmname):
-            log.debug('No srpm found, building one.')
-        elif _newer(self.srpmname, self.spec):
-            log.debug('srpm is up-to-date, skip rebuilding')
-            # srpm is newer, don't redo it
-            return
+        if os.path.exists(self.srpmname):
+            log.debug('Srpm found, rewriting it.')
 
         cmd = ['rpmbuild']
         cmd.extend(self.rpmdefines)
