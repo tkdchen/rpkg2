@@ -8,7 +8,7 @@ import datetime
 
 # We could substitute the "" in .TH with the fedpkg version if we knew it
 man_header = """\
-.\" man page for fedpkg
+.\\" man page for fedpkg
 .TH fedpkg 1 "%(today)s" "" "fedora\-packager"
 .SH "NAME"
 fedpkg \- Fedora Packaging utility
