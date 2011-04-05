@@ -834,6 +834,10 @@ def update(args):
     editor = os.getenv('EDITOR', 'vi')
     pyfedpkg._run_command([editor, 'bodhi.template'], shell=True)
 
+    # Check to see if we got a template written out.  Bail otherwise
+    if not os.path.isfile('bodhi.template'):
+        log.error('No bodhi update details saved!')
+        sys.exit(1)
     # If the template was changed, submit it to bodhi
     hash = pyfedpkg._hash_file('bodhi.template', 'sha1')
     if hash != orig_hash:
