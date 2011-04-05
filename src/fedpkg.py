@@ -615,8 +615,8 @@ def new(args):
 def new_sources(args):
     # Check to see if the files passed exist
     for file in args.files:
-        if not os.path.exists(file):
-            log.error('File does not exist: %s' % file)
+        if not os.path.isfile(file):
+            log.error('Path does not exist or is not a file: %s' % file)
             sys.exit(1)
     try:
         mymodule = pyfedpkg.PackageModule(args.path, args.dist)
