@@ -1741,8 +1741,6 @@ class PackageModule:
             file_basename = os.path.basename(f)
             if not "%s  %s\n" % (file_hash, file_basename) in sources:
                 sources_file.write("%s  %s\n" % (file_hash, file_basename))
-            import pdb
-            pdb.set_trace()
 
             # Add this file to .gitignore if it's not already there:
             if not gitignore.match(file_basename):
