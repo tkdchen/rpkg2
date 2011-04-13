@@ -46,6 +46,7 @@ def convert(args):
     repo = git.Repo(args.path)
 
     # Get the right remotes
+    log.debug('Checking for proper Fedora remotes in the repo')
     fedpkg = 'pkgs.*\.fedoraproject\.org\/'
     remotes = [remote.name for remote in repo.remotes if
                re.search(fedpkg, remote.url)]
@@ -55,6 +56,7 @@ def convert(args):
     log.debug('Found %s remotes to work on' % len(remotes))
 
     # Create a dict to hold local branch info
+    log.debug('Gathering data about local branches')
     lbranchdict = {}
     branches = [branch for branch in repo.branches if
                 re.match(lbranchre, branch.name)]
@@ -77,6 +79,7 @@ def convert(args):
         lbranchdict.setdefault(branchstub, []).append(branch)
 
     # Rename local branches
+    log.debug('Renaming any local Fedora branches that have "/" in the name')
     for branchset in lbranchdict.keys():
         masterbranch = None
         # Skipping /master rename each branch replacing / with -
@@ -84,19 +87,21 @@ def convert(args):
             if branch.name == '%s/master' % branchset:
                 masterbranch = branch
                 continue
-            print('Renaming %s to %s' % (branch.name,
-                                         branch.name.replace('/', '-')))
+            log.info('Renaming %s to %s' % (branch.name,
+                                            branch.name.replace('/', '-')))
             if not args.dry_run:
                 branch.rename(branch.name.replace('/', '-'))
         if masterbranch:
             # rename <top>/master to <top>
-            print('Renaming %s to %s' % (masterbranch.name, branchset))
+            log.info('Renaming %s to %s' % (masterbranch.name, branchset))
             if not args.dry_run:
                 masterbranch.rename(branchset)
 
     # Loop through the remotes in order to update the local branch data
     # with the proper remote branch names.  If we update any then prune
     # and fetch new data.
+    log.debug('Checking for old style branches in a Fedora remote too see '
+              'if we should prune branch data')
     branchre = 'refs\/heads\/(f[0-9]\/|f[0-9][0-9]\/|fc[0-9]\/el[0-9]\/|olpc[0-9]\/)'
     for remote in remotes:
         pruned = False
@@ -110,6 +115,8 @@ def convert(args):
         for ref in repo.refs:
             if type(ref) == git.refs.RemoteReference and \
             re.match(refsre, ref.name):
+                log.debug('Found a remote with old style branches: %s' %
+                          remote)
                 log.info('Pruning branch data from %s' % remote)
                 if not args.dry_run:
                     repo.git.remote('prune', remote)
@@ -117,10 +124,12 @@ def convert(args):
                 break
 
         # Find the local branches to convert
+        log.debug('Looking for local branches tracking %s to update merge '
+                  'data' % remote)
         lbranches = [branch for branch in repo.branches if
                      repo.git.config('--get', 'branch.%s.remote' % branch.name) ==
                      remote]
-        log.debug('Found %s local branches related to %s' % (len(branches),
+        log.debug('Found %s local branches related to %s' % (len(lbranches),
                                                              remote))
         for branch in lbranches:
             # Get the merge point
@@ -133,7 +142,9 @@ def convert(args):
                 # refs/heads/something/else/master
                 if re.match('refs\/heads\/[^\/]*\/master$', merge):
                     # Rename the mere point scraping off /master
-                    log.debug('Fixing branch %s' % branch.name)
+                    log.info('Fixing merge point of %s' % branch)
+                    log.debug('Changing %s merge point of %s to %s' %
+                              (branch, merge, merge.replace('/master', '')))
                     if not args.dry_run:
                         repo.git.config('branch.%s.merge' % branch.name,
                                         merge.replace('/master', ''))
@@ -142,7 +153,9 @@ def convert(args):
                     newmerge = 'refs/heads/%s' % \
                                 merge.replace('refs/heads/', '').replace('/',
                                                                          '-')
-                    log.debug('Fixing branch %s' % branch.name)
+                    log.info('Fixing merge point of %s' % branch)
+                    log.debug('Changing %s merge point of %s to %s' %
+                              (branch, merge, newmerge))
                     if not args.dry_run:
                         repo.git.config('branch.%s.merge' % branch.name,
                                         newmerge)
