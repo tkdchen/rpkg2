@@ -193,6 +193,11 @@ def parse_cmdline(generate_manpage = False):
                         help = 'Do everything except actually rename the \
                         branches')
 
+    # Use the force
+    parser.add_argument('--force', '-f', action = 'store_true',
+                        help = 'Force update even if upstream has not been '
+                        'converted')
+
     # Parse the args
     return parser.parse_args()
 
@@ -226,11 +231,15 @@ if __name__ == '__main__':
     log.addHandler(stdouthandler)
     log.addHandler(stderrhandler)
 
+    # Are we using the force?
+    if args.force:
+        log.warning('WARNING: Using --force is not recommended!')
+
     # Check to see if the branches have been converted
     log.info('Checking status of upstream branch conversion')
     log.debug('Reading url %s' % STATUSURL)
     try:
-        if not urllib2.urlopen(STATUSURL).read():
+        if not urllib2.urlopen(STATUSURL).read() and not args.force:
             log.error('Fedora repos have not yet been converted.')
             sys.exit(1)
     except urllib2.HTTPError, e:
