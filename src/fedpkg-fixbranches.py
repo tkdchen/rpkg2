@@ -140,7 +140,8 @@ def convert(args):
                 # Otherwise transpose / for - after refs/heads/
                 else:
                     newmerge = 'refs/heads/%s' % \
-                                merge.replace('refs/heads/', '').replace('/', '-')
+                                merge.replace('refs/heads/', '').replace('/',
+                                                                         '-')
                     log.debug('Fixing branch %s' % branch.name)
                     if not args.dry_run:
                         repo.git.config('branch.%s.merge' % branch.name,
