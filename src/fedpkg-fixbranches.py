@@ -19,6 +19,10 @@ import logging
 import re
 import pyfedpkg
 import git
+import urllib2
+
+# URL to check to see if we've converted the upstream repos
+STATUSURL = 'http://jkeating.fedorapeople.org/reposconverted'
 
 # REGEXES!  SO AWESOME
 # This regex is used to find local branches that use a Fedora/EPEL/OLPC
@@ -221,6 +225,17 @@ if __name__ == '__main__':
     stderrhandler.setFormatter(formatter)
     log.addHandler(stdouthandler)
     log.addHandler(stderrhandler)
+
+    # Check to see if the branches have been converted
+    log.info('Checking status of upstream branch conversion')
+    log.debug('Reading url %s' % STATUSURL)
+    try:
+        if not urllib2.urlopen(STATUSURL).read():
+            log.error('Fedora repos have not yet been converted.')
+            sys.exit(1)
+    except urllib2.HTTPError, e:
+        log.error('Could not check status of conversion from webpage: %s' % e)
+        sys.exit(1)
 
     if not args.path:
         try:
