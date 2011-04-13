@@ -190,8 +190,8 @@ def parse_cmdline(generate_manpage = False):
 
     # What would it do?
     parser.add_argument('--dry-run', '-n', action = 'store_true',
-                        help = 'Do everything except actually rename the \
-                        branches')
+                        help = 'Do everything except actually rename the '
+                        'branches')
 
     # Use the force
     parser.add_argument('--force', '-f', action = 'store_true',
