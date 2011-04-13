@@ -197,13 +197,6 @@ def parse_cmdline(generate_manpage = False):
 if __name__ == '__main__':
     args = parse_cmdline()
 
-    if not args.path:
-        try:
-            args.path=os.getcwd()
-        except:
-            print('Could not get current path, have you deleted it?')
-            sys.exit(1)
-
     # setup the logger -- This logger will take things of INFO or DEBUG and
     # log it to stdout.  Anything above that (WARN, ERROR, CRITICAL) will go
     # to stderr.  Normal operation will show anything INFO and above.
@@ -229,7 +222,18 @@ if __name__ == '__main__':
     log.addHandler(stdouthandler)
     log.addHandler(stderrhandler)
 
+    if not args.path:
+        try:
+            args.path=os.getcwd()
+        except:
+            log.error('Could not get current path, have you deleted it?')
+            sys.exit(1)
+
     # Validate the path
+    if not os.path.exists(args.path):
+        log.error('Invalid path %s' % args.path)
+        sys.exit(1)
+
     if not os.path.exists(os.path.join(args.path, '.git')):
         # We aren't looking at a repo itself, lets see if it's a split out
         # Look for folders that are named like one of ours, and treat each
