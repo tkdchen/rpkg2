@@ -86,11 +86,13 @@ def convert(args):
                 continue
             print('Renaming %s to %s' % (branch.name,
                                          branch.name.replace('/', '-')))
-            branch.rename(branch.name.replace('/', '-'))
+            if not args.dry_run:
+                branch.rename(branch.name.replace('/', '-'))
         if masterbranch:
             # rename <top>/master to <top>
             print('Renaming %s to %s' % (masterbranch.name, branchset))
-            masterbranch.rename(branchset)
+            if not args.dry_run:
+                masterbranch.rename(branchset)
 
     # Loop through the remotes in order to update the local branch data
     # with the proper remote branch names.  If we update any then prune
@@ -109,7 +111,8 @@ def convert(args):
             if type(ref) == git.refs.RemoteReference and \
             re.match(refsre, ref.name):
                 log.info('Pruning branch data from %s' % remote)
-                repo.git.remote('prune', remote)
+                if not args.dry_run:
+                    repo.git.remote('prune', remote)
                 pruned = True
                 break
 
@@ -131,18 +134,22 @@ def convert(args):
                 if re.match('refs\/heads\/[^\/]*\/master$', merge):
                     # Rename the mere point scraping off /master
                     log.debug('Fixing branch %s' % branch.name)
-                    repo.git.config('branch.%s.merge' % branch.name,
-                                    merge.replace('/master', ''))
+                    if not args.dry_run:
+                        repo.git.config('branch.%s.merge' % branch.name,
+                                        merge.replace('/master', ''))
                 # Otherwise transpose / for - after refs/heads/
                 else:
                     newmerge = 'refs/heads/%s' % \
                                 merge.replace('refs/heads/', '').replace('/', '-')
                     log.debug('Fixing branch %s' % branch.name)
-                    repo.git.config('branch.%s.merge' % branch.name, newmerge)
+                    if not args.dry_run:
+                        repo.git.config('branch.%s.merge' % branch.name,
+                                        newmerge)
         # Now fetch the remote
         if pruned:
             log.info('Fetching remote branch data for %s' % remote)
-            repo.git.fetch(remote)
+            if not args.dry_run:
+                repo.git.fetch(remote)
     return
 
 
@@ -162,6 +169,11 @@ def parse_cmdline(generate_manpage = False):
                         help = 'Run with verbose debug output')
     parser.add_argument('-q', action = 'store_true',
                         help = 'Run quietly only displaying errors')
+
+    # What would it do?
+    parser.add_argument('--dry-run', '-n', action = 'store_true',
+                        help = 'Do everything except actually rename the \
+                        branches')
 
     # Parse the args
     return parser.parse_args()
