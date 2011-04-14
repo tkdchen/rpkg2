@@ -131,8 +131,8 @@ def convert(args):
         log.debug('Looking for local branches tracking %s to update merge '
                   'data' % remote)
         lbranches = [branch for branch in repo.branches if
-                     repo.git.config('--get', 'branch.%s.remote' % branch.name) ==
-                     remote]
+                     repo.git.config('--get', 'branch.%s.remote' %
+                                     branch.name) == remote]
         log.debug('Found %s local branches related to %s' % (len(lbranches),
                                                              remote))
         for branch in lbranches:
