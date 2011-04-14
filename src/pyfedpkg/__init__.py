@@ -30,6 +30,7 @@ import StringIO
 import OpenSSL
 import fnmatch
 import offtrac
+import urllib2
 
 
 # Define some global variables, put them here to make it easy to change
@@ -46,6 +47,8 @@ UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff', 'bin',
 BRANCHRE = 'f\d$|f\d\d$|el\d$|olpc\d$|master$'
 # Maintain a regex of old style of branch names with /master
 OLDBRANCHRE = 'f\d\/master$|f\d\d\/master$|el\d\/master$|olpc\d\/master$|master$'
+# URL to see if the branch naming scheme has changed
+STATUSURL = 'http://jkeating.fedorapeople.org/reposconverted'
 
 # Define our own error class
 class FedpkgError(Exception):
@@ -63,6 +66,48 @@ h = NullHandler()
 log = logging.getLogger("fedpkg")
 # Add the null handler
 log.addHandler(h)
+
+def _check_newstyle_branches(path=None, repo=None):
+    """Check to see if the branches are "newstyle" or not.
+
+    Will also see if the upstream branches have been migrated.
+
+    Will raise and log an error leading the user to fix branches.
+
+    """
+
+    if not path:
+        path = os.getcwd()
+
+    # Create the repo from path if no repo passed
+    if not repo:
+        try:
+            repo = git.Repo(path)
+        except git.errors.InvalidGitRepositoryError:
+            raise FedpkgError('%s is not a valid repo' % path)
+
+    # First only work on the remotes we care about
+    fedpkg = 'pkgs.*\.fedoraproject\.org\/'
+    remotes = [remote.name for remote in repo.remotes if
+               re.search(fedpkg, remote.url)]
+
+    # Now loop through the remotes and see if any of them have
+    # old style branch names
+    for remote in remotes:
+        # Check to see if the remote data matches the old style
+        # This regex looks at the ref name which should be
+        # "origin/f15/master or simliar.  This regex fills in the remote
+        # name we care about and attempts to find any fedora/epel/olpc
+        # branch that has the old style /master tail.
+        refsre = r'%s/(f\d\d/master|f\d/master|fc\d/master|' % remote
+        refsre += r'el\d/master|olpc\d/master)'
+        for ref in repo.refs:
+            if type(ref) == git.refs.RemoteReference and \
+            re.match(refsre, ref.name):
+                log.error('This repo has old style branches but upstream '
+                          'has converted to new style.  Please run '
+                          'fedpkg-fixbranches.py to fix your repo')
+                raise FedpkgError('Unconverted branches')
 
 def _find_branch(path=None, repo=None):
     """Returns the active branch name"""
@@ -642,6 +687,9 @@ def import_srpm(srpm, path=None):
         raise FedpkgError('%s is not a valid repo' % path)
     if repo.is_dirty():
         raise FedpkgError('There are uncommitted changes in your repo')
+    # See if upstream has converted branches and we haven't
+    if urllib2.urlopen(STATUSURL).read():
+        _check_newstyle_branches(repo=repo)
     # Get the details of the srpm
     name, files, uploadfiles = _srpmdetails(srpm)
 
@@ -736,6 +784,9 @@ def pull(path=None, rebase=False, norebase=False):
 
     """
 
+    # See if upstream has converted branches and we haven't
+    if urllib2.urlopen(STATUSURL).read():
+        _check_newstyle_branches(path=path)
     if not path:
         path = os.getcwd()
     cmd = ['git', 'pull']
@@ -749,6 +800,9 @@ def pull(path=None, rebase=False, norebase=False):
 def push(path=None):
     """Push changes to the main repository using optional path"""
 
+    # See if upstream has converted branches and we haven't
+    if urllib2.urlopen(STATUSURL).read():
+        _check_newstyle_branches(path=path)
     if not path:
         path = os.getcwd()
     cmd = ['git', 'push']
@@ -1236,6 +1290,9 @@ class PackageModule:
 
         """
 
+        # See if upstream has converted branches and we haven't
+        if urllib2.urlopen(STATUSURL).read():
+            _check_newstyle_branches(repo=self.repo)
         # build up the command that a user would issue
         cmd = ['koji']
         # Make sure we have a valid session.
