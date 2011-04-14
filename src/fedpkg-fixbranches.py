@@ -29,7 +29,7 @@ STATUSURL = 'http://jkeating.fedorapeople.org/reposconverted'
 # namespace with a trailing / in the branch name.
 # Should match f14/master or f15/user/fred but not f14 or f15
 # or f15-user-fred
-lbranchre = '^f\d\/|^f\d\d\/|^fc\d\/|^el\d\/|^olpc\d\/'
+lbranchre = r'^f\d/|^f\d\d/|^fc\d/|^el\d/|^olpc\d/'
 
 # Add a log filter class
 class StdoutFilter(logging.Filter):
@@ -106,7 +106,7 @@ def convert(args):
     # and fetch new data.
     log.debug('Checking for old style branches in a Fedora remote too see '
               'if we should prune branch data')
-    branchre = 'refs\/heads\/(f[0-9]\/|f[0-9][0-9]\/|fc[0-9]\/el[0-9]\/|olpc[0-9]\/)'
+    branchre = r'refs/heads/(f[0-9]/|f[0-9][0-9]/|fc[0-9]/|el[0-9]/|olpc[0-9]/)'
     for remote in remotes:
         pruned = False
         # Check to see if the remote data matches the old style
@@ -114,8 +114,8 @@ def convert(args):
         # or simliar.  This regex fills in the remote name we care about and
         # attempts to find any fedora/epel/olpc branch that has the old style
         # /master tail.
-        refsre = '%s/(f\d\d\/master|f\d\/master|fc\d\/master|el\d\/master|olpc\d\/master)' % \
-                  remote
+        refsre = r'%s/(f\d\d/master|f\d/master|fc\d/master' % remote
+        refsre += r'|el\d/master|olpc\d/master)'
         for ref in repo.refs:
             if type(ref) == git.refs.RemoteReference and \
             re.match(refsre, ref.name):
@@ -144,8 +144,8 @@ def convert(args):
                 # This regex should capture any branch that is
                 # refs/heads/something/master  but won't match
                 # refs/heads/something/else/master
-                if re.match('refs\/heads\/[^\/]*\/master$', merge):
-                    # Rename the mere point scraping off /master
+                if re.match(r'refs/heads/[^/]*/master$', merge):
+                    # Rename the merge point scraping off /master
                     log.info('Fixing merge point of %s' % branch)
                     log.debug('Changing %s merge point of %s to %s' %
                               (branch, merge, merge.replace('/master', '')))
