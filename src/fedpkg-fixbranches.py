@@ -130,9 +130,16 @@ def convert(args):
         # Find the local branches to convert
         log.debug('Looking for local branches tracking %s to update merge '
                   'data' % remote)
-        lbranches = [branch for branch in repo.branches if
-                     repo.git.config('--get', 'branch.%s.remote' %
-                                     branch.name) == remote]
+        lbranches = []
+        for branch in repo.branches:
+            try:
+                merge = repo.git.config('--get', 'branch.%s.remote' %
+                                        branch.name)
+            except git.GitCommandError:
+                continue
+            if merge == remote:
+                lbranches.append(branch)
+
         log.debug('Found %s local branches related to %s' % (len(lbranches),
                                                              remote))
         for branch in lbranches:
