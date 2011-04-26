@@ -1675,9 +1675,6 @@ class PackageModule:
         # This could really use a list of arches to build for and loop over
         # Get the sources
         sources(self.path)
-        # Determine arch to build for
-        if not arch:
-            arch = self.localarch
         # build up the rpm command
         cmd = ['rpmbuild']
         cmd.extend(self.rpmdefines)
@@ -1685,8 +1682,9 @@ class PackageModule:
         if not hashtype == 'sha256':
             cmd.extend(["--define '_source_filedigest_algorithm %s'" % hashtype,
                         "--define '_binary_filedigest_algorithm %s'" % hashtype])
-        cmd.extend(['--target', arch, '-ba',
-                    os.path.join(self.path, self.spec)])
+        if arch:
+            cmd.extend(['--target', arch])
+        cmd.extend(['-ba', os.path.join(self.path, self.spec)])
         logfile = '.build-%s-%s.log' % (self.ver, self.rel)
         # Run the command
         _run_command(cmd, shell=True, pipe=['tee', logfile])
