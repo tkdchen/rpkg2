@@ -1216,25 +1216,23 @@ class PackageModule:
             self.branch = dist
         else:
             self.branch = self._findbranch()
+        self.target = '%s-candidate' % self.branch
         if self.branch.startswith('f'):
             self.distval = self.branch.split('f')[1]
             self.distvar = 'fedora'
             self.dist = 'fc%s' % self.distval
-            self.target = 'dist-f%s-updates-candidate' % self.distval
             self.mockconfig = 'fedora-%s-%s' % (self.distval, self.localarch)
             self.override = 'dist-f%s-override' % self.distval
         elif self.branch.startswith('el'):
             self.distval = self.branch.split('el')[1]
             self.distvar = 'rhel'
             self.dist = 'el%s' % self.distval
-            self.target = 'dist-%sE-epel-testing-candidate' % self.distval
             self.mockconfig = 'epel-%s-%s' % (self.distval, self.localarch)
             self.override = 'dist-%sE-epel-override' % self.distval
         elif self.branch.startswith('olpc'):
             self.distval = self.branch.split('olpc')[1]
             self.distvar = 'olpc'
             self.dist = 'olpc%s' % self.distval
-            self.target = 'dist-olpc%s' % self.distval
             self.override = 'dist-olpc%s-override' % self.distval
         # If we don't match one of the above, assume master or a branch of
         # master
