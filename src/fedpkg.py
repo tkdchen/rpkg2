@@ -36,7 +36,8 @@ SECONDARY_ARCH_PKGS = {'sparc': ['silo', 'prtconf', 'lssbus', 'afbinit',
                                  'xorg-x11-drv-suncg6', 'xorg-x11-drv-sunffb',
                                  'xorg-x11-drv-sunleo', 'xorg-x11-drv-suntcx'],
                        'ppc': ['ppc64-utils', 'yaboot'],
-                       'arm': []}
+                       'arm': ['xorg-x11-drv-omapfb'],
+                       's390': ['s390utils', 'openssl-ibmca', 'libica']}
 
 # Add a log filter class
 class StdoutFilter(logging.Filter):
