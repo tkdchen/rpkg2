@@ -822,16 +822,16 @@ def retire(path, message=None):
     _run_command(cmd, cwd=path)
 
     if not message:
-        msg = 'Package is retired'
+        message = 'Package is retired'
 
     fd = open(os.path.join(path, 'dead.package'), 'w')
-    fd.write(msg)
+    fd.write(message)
     fd.close()
 
     cmd = ['git', 'add', os.path.join(path, 'dead.package')]
     _run_command(cmd, cwd=path)
 
-    commit(path, msg)
+    commit(path, message)
 
     return
 
