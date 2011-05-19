@@ -276,8 +276,7 @@ _fedpkg_branch()
     local git_options= format="--format %(refname:short)"
     [[ -n $1 ]] && git_options="--git-dir=$1/.git"
 
-    git $git_options for-each-ref $format 'refs/remotes/origin' \
-        | sed 's,^origin/,,'
+    git $git_options for-each-ref $format 'refs/remotes' | sed 's,.*/,,'
     git $git_options for-each-ref $format 'refs/heads'
 }
 
