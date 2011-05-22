@@ -333,7 +333,7 @@ def build(args, sets=False):
     try:
         task_id = mymodule.build(args.skip_tag, args.scratch, args.background,
                                  url, chain, arches, sets)
-    except pyfedpkg.FedpkgError, e:
+    except Exception, e:
         log.error('Could not initiate build: %s' % e)
         sys.exit(1)
     # Now that we have the task ID we need to deal with it.
