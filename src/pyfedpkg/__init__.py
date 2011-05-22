@@ -491,10 +491,6 @@ def clone(module, user, path=None, branch=None, bare_dir=None):
     if branch:
         switch_branch(branch, path=os.path.join(path, module))
 
-    # Set push.default to "tracking"
-    if not bare_dir:
-        repo = git.Repo(os.path.join(path, module))
-        repo.git.config('--add', 'push.default', 'tracking')
     return
 
 def clone_with_dirs(module, user, path=None):
@@ -549,9 +545,6 @@ def clone_with_dirs(module, user, path=None):
             branch_git.config("--replace-all", "remote.origin.url", giturl)
             # Bad use of "origin" here, need to fix this when more than one
             # remote is used.
-            # Remove the push.default setting when new branches are
-            # active upstream
-            branch_git.config('--add', 'push.default', 'tracking')
         except (git.GitCommandError, OSError), e:
             raise FedpkgError('Could not locally clone %s from %s: %s' %
                     (branch, repo_path, e))
