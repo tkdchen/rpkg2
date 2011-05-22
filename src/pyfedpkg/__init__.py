@@ -47,8 +47,6 @@ UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff', 'bin',
 BRANCHRE = 'f\d$|f\d\d$|el\d$|olpc\d$|master$'
 # Maintain a regex of old style of branch names with /master
 OLDBRANCHRE = 'f\d\/master$|f\d\d\/master$|el\d\/master$|olpc\d\/master$|master$'
-# URL to see if the branch naming scheme has changed
-STATUSURL = 'http://jkeating.fedorapeople.org/reposconverted'
 
 # Define our own error class
 class FedpkgError(Exception):
@@ -681,8 +679,7 @@ def import_srpm(srpm, path=None):
     if repo.is_dirty():
         raise FedpkgError('There are uncommitted changes in your repo')
     # See if upstream has converted branches and we haven't
-    if urllib2.urlopen(STATUSURL).read():
-        _check_newstyle_branches(repo=repo)
+    _check_newstyle_branches(repo=repo)
     # Get the details of the srpm
     name, files, uploadfiles = _srpmdetails(srpm)
 
@@ -778,8 +775,7 @@ def pull(path=None, rebase=False, norebase=False):
     """
 
     # See if upstream has converted branches and we haven't
-    if urllib2.urlopen(STATUSURL).read():
-        _check_newstyle_branches(path=path)
+    _check_newstyle_branches(path=path)
     if not path:
         path = os.getcwd()
     cmd = ['git', 'pull']
@@ -794,8 +790,7 @@ def push(path=None):
     """Push changes to the main repository using optional path"""
 
     # See if upstream has converted branches and we haven't
-    if urllib2.urlopen(STATUSURL).read():
-        _check_newstyle_branches(path=path)
+    _check_newstyle_branches(path=path)
     if not path:
         path = os.getcwd()
     cmd = ['git', 'push']
@@ -1282,8 +1277,7 @@ class PackageModule:
         """
 
         # See if upstream has converted branches and we haven't
-        if urllib2.urlopen(STATUSURL).read():
-            _check_newstyle_branches(repo=self.repo)
+        _check_newstyle_branches(repo=self.repo)
         # build up the command that a user would issue
         cmd = ['koji']
         # Make sure we have a valid session.
