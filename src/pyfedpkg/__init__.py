@@ -1647,6 +1647,8 @@ class PackageModule:
                                              [self.localarch])
         rpms = []
         for arch in arches:
+            if not os.path.exists(os.path.join(self.path, arch)):
+                raise FedpkgError('Need to build the rpms first')
             rpms.extend([os.path.join(self.path, arch, file) for file in
                          os.listdir(os.path.join(self.path, arch))
                          if file.endswith('.rpm')])
