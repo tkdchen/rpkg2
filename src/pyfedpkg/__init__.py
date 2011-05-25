@@ -104,7 +104,7 @@ def _check_newstyle_branches(path=None, repo=None):
             re.match(refsre, ref.name):
                 log.error('This repo has old style branches but upstream '
                           'has converted to new style.  Please run '
-                          '/usr/libexec/fedpkg-fixbranches.py to fix your repo')
+                          '/usr/libexec/fedpkg-fixbranches to fix your repo')
                 raise FedpkgError('Unconverted branches')
 
 def _find_branch(path=None, repo=None):
