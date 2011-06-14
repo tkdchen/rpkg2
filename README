@@ -1,0 +1,7 @@
+This is the rpkg project, which mostly is a python library for dealing with
+rpm packaging in a git source control.  pyrpkg is the base library that sites
+can subclass to create useful tools.
+
+Unless otherwise specified, all files are licensed under GPLv2+.
+
+See https://fedorahosted.org/rpkg for more information, bug tracking, etc.
