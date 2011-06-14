@@ -1,19 +1,18 @@
 # Print a man page from the help texts.
 
 
-import argparse
 import sys
 import datetime
 
 
-# We could substitute the "" in .TH with the fedpkg version if we knew it
+# We could substitute the "" in .TH with the rpkg version if we knew it
 man_header = """\
-.\\" man page for fedpkg
-.TH fedpkg 1 "%(today)s" "" "fedora\-packager"
+.\\" man page for rpkg
+.TH rpkg 1 "%(today)s" "" "rpm\-packager"
 .SH "NAME"
-fedpkg \- Fedora Packaging utility
+rpkg \- RPM Packaging utility
 .SH "SYNOPSIS"
-.B "fedpkg"
+.B "rpkg"
 [
 .I global_options
 ]
@@ -25,21 +24,21 @@ fedpkg \- Fedora Packaging utility
 .I command_arguments
 ]
 .br
-.B "fedpkg"
+.B "rpkg"
 .B "help"
 .br
-.B "fedpkg"
+.B "rpkg"
 .I "command"
 .B "\-\-help"
 .SH "DESCRIPTION"
-.B "fedpkg"
-is a script to interact with the Fedora Packaging system.
+.B "rpkg"
+is a script to interact with the RPM Packaging system.
 """
 
 man_footer = """\
 .SH "SEE ALSO"
-.UR "https://fedorahosted.org/fedora\-packager/"
-.BR "https://fedorahosted.org/fedora\-packager/"
+.UR "https://fedorahosted.org/rpkg/"
+.BR "https://fedorahosted.org/rpkg/"
 """
 
 class ManFormatter(object):
@@ -139,7 +138,6 @@ def generate(parser, subparsers):
             if not help.endswith('.'): help = "%s." % help
             cmdparser.description = help
 
-        formatter = cmdparser.formatter_class(cmdparser.prog)
         h = cmdparser.format_help()
         mf.write(h)
 
@@ -147,5 +145,6 @@ def generate(parser, subparsers):
 
 
 if __name__ == '__main__':
-    import fedpkg
-    fedpkg.parse_cmdline(generate_manpage = True)
+    import pyrpkg.cli
+    client = pyrpkg.cli.cliClient(name='rpkg', config=None)
+    client.parse_cmdline(manpage = True)
