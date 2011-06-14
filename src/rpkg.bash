@@ -1,7 +1,7 @@
-# fedpkg bash completion
+# rpkg bash completion
 
-have fedpkg &&
-_fedpkg()
+have rpkg &&
+_rpkg()
 {
     COMPREPLY=()
 
@@ -36,8 +36,8 @@ _fedpkg()
     local options="--help -v -q"
     local options_value="--dist --user --path"
     local commands="build chain-build ci clean clog clone co commit compile diff gimmespec giturl help \
-    import install lint local mockbuild new new-sources patch prep pull push retire scratch-build sources \
-    srpm switch-branch tag tag-request unused-patches update upload verify-files verrel"
+    import install lint local new new-sources patch prep pull push scratch-build sources \
+    srpm switch-branch tag unused-patches upload verify-files verrel"
 
     # parse main options and get command
 
@@ -71,6 +71,9 @@ _fedpkg()
         fi
 
         case "$prev" in
+            --config)
+                _filedir_exclude_paths
+                ;;
             --dist)
                 ;;
             --user|-u)
@@ -93,7 +96,7 @@ _fedpkg()
     local after= after_more=
 
     case $command in
-        help|clog|gimmespec|giturl|lint|mockbuild|new|push|unused-patches|update|verrel)
+        help|clog|gimmespec|giturl|lint|new|push|unused-patches|verrel)
             ;;
         build)
             options="--nowait --background --skip-tag --scratch"
@@ -152,10 +155,6 @@ _fedpkg()
         pull)
             options="--rebase --no-rebase"
             ;;
-        retire)
-            options="--push"
-            after_more=true
-            ;;
         scratch-build)
             options="--nowait --background"
             options_target="--target"
@@ -177,9 +176,6 @@ _fedpkg()
             options_string="--message"
             options_file="--file"
             after_more=true
-            ;;
-        tag-request)
-            options_string="--desc --build"
             ;;
         upload|new-sources)
             after="file"
@@ -213,16 +209,16 @@ _fedpkg()
     # completion
 
     if [[ -n $options_target ]] && in_array "$prev" "$options_target"; then
-        COMPREPLY=( $(compgen -W "$(_fedpkg_target)" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$(_rpkg_target)" -- "$cur") )
 
     elif [[ -n $options_arches ]] && in_array "$last_option" "$options_arches"; then
-        COMPREPLY=( $(compgen -W "$(_fedpkg_arch) $all_options" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$(_rpkg_arch) $all_options" -- "$cur") )
 
     elif [[ -n $options_srpm ]] && in_array "$prev" "$options_srpm"; then
         _filedir_exclude_paths "*.src.rpm"
 
     elif [[ -n $options_branch ]] && in_array "$prev" "$options_branch"; then
-        COMPREPLY=( $(compgen -W "$(_fedpkg_branch "$path")" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$(_rpkg_branch "$path")" -- "$cur") )
 
     elif [[ -n $options_file ]] && in_array "$prev" "$options_file"; then
         _filedir_exclude_paths
@@ -241,8 +237,8 @@ _fedpkg()
             case $after in
                 file)    _filedir_exclude_paths; compgen_extra=${COMPREPLY[@]} ;;
                 srpm)    _filedir_exclude_paths "*.src.rpm"; compgen_extra=${COMPREPLY[@]} ;;
-                branch)  after_options="$(_fedpkg_branch "$path")" ;;
-                package) after_options="$(_fedpkg_package "$cur")";;
+                branch)  after_options="$(_rpkg_branch "$path")" ;;
+                package) after_options="$(_rpkg_package "$cur")";;
             esac
         fi
 
@@ -256,32 +252,33 @@ _fedpkg()
 
     return 0
 } &&
-complete -F _fedpkg fedpkg
+complete -F _rpkg rpkg
 
-have _fedpkg &&
-_fedpkg_target()
+have _rpkg &&
+_rpkg_target()
 {
     koji list-targets --quiet 2>/dev/null | cut -d" " -f1
 }
 
-have _fedpkg &&
-_fedpkg_arch()
+have _rpkg &&
+_rpkg_arch()
 {
     echo "i386 x86_64 ppc ppc64 s390 s390x sparc sparc64"
 }
 
-have _fedpkg &&
-_fedpkg_branch()
+have _rpkg &&
+_rpkg_branch()
 {
     local git_options= format="--format %(refname:short)"
     [[ -n $1 ]] && git_options="--git-dir=$1/.git"
 
-    git $git_options for-each-ref $format 'refs/remotes' | sed 's,.*/,,'
+    git $git_options for-each-ref $format 'refs/remotes/origin/*' \
+        | sed 's,origin/,,'
     git $git_options for-each-ref $format 'refs/heads'
 }
 
-have _fedpkg &&
-_fedpkg_package()
+have _rpkg &&
+_rpkg_package()
 {
     repoquery -C --qf=%{sourcerpm} "$1*" 2>/dev/null | sort -u | sed -r 's/(-[^-]*){2}\.src\.rpm$//'
 }
