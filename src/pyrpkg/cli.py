@@ -1,9 +1,8 @@
-#!/usr/bin/python
-# fedpkg - a script to interact with the Fedora Packaging system
+# cli.py - a cli client class module
 #
-# Copyright (C) 2009 Red Hat Inc.
+# Copyright (C) 2011 Red Hat Inc.
 # Author(s): Jesse Keating <jkeating@redhat.com>
-# 
+#
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation; either version 2 of the License, or (at your
@@ -11,40 +10,1285 @@
 # the full text of the license.
 
 import argparse
-import os
 import sys
-import getpass
+import os
 import logging
-import xmlrpclib
 import time
 import random
 import string
-import re
-import hashlib
-import textwrap
+import xmlrpclib
+try:
+    import brew as koji
+except ImportError:
+    import koji
 
-# See/put non-standard python imports down in __main__.  This lets us
-# generate the man page without needing extra stuff at build time.
+class cliClient():
+    """This is a client class for rhtpkg clients."""
 
-# Define packages which belong to specific secondary arches
-# This is ugly and should go away.  A better way to do this is to have a list
-# of secondary arches, and then check the spec file for ExclusiveArch that
-# is one of the secondary arches, and handle it accordingly.
-SECONDARY_ARCH_PKGS = {'sparc': ['silo', 'prtconf', 'lssbus', 'afbinit',
-                                 'piggyback', 'xorg-x11-drv-sunbw2',
-                                 'xorg-x11-drv-suncg14', 'xorg-x11-drv-suncg3',
-                                 'xorg-x11-drv-suncg6', 'xorg-x11-drv-sunffb',
-                                 'xorg-x11-drv-sunleo', 'xorg-x11-drv-suntcx'],
-                       'ppc': ['ppc64-utils', 'yaboot'],
-                       'arm': ['xorg-x11-drv-omapfb'],
-                       's390': ['s390utils', 'openssl-ibmca', 'libica']}
+    def __init__(self, config, name=None):
+        """This requires a ConfigParser object
 
-# Add a log filter class
-class StdoutFilter(logging.Filter):
+        Name of the app can optionally set, or discovered from exe name
+        """
 
-    def filter(self, record):
-        # If the record level is 20 (INFO) or lower, let it through
-        return record.levelno <= logging.INFO
+        self.config = config
+        self.name = name
+        if not name:
+            self.name = os.path.basename(sys.argv[0])
+        # Property holders, set to none
+        self._cmd = None
+        self._module = None
+        # Setup the base argparser
+        self.setup_argparser()
+        # Add a subparser
+        self.subparsers = self.parser.add_subparsers(title = 'Targets',
+                                                 description = 'These are '
+                                                 'valid commands you can '
+                                                 'ask %s to do' % self.name)
+        # Register all the commands
+        self.setup_subparsers()
+
+    # Define some properties here, for lazy loading
+    @property
+    def cmd(self):
+        """This is a property for the command attribute"""
+
+        if not self._cmd:
+            self.load_cmd()
+        return(self._cmd)
+
+    def load_cmd(self):
+        """This sets up the cmd object"""
+
+        # Load up the library based on exe name
+        site = os.path.basename(sys.argv[0])
+
+        # Set target if we got it as an option
+        target = None
+        if hasattr(self.args, 'target') and self.args.target:
+            target = self.args.target
+
+        # load items from the config file
+        items = dict(self.config.items(site, raw=True))
+
+        # Create the cmd object
+        self._cmd = self.site.Commands(self.args.path,
+                                       items['lookaside'],
+                                       items['lookasidehash'],
+                                       items['lookaside_cgi'],
+                                       items['gitbaseurl'],
+                                       items['anongiturl'],
+                                       items['branchre'],
+                                       items['kojiconfig'],
+                                       items['build_client'],
+                                       user=self.args.user,
+                                       dist=self.args.dist,
+                                       target=target)
+
+    # This function loads the extra stuff once we figure out what site
+    # we are
+    def do_imports(self, site=None):
+        """Import extra stuff not needed during build
+
+        site option can be used to specify which library to load
+        """
+
+        # We do some imports here to be more flexible
+        if not site:
+            import pyrpkg
+            self.site = pyrpkg
+        else:
+            try:
+                __import__(site)
+                self.site = sys.modules[site]
+            except ImportError:
+                raise Exception('Unknown site %s' % site)
+
+    def setup_argparser(self):
+        """Setup the argument parser and register some basic commands."""
+
+        self.parser = argparse.ArgumentParser(prog = self.name,
+                                              epilog = 'For detailed help '
+                                              'pass --help to a target')
+        # Add some basic arguments that should be used by all.
+        # Add a config file
+        self.parser.add_argument('--config', '-c',
+                                 default=None,
+                                 help='Specify a config file to use')
+        # Allow forcing the dist value
+        self.parser.add_argument('--dist', default=None,
+                                 help='Override the discovered distribution')
+        # Override the  discovered user name
+        self.parser.add_argument('--user', default=None,
+                                 help='Override the discovered user name')
+        # Let the user define a path to work in rather than cwd
+        self.parser.add_argument('--path', default=None,
+                                 help='Define the directory to work in '
+                                 '(defaults to cwd)')
+        # Verbosity
+        self.parser.add_argument('-v', action = 'store_true',
+                                 help = 'Run with verbose debug output')
+        self.parser.add_argument('-q', action = 'store_true',
+                                 help = 'Run quietly only displaying errors')
+
+    def setup_subparsers(self):
+        """Setup basic subparsers that all clients should use"""
+
+        # Setup some basic shared subparsers
+
+        # help command
+        self.register_help()
+
+        # Add a common build parser to be used as a parent
+        self.register_build_common()
+
+        # Other targets
+        self.register_build()
+        self.register_chainbuild()
+        self.register_clean()
+        self.register_clog()
+        self.register_clone()
+        self.register_commit()
+        self.register_compile()
+        self.register_diff()
+        self.register_gimmespec()
+        self.register_giturl()
+        self.register_import_srpm()
+        self.register_install()
+        self.register_lint()
+        self.register_local()
+        self.register_new()
+        self.register_new_sources()
+        self.register_patch()
+        self.register_prep()
+        self.register_pull()
+        self.register_push()
+        self.register_scratch_build()
+        self.register_sources()
+        self.register_srpm()
+        self.register_switch_branch()
+        self.register_tag()
+        self.register_unused_patches()
+        self.register_upload()
+        self.register_verify_files()
+        self.register_verrel()
+
+    # All the register functions go here.
+    def register_help(self):
+        """Register the help command."""
+
+        help_parser = self.subparsers.add_parser('help', help = 'Show usage')
+        help_parser.set_defaults(command = lambda args: self.usage())
+
+    def register_build_common(self):
+        """Create a common build parser to use in other commands"""
+
+        self.build_parser_common = self.subparsers.add_parser('build_common',
+                                                         add_help = False)
+        self.build_parser_common.add_argument('--nowait',
+                                         action = 'store_true',
+                                         default = False,
+                                         help = "Don't wait on build")
+        self.build_parser_common.add_argument('--target',
+                                         default = None,
+                                         help = 'Define build target to build '
+                                         'into')
+        self.build_parser_common.add_argument('--background',
+                                         action = 'store_true',
+                                         default = False,
+                                         help = 'Run the build at a low '
+                                         'priority')
+
+    def register_build(self):
+        """Register the build target"""
+
+        build_parser = self.subparsers.add_parser('build',
+                                         help = 'Request build',
+                                         parents = [self.build_parser_common],
+                                         description = 'This command \
+                                         requests a build of the package \
+                                         in the build system.  By default \
+                                         it discovers the target to build for \
+                                         based on branch data, and uses the \
+                                         latest commit as the build source.')
+        build_parser.add_argument('--skip-tag', action = 'store_true',
+                                  default = False,
+                                  help = 'Do not attempt to tag package')
+        build_parser.add_argument('--scratch', action = 'store_true',
+                                  default = False,
+                                  help = 'Perform a scratch build')
+        build_parser.add_argument('--srpm',
+                                  help = 'Build from an srpm.')
+        build_parser.set_defaults(command = self.build)
+
+    def register_chainbuild(self):
+        """Register the chain build target"""
+
+        chainbuild_parser = self.subparsers.add_parser('chain-build',
+                    help = 'Build current package in order with other packages',
+                    parents = [self.build_parser_common],
+                    formatter_class=argparse.RawDescriptionHelpFormatter,
+                    description = """
+Build current package in order with other packages.
+
+example: %(name)s chain-build libwidget libgizmo
+
+The current package is added to the end of the CHAIN list.
+Colons (:) can be used in the CHAIN parameter to define groups of
+packages.  Packages in any single group will be built in parallel
+and all packages in a group must build successfully and populate
+the repository before the next group will begin building.
+
+For example:
+
+%(name)s chain-build libwidget libaselib : libgizmo :
+
+will cause libwidget and libaselib to be built in parallel, followed
+by libgizmo and then the currect directory package. If no groups are
+defined, packages will be built sequentially.""" %
+                    {'name': self.name})
+        chainbuild_parser.add_argument('package', nargs = '+',
+                                       help = 'List the packages and order you '
+                                       'want to build in')
+        chainbuild_parser.set_defaults(command = self.chainbuild)
+
+    def register_clean(self):
+        """Register the clean target"""
+        clean_parser = self.subparsers.add_parser('clean',
+                                         help = 'Remove untracked files',
+                                         description = "This command can be \
+                                         used to clean up your working \
+                                         directory.  By default it will \
+                                         follow .gitignore rules.")
+        clean_parser.add_argument('--dry-run', '-n', action = 'store_true',
+                                  help = 'Perform a dry-run')
+        clean_parser.add_argument('-x', action = 'store_true',
+                                  help = 'Do not follow .gitignore rules')
+        clean_parser.set_defaults(command = self.clean)
+
+    def register_clog(self):
+        """Register the clog target"""
+
+        clog_parser = self.subparsers.add_parser('clog',
+                                        help = 'Make a clog file containing '
+                                        'top changelog entry',
+                                        description = 'This will create a \
+                                        file named "clog" that contains the \
+                                        latest rpm changelog entry. The \
+                                        leading "- " text will be stripped.')
+        clog_parser.set_defaults(command = self.clog)
+
+    def register_clone(self):
+        """Register the clone target and co alias"""
+
+        clone_parser = self.subparsers.add_parser('clone',
+                                         help = 'Clone and checkout a module',
+                                         description = 'This command will \
+                                         clone the named module from the \
+                                         configured repository base URL.  \
+                                         By default it will also checkout \
+                                         the master branch for your working \
+                                         copy.')
+        # Allow an old style clone with subdirs for branches
+        clone_parser.add_argument('--branches', '-B',
+                                  action = 'store_true',
+                                  help = 'Do an old style checkout with \
+                                  subdirs for branches')
+        # provide a convenient way to get to a specific branch
+        clone_parser.add_argument('--branch', '-b',
+                                  help = 'Check out a specific branch')
+        # allow to clone without needing a account on the rht buildsystem
+        clone_parser.add_argument('--anonymous', '-a',
+                                  action = 'store_true',
+                                  help = 'Check out a module anonymously')
+        # store the module to be cloned
+        clone_parser.add_argument('module', nargs = 1,
+                                  help = 'Name of the module to clone')
+        clone_parser.set_defaults(command = self.clone)
+
+        # Add an alias for historical reasons
+        co_parser = self.subparsers.add_parser('co', parents = [clone_parser],
+                                          conflict_handler = 'resolve',
+                                          help = 'Alias for clone',
+                                          description = 'This command will \
+                                          clone the named module from the \
+                                          configured repository base URL.  \
+                                          By default it will also checkout \
+                                          the master branch for your working \
+                                          copy.')
+        co_parser.set_defaults(command = self.clone)
+
+    def register_commit(self):
+        """Register the commit target and ci alias"""
+
+        commit_parser = self.subparsers.add_parser('commit',
+                                          help = 'Commit changes',
+                                          description = 'This envokes a git \
+                                          commit.  All tracked files with \
+                                          changes will be committed unless \
+                                          a specific file list is provided.  \
+                                          $EDITOR will be used to generate a \
+                                          changelog message unless one is \
+                                          given to the command.  A push \
+                                          can be done at the same time.')
+        commit_parser.add_argument('-c', '--clog',
+                                   default = False,
+                                   action = 'store_true',
+                                   help = 'Generate the commit message from \
+                                   the Changelog section')
+        commit_parser.add_argument('-t', '--tag',
+                                   default = False,
+                                   action = 'store_true',
+                                   help = 'Create a tag for this commit')
+        commit_parser.add_argument('-m', '--message',
+                                   default = None,
+                                   help = 'Use the given <msg> as the commit \
+                                   message')
+        commit_parser.add_argument('-F', '--file',
+                                   default = None,
+                                   help = 'Take the commit message from the \
+                                   given file')
+        # allow one to commit /and/ push at the same time.
+        commit_parser.add_argument('-p', '--push',
+                                   default = False,
+                                   action = 'store_true',
+                                   help = 'Commit and push as one action')
+        # Allow a list of files to be committed instead of everything
+        commit_parser.add_argument('files', nargs = '*',
+                                   default = [],
+                                   help = 'Optional list of specific files to \
+                                   commit')
+        commit_parser.set_defaults(command = self.commit)
+
+        # Add a ci alias
+        ci_parser = self.subparsers.add_parser('ci', parents = [commit_parser],
+                                          conflict_handler = 'resolve',
+                                          help = 'Alias for commit',
+                                          description = 'This envokes a git \
+                                          commit.  All tracked files with \
+                                          changes will be committed unless \
+                                          a specific file list is provided.  \
+                                          $EDITOR will be used to generate a \
+                                          changelog message unless one is \
+                                          given to the command.  A push \
+                                          can be done at the same time.')
+        ci_parser.set_defaults(command = self.commit)
+
+    def register_compile(self):
+        """Register the compile target"""
+
+        compile_parser = self.subparsers.add_parser('compile',
+                                       help = 'Local test rpmbuild compile',
+                                       description = 'This command calls \
+                                       rpmbuild to compile the source.  \
+                                       By default the prep and configure \
+                                       stages will be done as well, \
+                                       unless the short-circuit option \
+                                       is used.')
+        compile_parser.add_argument('--arch', help = 'Arch to compile for')
+        compile_parser.add_argument('--short-circuit', action = 'store_true',
+                                    help = 'short-circuit compile')
+        compile_parser.set_defaults(command = self.compile)
+
+    def register_diff(self):
+        """Register the diff target"""
+
+        diff_parser = self.subparsers.add_parser('diff',
+                                        help = 'Show changes between commits, '
+                                        'commit and working tree, etc',
+                                        description = 'Use git diff to show \
+                                        changes that have been made to \
+                                        tracked files.  By default cached \
+                                        changes (changes that have been git \
+                                        added) will not be shown.')
+        diff_parser.add_argument('--cached', default = False,
+                                 action = 'store_true',
+                                 help = 'View staged changes')
+        diff_parser.add_argument('files', nargs = '*',
+                                 default = [],
+                                 help = 'Optionally diff specific files')
+        diff_parser.set_defaults(command = self.diff)
+
+    def register_gimmespec(self):
+        """Register the gimmespec target"""
+
+        gimmespec_parser = self.subparsers.add_parser('gimmespec',
+                                         help = 'Print the spec file name')
+        gimmespec_parser.set_defaults(command = self.gimmespec)
+
+    def register_giturl(self):
+        """Register the giturl target"""
+
+        giturl_parser = self.subparsers.add_parser('giturl',
+                                          help = 'Print the git url for '
+                                          'building',
+                                          description = 'This will show you \
+                                          which git URL would be used in a \
+                                          build command.  It uses the git \
+                                          hashsum of the HEAD of the current \
+                                          branch (which may not be pushed).')
+        giturl_parser.set_defaults(command = self.giturl)
+
+    def register_import_srpm(self):
+        """Register the import-srpm target"""
+
+        import_srpm_parser = self.subparsers.add_parser('import',
+                                               help = 'Import srpm content '
+                                               'into a module',
+                                               description = 'This will \
+                                               extract sources, patches, and \
+                                               the spec file from an srpm and \
+                                               update the current module \
+                                               accordingly.  It will import \
+                                               to the current branch by \
+                                               default.')
+        import_srpm_parser.add_argument('--branch', '-b',
+                                        help = 'Branch to import onto',
+                                        default = 'devel')
+        #import_srpm_parser.add_argument('--create', '-c',
+        #                                help = 'Create a new local repo',
+        #                                action = 'store_true')
+        import_srpm_parser.add_argument('srpm',
+                                        help = 'Source rpm to import')
+        import_srpm_parser.set_defaults(command = self.import_srpm)
+
+    def register_install(self):
+        """Register the install target"""
+
+        install_parser = self.subparsers.add_parser('install',
+                                       help = 'Local test rpmbuild install',
+                                       description = 'This will call \
+                                       rpmbuild to run the install \
+                                       section.  All leading sections \
+                                       will be processed as well, unless \
+                                       the short-circuit option is used.')
+        install_parser.add_argument('--arch', help = 'Arch to install for',
+                                    default = None)
+        install_parser.add_argument('--short-circuit', action = 'store_true',
+                                    help = 'short-circuit install',
+                                    default = False)
+        install_parser.set_defaults(command = self.install)
+
+    def register_lint(self):
+        """Register the lint target"""
+
+        lint_parser = self.subparsers.add_parser('lint',
+                                            help = 'Run rpmlint against local '
+                                            'build output')
+        lint_parser.add_argument('--info', '-i',
+                                 default = False,
+                                 action = 'store_true',
+                                 help = 'Display explanations for reported \
+                                 messages')
+        lint_parser.set_defaults(command = self.lint)
+
+    def register_local(self):
+        """Register the local target"""
+
+        local_parser = self.subparsers.add_parser('local',
+                                     help = 'Local test rpmbuild binary',
+                                     description = 'Locally test run of \
+                                     rpmbuild producing binary RPMs. The \
+                                     rpmbuild output will be logged into a \
+                                     file named \
+                                     .build-%{version}-%{release}.log')
+        local_parser.add_argument('--arch', help = 'Build for arch')
+        # optionally define old style hashsums
+        local_parser.add_argument('--md5', action = 'store_true',
+                              help = 'Use md5 checksums (for older rpm hosts)')
+        local_parser.set_defaults(command = self.local)
+
+    def register_new(self):
+        """Register the new target"""
+
+        new_parser = self.subparsers.add_parser('new',
+                                       help = 'Diff against last tag',
+                                       description = 'This will use git to \
+                                       show a diff of all the changes \
+                                       (even uncommited changes) since the \
+                                       last git tag was applied.')
+        new_parser.set_defaults(command = self.new)
+
+    def register_new_sources(self):
+        """Register the new-sources target"""
+
+        # Make it part of self to be used later
+        self.new_sources_parser = self.subparsers.add_parser('new-sources',
+                                              help = 'Upload new source files',
+                                              description = 'This will upload \
+                                              new source files to the \
+                                              lookaside cache and remove \
+                                              any existing files.  The \
+                                              "sources" and .gitignore file \
+                                              will be updated for the new \
+                                              file(s).')
+        self.new_sources_parser.add_argument('files', nargs = '+')
+        self.new_sources_parser.set_defaults(command = self.new_sources,
+                                             replace = True)
+
+    def register_patch(self):
+        """Register the patch target"""
+
+        patch_parser = self.subparsers.add_parser('patch',
+                                             help = 'Create and add a gendiff '
+                                             'patch file')
+        patch_parser.add_argument('--suffix')
+        patch_parser.add_argument('--rediff', action = 'store_true',
+                          help = 'Recreate gendiff file retaining comments')
+        patch_parser.set_defaults(command = self.patch)
+
+    def register_prep(self):
+        """Register the prep target"""
+
+        prep_parser = self.subparsers.add_parser('prep',
+                                        help = 'Local test rpmbuild prep',
+                                        description = 'Use rpmbuild to "prep" \
+                                        the sources (unpack the source \
+                                        archive(s) and apply any patches.)')
+        prep_parser.add_argument('--arch', help = 'Prep for a specific arch')
+        prep_parser.set_defaults(command = self.prep)
+
+    def register_pull(self):
+        """Register the pull target"""
+
+        pull_parser = self.subparsers.add_parser('pull',
+                                        help = 'Pull changes from remote '
+                                        'repository and update working copy.',
+                                        description = 'This command uses git \
+                                        to fetch remote changes and apply \
+                                        them to the current working copy.  A \
+                                        rebase option is available which can \
+                                        be used to avoid merges.',
+                                        epilog = 'See git pull --help for \
+                                        more details')
+        pull_parser.add_argument('--rebase', action = 'store_true',
+                             help = 'Rebase the locally committed changes on \
+                             top of the remote changes after fetching.  This \
+                             can avoid a merge commit, but does rewrite local \
+                             history.')
+        pull_parser.add_argument('--no-rebase', action = 'store_true',
+                             help = 'Do not rebase, override .git settings to \
+                             automatically rebase')
+        pull_parser.set_defaults(command = self.pull)
+
+    def register_push(self):
+        """Register the push target"""
+
+        push_parser = self.subparsers.add_parser('push',
+                                            help = 'Push changes to remote '
+                                            'repository')
+        push_parser.set_defaults(command = self.push)
+
+    def register_scratch_build(self):
+        """Register the scratch-build target"""
+
+        scratch_build_parser = self.subparsers.add_parser('scratch-build',
+                                        help = 'Request scratch build',
+                                        parents = [self.build_parser_common],
+                                        description = 'This command \
+                                        will request a scratch build \
+                                        of the package.  Without \
+                                        providing an srpm, it will \
+                                        attempt to build the latest \
+                                        commit, which must have been \
+                                        pushed.  By default all \
+                                        approprate arches will be \
+                                        built.')
+        scratch_build_parser.add_argument('--arches', nargs = '*',
+                                          help = 'Build for specific arches')
+        scratch_build_parser.add_argument('--srpm', help='Build from srpm')
+        scratch_build_parser.set_defaults(command = self.scratch_build)
+
+    def register_sources(self):
+        """Register the sources target"""
+
+        sources_parser = self.subparsers.add_parser('sources',
+                                               help = 'Download source files')
+        sources_parser.add_argument('--outdir',
+                                    default = os.curdir,
+                                    help = 'Directory to download files into \
+                                    (defaults to pwd)')
+        sources_parser.set_defaults(command = self.sources)
+
+    def register_srpm(self):
+        """Register the srpm target"""
+
+        srpm_parser = self.subparsers.add_parser('srpm',
+                                                 help = 'Create a source rpm')
+        # optionally define old style hashsums
+        srpm_parser.add_argument('--md5', action = 'store_true',
+                                 help = 'Use md5 checksums (for older rpm \
+                                 hosts)')
+        srpm_parser.set_defaults(command = self.srpm)
+
+    def register_switch_branch(self):
+        """Register the switch-branch target"""
+
+        switch_branch_parser = self.subparsers.add_parser('switch-branch',
+                                                help = 'Work with branches',
+                                                description = 'This command \
+                                                can create or switch to a \
+                                                local git branch.  It can \
+                                                also be used to list the \
+                                                existing local and remote \
+                                                branches.')
+        switch_branch_parser.add_argument('branch',  nargs = '?',
+                                          help = 'Switch to or create branch')
+        switch_branch_parser.add_argument('-l', '--list',
+                                          help = 'List both remote-tracking \
+                                          branches and local branches',
+                                          action = 'store_true')
+        switch_branch_parser.set_defaults(command = self.switch_branch)
+
+    def register_tag(self):
+        """Register the tag target"""
+
+        tag_parser = self.subparsers.add_parser('tag',
+                                       help = 'Management of git tags',
+                                       description = 'This command uses git \
+                                       to create, list, or delete tags.')
+        tag_parser.add_argument('-f', '--force',
+                                default = False,
+                                action = 'store_true',
+                                help = 'Force the creation of the tag')
+        tag_parser.add_argument('-m', '--message',
+                                default = None,
+                                help = 'Use the given <msg> as the tag \
+                                message')
+        tag_parser.add_argument('-c', '--clog',
+                                default = False,
+                                action = 'store_true',
+                                help = 'Generate the tag message from the \
+                                spec changelog section')
+        tag_parser.add_argument('-F', '--file',
+                                default = None,
+                                help = 'Take the tag message from the given \
+                                file')
+        tag_parser.add_argument('-l', '--list',
+                                default = False,
+                                action = 'store_true',
+                                help = 'List all tags with a given pattern, \
+                                or all if not pattern is given')
+        tag_parser.add_argument('-d', '--delete',
+                                default = False,
+                                action = 'store_true',
+                                help = 'Delete a tag')
+        tag_parser.add_argument('tag',
+                                nargs = '?',
+                                default = None,
+                                help = 'Name of the tag')
+        tag_parser.set_defaults(command = self.tag)
+
+    def register_unused_patches(self):
+        """Register the unused-patches target"""
+
+        unused_patches_parser = self.subparsers.add_parser('unused-patches',
+                                             help = 'Print list of patches '
+                                             'not referenced by name in '
+                                             'the specfile')
+        unused_patches_parser.set_defaults(command = self.unused_patches)
+
+    def register_upload(self):
+        """Register the upload target"""
+
+        upload_parser = self.subparsers.add_parser('upload',
+                                          parents = [self.new_sources_parser],
+                                          conflict_handler = 'resolve',
+                                          help = 'Upload source files',
+                                          description = 'This command will \
+                                          add a new source archive to the \
+                                          lookaside cache.  The sources and \
+                                          .gitignore file will be updated \
+                                          with the new file(s).')
+        upload_parser.set_defaults(command = self.new_sources,
+                                   replace = False)
+
+    def register_verify_files(self):
+        """Register the verify-files target"""
+
+        verify_files_parser = self.subparsers.add_parser('verify-files',
+                                            help='Locally verify %%files '
+                                            'section',
+                                            description="Locally run \
+                                            'rpmbuild -bl' to verify the \
+                                            spec file's %files sections. \
+                                            This requires a successful run \
+                                            of 'rhtpkg compile'")
+        verify_files_parser.set_defaults(command = self.verify_files)
+
+    def register_verrel(self):
+
+        verrel_parser = self.subparsers.add_parser('verrel',
+                                                   help = 'Print the '
+                                                   'name-version-release')
+        verrel_parser.set_defaults(command = self.verrel)
+
+    # All the command functions go here
+    def usage(self):
+        self.parser.print_help()
+
+    def build(self, sets=None):
+        # We may have gotten arches by way of scratch build, so handle them
+        arches = None
+        if hasattr(self.args, 'arches'):
+            arches = self.args.arches
+        # Place holder for if we build with an uploaded srpm or not
+        url = None
+        # See if this is a chain or not
+        chain = None
+        if hasattr(self.args, 'chain'):
+            chain = self.args.chain
+        # Need to do something with BUILD_FLAGS or KOJI_FLAGS here for compat
+        if self.args.target:
+            self.cmd._target = self.args.target
+        # handle uploading the srpm if we got one
+        if hasattr(self.args, 'srpm') and self.args.srpm:
+            # Figure out if we want a verbose output or not
+            callback = None
+            if not self.args.q:
+                callback = self._progress_callback
+            # define a unique path for this upload.  Stolen from /usr/bin/koji
+            uniquepath = 'cli-build/%r.%s' % (time.time(),
+                                 ''.join([random.choice(string.ascii_letters)
+                                          for i in range(8)]))
+            # Should have a try here, not sure what errors we'll get yet though
+            self.cmd.koji_upload(self.args.srpm, uniquepath, callback=callback)
+            if not self.args.q:
+                # print an extra blank line due to callback oddity
+                print('')
+            url = '%s/%s' % (uniquepath, os.path.basename(self.args.srpm))
+        # Should also try this, again not sure what errors to catch
+        try:
+            task_id = self.cmd.build(self.args.skip_tag, self.args.scratch,
+                                     self.args.background, url, chain, arches,
+                                     sets)
+        except Exception, e:
+            self.log.error('Could not initiate build: %s' % e)
+            sys.exit(1)
+        # Now that we have the task ID we need to deal with it.
+        if self.args.nowait:
+            # Log out of the koji session
+            self.cmd.kojisession.logout()
+            return
+        # pass info off to our koji task watcher
+        try:
+            self.cmd.kojisession.logout()
+            return self._watch_koji_tasks(self.cmd.kojisession,
+                                          [task_id])
+        except:
+            # We could get an auth error if credentials have expired
+            # use exc_info here to get what kind of error this is
+            self.log.error('Could not watch build: %s' % sys.exc_info()[0])
+            sys.exit(1)
+
+    def chainbuild(self):
+        if self.cmd.module_name in self.args.package:
+            self.log.error('%s must not be in the chain' %
+                           self.cmd.module_name)
+            sys.exit(1)
+        # make sure we didn't get an empty chain
+        if self.args.package == [':']:
+            self.log.error('Must provide at least one dependency build')
+            sys.exit(1)
+        # Break the chain up into sections
+        sets = False
+        urls = []
+        build_set = []
+        self.log.debug('Processing chain %s' % ' '.join(self.args.package))
+        for component in self.args.package:
+            if component == ':':
+                # We've hit the end of a set, add the set as a unit to the
+                # url list and reset the build_set.
+                urls.append(build_set)
+                self.log.debug('Created a build set: %s' % ' '.join(build_set))
+                build_set = []
+                sets = True
+            else:
+                # Figure out the scm url to build from package name
+                try:
+                    hash = self.cmd.get_latest_commit(component)
+                    url = self.cmd.anongiturl % {'module':
+                                                 component} + '#%s' % hash
+                except Exception, e:
+                    self.log.error('Could not get a build url for %s: %s'
+                                   % (component, e))
+                    sys.exit(1)
+                # If there are no ':' in the chain list, treat each object as an
+                # individual chain
+                if ':' in self.args.package:
+                    build_set.append(url)
+                else:
+                    urls.append([url])
+                    self.log.debug('Created a build set: %s' % url)
+        # Take care of the last build set if we have one
+        if build_set:
+            self.log.debug('Created a build set: %s' % ' '.join(build_set))
+            urls.append(build_set)
+        # See if we ended in a : making our last build it's own group
+        if self.args.package[-1] == ':':
+            self.log.debug('Making the last build its own set.')
+            urls.append([])
+        # pass it off to build
+        self.args.chain = urls
+        self.args.skip_tag = False
+        self.args.scratch = False
+        self.build(sets=sets)
+
+    def clean(self):
+        dry = False
+        useignore = True
+        if self.args.dry_run:
+            dry = True
+        if self.args.x:
+            useignore = False
+        try:
+            return self.cmd.clean(dry, useignore)
+        except Exception, e:
+            self.log.error('Could not clean: %s' % e)
+            sys.exit(1)
+
+    def clog(self):
+        try:
+            self.cmd.clog()
+        except Exception, e:
+            self.log.error('Could not generate clog: %s' % e)
+            sys.exit(1)
+
+    def clone(self):
+        if not self.args.anonymous:
+            user = self.user
+        try:
+            if self.args.branches:
+                self.cmd.clone_with_dirs(self.args.module[0],
+                                         anon=self.args.anonymous)
+            else:
+                self.cmd.clone(self.args.module[0], self.args.branch,
+                               anon=self.args.anonymous)
+        except Exception, e:
+            self.log.error('Could not clone: %s' % e)
+            sys.exit(1)
+
+    def commit(self):
+        if self.args.clog:
+            try:
+                self.cmd.clog()
+            except Exception, e:
+                self.log.error('Could not create clog: %s' % e)
+                sys.exit(1)
+            self.args.file = os.path.abspath(os.path.join(self.args.path,
+                                                          'clog'))
+        try:
+            self.cmd.commit(self.args.message, self.args.file,
+                            self.args.files)
+        except Exception, e:
+            self.log.error('Could not commit: %s' % e)
+            sys.exit(1)
+        if self.args.tag:
+            try:
+                tagname = self.cmd.nvr
+                self.cmd.add_tag(tagname, True, self.args.message,
+                                 self.args.file)
+            except Exception, e:
+                self.log.error('Could not create a tag: %s' % e)
+                sys.exit(1)
+        if self.args.push:
+            self.push()
+
+    def compile(self):
+        arch = None
+        short = False
+        if self.args.arch:
+            arch = self.args.arch
+        if self.args.short_circuit:
+            short = True
+        try:
+            self.cmd.compile(arch=arch, short=short)
+        except Exception, e:
+            self.log.error('Could not compile: %s' % e)
+            sys.exit(1)
+
+    def diff(self):
+        try:
+            self.cmd.diff(self.args.cached, self.args.files)
+        except Exception, e:
+            self.log.error('Could not diff: %s' % e)
+            sys.exit(1)
+
+    def gimmespec(self):
+        try:
+            print(self.cmd.spec)
+        except Exception, e:
+            self.log.error('Could not get spec file: %s' % e)
+            sys.exit(1)
+
+    def giturl(self):
+        try:
+            print(self.cmd.giturl())
+        except Exception, e:
+            self.log.error('Could not get the giturl: %s' % e)
+            sys.exit(1)
+
+    def import_srpm(self):
+        try:
+            uploadfiles = self.cmd.import_srpm(self.args.srpm)
+            self.cmd.upload(uploadfiles, replace=True)
+        except Exception, e:
+            self.log.error('Could not import srpm: %s' % e)
+            sys.exit(1)
+        try:
+            self.cmd.diff(cached=True)
+        except Exception, e:
+            self.log.error('Could not diff the repo: %s' % e)
+            sys.exit(1)
+        print('--------------------------------------------')
+        print("New content staged and new sources uploaded.")
+        print("Commit if happy or revert with: git reset --hard HEAD")
+
+    def install(self):
+        try:
+            self.cmd.install(arch=self.args.arch,
+                             short=self.args.short_circuit)
+        except Exception, e:
+            self.log.error('Could not install: %s' % e)
+            sys.exit(1)
+
+    def lint(self):
+        try:
+            self.cmd.lint(self.args.info)
+        except Exception, e:
+            self.log.error('Could not run rpmlint: %s' % e)
+            sys.exit(1)
+
+    def local(self):
+        try:
+            if self.args.md5:
+                self.cmd.local(arch=self.args.arch, hashtype='md5')
+            else:
+                self.cmd.local(arch=self.args.arch)
+        except Exception, e:
+            self.log.error('Could not build locally: %s' % e)
+            sys.exit(1)
+
+    def new(self):
+        try:
+            print(self.cmd.new())
+        except Exception, e:
+            self.log.error('Could not get new changes: %s' % e)
+            sys.exit(1)
+
+    def new_sources(self):
+        # Check to see if the files passed exist
+        for file in self.args.files:
+            if not os.path.isfile(file):
+                self.log.error('Path does not exist or is not a file: %s' %
+                               file)
+                sys.exit(1)
+        try:
+            self.cmd.upload(self.args.files, replace=self.args.replace)
+        except Exception, e:
+            self.log.error('Could not upload new sources: %s' % e)
+            sys.exit(1)
+        print("Source upload succeeded. Don't forget to commit the \
+              sources file")
+
+    def patch(self):
+        self.log.warning('Not implimented yet')
+
+    def prep(self):
+        try:
+            self.cmd.prep(arch=self.args.arch)
+        except Exception, e:
+            self.log.error('Could not prep: %s' % e)
+            sys.exit(1)
+
+    def pull(self):
+        try:
+            self.cmd.pull(rebase=self.args.rebase,
+                          norebase=self.args.no_rebase)
+        except Exception, e:
+            self.log.error('Could not pull: %s' % e)
+            sys.exit(1)
+
+    def push(self):
+        try:
+            self.cmd.push()
+        except Exception, e:
+            self.log.error('Could not push: %s' % e)
+            sys.exit(1)
+
+    def scratch_build(self):
+        # A scratch build is just a build with --scratch
+        self.args.scratch = True
+        self.args.skip_tag = False
+        self.build()
+
+    def sources(self):
+        try:
+            self.cmd.sources(self.args.outdir)
+        except Exception, e:
+            self.log.error('Could not download sources: %s' % e)
+            sys.exit(1)
+
+    def srpm(self):
+        try:
+            self.cmd.sources()
+            if self.args.md5:
+                self.cmd.srpm('md5')
+            else:
+                self.cmd.srpm()
+        except Exception, e:
+            self.log.error('Could not make an srpm: %s' % e)
+            sys.exit(1)
+
+    def switch_branch(self):
+        if self.args.branch:
+            try:
+                self.cmd.switch_branch(self.args.branch)
+            except Exception, e:
+                self.log.error('Unable to switch to another branch: %s' % e)
+                sys.exit(1)
+        else:
+            try:
+                (locals, remotes) = self.cmd._list_branches()
+            except Exception, e:
+                self.log.error('Unable to list branches: %s' % e)
+                sys.exit(1)
+            # This is some ugly stuff here, but trying to emulate
+            # the way git branch looks
+            locals = ['  %s  ' % branch for branch in locals]
+            local_branch = self.cmd.repo.active_branch.name
+            locals[locals.index('  %s  ' %
+                                local_branch)] = '* %s' % local_branch
+            print('Locals:\n%s\nRemotes:\n  %s' %
+                  ('\n'.join(locals), '\n  '.join(remotes)))
+
+    def tag(self):
+        if self.args.list:
+            try:
+                self.cmd.list_tag(self.args.tag)
+            except Exception, e:
+                self.log.error('Could not create a list of the tag: %s' % e)
+                sys.exit(1)
+        elif self.args.delete:
+            try:
+                self.cmd.delete_tag(self.args.tag)
+            except Exception, e:
+                self.log.error('Could not delete tag: %s' % e)
+                sys.exit(1)
+        else:
+            filename = self.args.file
+            tagname = self.args.tag
+            try:
+                if not tagname or self.args.clog:
+                    if not tagname:
+                        tagname = self.cmd.nvr
+                    if self.args.clog:
+                        self.cmd.clog()
+                        filename = 'clog'
+                self.cmd.add_tag(tagname, self.args.force,
+                                  self.args.message, filename)
+            except Exception, e:
+                self.log.error('Could not create a tag: %s' % e)
+                sys.exit(1)
+
+    def unused_patches(self):
+        try:
+            unused = self.cmd.unused_patches()
+        except Exception, e:
+            self.log.error('Could not get unused patches: %s' % e)
+            sys.exit(1)
+        print('\n'.join(unused))
+
+    def verify_files(self):
+        try:
+            self.cmd.verify_files()
+        except Exception, e:
+            self.log.error('Could not verify %%files list: %s' % e)
+            sys.exit(1)
+
+    def verrel(self):
+        try:
+            print('%s-%s-%s' % (self.cmd.module_name, self.cmd.ver,
+                                self.cmd.rel))
+        except Exception, e:
+            self.log.error('Could not get ver-rel: %s' % e)
+            sys.exit(1)
+
+    # Other class stuff goes here
+    def _display_tasklist_status(self, tasks):
+        free = 0
+        open = 0
+        failed = 0
+        done = 0
+        for task_id in tasks.keys():
+            status = tasks[task_id].info['state']
+            if status == koji.TASK_STATES['FAILED']:
+                failed += 1
+            elif status == koji.TASK_STATES['CLOSED'] or \
+            status == koji.TASK_STATES['CANCELED']:
+                done += 1
+            elif status == koji.TASK_STATES['OPEN'] or \
+            status == koji.TASK_STATES['ASSIGNED']:
+                open += 1
+            elif status == koji.TASK_STATES['FREE']:
+                free += 1
+        self.log.info("  %d free  %d open  %d done  %d failed" %
+                      (free, open, done, failed))
+    
+    def _display_task_results(self, tasks):
+        for task in [task for task in tasks.values() if task.level == 0]:
+            state = task.info['state']
+            task_label = task.str()
+    
+            if state == koji.TASK_STATES['CLOSED']:
+                self.log.info('%s completed successfully' % task_label)
+            elif state == koji.TASK_STATES['FAILED']:
+                self.log.info('%s failed' % task_label)
+            elif state == koji.TASK_STATES['CANCELED']:
+                self.log.info('%s was canceled' % task_label)
+            else:
+                # shouldn't happen
+                self.log.info('%s has not completed' % task_label)
+    
+    def _watch_koji_tasks(self, session, tasklist):
+        if not tasklist:
+            return
+        self.log.info('Watching tasks (this may be safely interrupted)...')
+        # Place holder for return value
+        rv = 0
+        try:
+            tasks = {}
+            for task_id in tasklist:
+                tasks[task_id] = TaskWatcher(task_id, session, self.log,
+                                             quiet=self.args.q)
+            while True:
+                all_done = True
+                for task_id,task in tasks.items():
+                    changed = task.update()
+                    if not task.is_done():
+                        all_done = False
+                    else:
+                        if changed:
+                            # task is done and state just changed
+                            if not self.args.q:
+                                self._display_tasklist_status(tasks)
+                        if not task.is_success():
+                            rv = 1
+                    for child in session.getTaskChildren(task_id):
+                        child_id = child['id']
+                        if not child_id in tasks.keys():
+                            tasks[child_id] = TaskWatcher(child_id,
+                                                          session,
+                                                          self.log,
+                                                          task.level + 1,
+                                                          quiet=self.args.q)
+                            tasks[child_id].update()
+                            # If we found new children, go through the list
+                            # again, in case they have children also
+                            all_done = False
+                if all_done:
+                    if not self.args.q:
+                        print
+                        self._display_task_results(tasks)
+                    break
+    
+                time.sleep(1)
+        except (KeyboardInterrupt):
+            if tasks:
+                self.log.info(
+    """
+Tasks still running. You can continue to watch with the 'brew watch-task' command.
+    Running Tasks:
+    %s""" % '\n'.join(['%s: %s' % (t.str(), t.display_state(t.info))
+                       for t in tasks.values() if not t.is_done()]))
+            # /usr/bin/koji considers a ^c while tasks are running to be a
+            # non-zero exit.  I don't quite agree, so I comment it out here.
+            #rv = 1
+        return rv
+    
+    # Stole these three functions from /usr/bin/koji
+    def _format_size(self, size):
+        if (size / 1073741824 >= 1):
+            return "%0.2f GiB" % (size / 1073741824.0)
+        if (size / 1048576 >= 1):
+            return "%0.2f MiB" % (size / 1048576.0)
+        if (size / 1024 >=1):
+            return "%0.2f KiB" % (size / 1024.0)
+        return "%0.2f B" % (size)
+    
+    def _format_secs(self, t):
+        h = t / 3600
+        t = t % 3600
+        m = t / 60
+        s = t % 60
+        return "%02d:%02d:%02d" % (h, m, s)
+    
+    def _progress_callback(self, uploaded, total, piece, time, total_time):
+        percent_done = float(uploaded)/float(total)
+        percent_done_str = "%02d%%" % (percent_done * 100)
+        data_done = self._format_size(uploaded)
+        elapsed = self._format_secs(total_time)
+    
+        speed = "- B/sec"
+        if (time):
+            if (uploaded != total):
+                speed = self._format_size(float(piece)/float(time)) + "/sec"
+            else:
+                speed = self._format_size(float(total)/float(total_time)) + \
+                "/sec"
+    
+        # write formated string and flush
+        sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" %
+                         ('='*(int(percent_done*36)),
+                          percent_done_str, elapsed, data_done, speed))
+        sys.stdout.flush()
+
+    def setupLogging(self, log):
+        """Setup the various logging stuff."""
+
+        # Assign the log object to self
+        self.log = log
+
+        # Add a log filter class
+        class StdoutFilter(logging.Filter):
+
+            def filter(self, record):
+                # If the record level is 20 (INFO) or lower, let it through
+                return record.levelno <= logging.INFO
+
+        # have to create a filter for the stdout stream to filter out WARN+
+        myfilt = StdoutFilter()
+        # Simple format
+        formatter = logging.Formatter('%(message)s')
+        stdouthandler = logging.StreamHandler(sys.stdout)
+        stdouthandler.addFilter(myfilt)
+        stdouthandler.setFormatter(formatter)
+        stderrhandler = logging.StreamHandler()
+        stderrhandler.setLevel(logging.WARNING)
+        stderrhandler.setFormatter(formatter)
+        self.log.addHandler(stdouthandler)
+        self.log.addHandler(stderrhandler)
+
+    def parse_cmdline(self, manpage=False):
+        """Parse the commandline, optionally make a manpage
+
+        This also sets up self.user
+        """
+
+        if  manpage:
+            # Generate the man page
+            man_page = __import__('%s' % 
+                                  os.path.basename(sys.argv[0]).strip('.py'))
+            man_page.generate(self.parser, self.subparsers)
+            sys.exit(0)
+            # no return possible
+
+        # Parse the args
+        self.args = self.parser.parse_args()
+        if self.args.user:
+            self.user = self.args.user
+        else:
+            self.user = os.getlogin()
 
 # Add a class stolen from /usr/bin/koji to watch tasks
 # this was cut/pasted from koji, and then modified for local use.
@@ -53,12 +1297,13 @@ class StdoutFilter(logging.Filter):
 # This is fragile and hopefully will be replaced by a real kojiclient lib.
 class TaskWatcher(object):
 
-    def __init__(self,task_id,session,level=0,quiet=False):
+    def __init__(self,task_id,session,log,level=0,quiet=False):
         self.id = task_id
         self.session = session
         self.info = None
         self.level = level
         self.quiet = quiet
+        self.log = log
 
     #XXX - a bunch of this stuff needs to adapt to different tasks
 
@@ -96,21 +1341,21 @@ class TaskWatcher(object):
         last = self.info
         self.info = self.session.getTaskInfo(self.id, request=True)
         if self.info is None:
-            log.error("No such task id: %i" % self.id)
+            self.log.error("No such task id: %i" % self.id)
             sys.exit(1)
         state = self.info['state']
         if last:
             #compare and note status changes
             laststate = last['state']
             if laststate != state:
-                log.info("%s: %s -> %s" % (self.str(),
+                self.log.info("%s: %s -> %s" % (self.str(),
                                            self.display_state(last),
                                            self.display_state(self.info)))
                 return True
             return False
         else:
             # First time we're seeing this task, so just show the current state
-            log.info("%s: %s" % (self.str(), self.display_state(self.info)))
+            self.log.info("%s: %s" % (self.str(), self.display_state(self.info)))
             return False
 
     def is_done(self):
@@ -141,1357 +1386,35 @@ class TaskWatcher(object):
         else:
             return koji.TASK_STATES[info['state']].lower()
 
-# Add a simple function to print usage, for the 'help' command
-def usage(args, parser):
-    parser.print_help()
-
-# Define our stub functions
-def _is_secondary(module):
-    """Check a list to see if the package is a secondary arch package"""
-
-    for arch in SECONDARY_ARCH_PKGS.keys():
-        if module in SECONDARY_ARCH_PKGS[arch]:
-            return arch
-    return None
-
-def _get_secondary_config(mymodule):
-    """Return the right config for a given secondary arch"""
-
-    arch = _is_secondary(mymodule.module)
-    if arch:
-        if arch == 'ppc' and mymodule.distvar == 'fedora' and \
-           mymodule.distval < '13':
-            return None
-        return os.path.expanduser('~/.koji/%s-config' % arch)
-    else:
-        return None
-
-def _display_tasklist_status(tasks):
-    free = 0
-    open = 0
-    failed = 0
-    done = 0
-    for task_id in tasks.keys():
-        status = tasks[task_id].info['state']
-        if status == koji.TASK_STATES['FAILED']:
-            failed += 1
-        elif status == koji.TASK_STATES['CLOSED'] or status == koji.TASK_STATES['CANCELED']:
-            done += 1
-        elif status == koji.TASK_STATES['OPEN'] or status == koji.TASK_STATES['ASSIGNED']:
-            open += 1
-        elif status == koji.TASK_STATES['FREE']:
-            free += 1
-    log.info("  %d free  %d open  %d done  %d failed" % (free, open, done, failed))
-
-def _display_task_results(tasks):
-    for task in [task for task in tasks.values() if task.level == 0]:
-        state = task.info['state']
-        task_label = task.str()
-
-        if state == koji.TASK_STATES['CLOSED']:
-            log.info('%s completed successfully' % task_label)
-        elif state == koji.TASK_STATES['FAILED']:
-            log.info('%s failed' % task_label)
-        elif state == koji.TASK_STATES['CANCELED']:
-            log.info('%s was canceled' % task_label)
-        else:
-            # shouldn't happen
-            log.info('%s has not completed' % task_label)
-
-def _watch_koji_tasks(session, tasklist, quiet=False):
-    if not tasklist:
-        return
-    log.info('Watching tasks (this may be safely interrupted)...')
-    # Place holder for return value
-    rv = 0
-    try:
-        tasks = {}
-        for task_id in tasklist:
-            tasks[task_id] = TaskWatcher(task_id, session, quiet=quiet)
-        while True:
-            all_done = True
-            for task_id,task in tasks.items():
-                changed = task.update()
-                if not task.is_done():
-                    all_done = False
-                else:
-                    if changed:
-                        # task is done and state just changed
-                        if not quiet:
-                            _display_tasklist_status(tasks)
-                    if not task.is_success():
-                        rv = 1
-                for child in session.getTaskChildren(task_id):
-                    child_id = child['id']
-                    if not child_id in tasks.keys():
-                        tasks[child_id] = TaskWatcher(child_id, session, task.level + 1, quiet=quiet)
-                        tasks[child_id].update()
-                        # If we found new children, go through the list again,
-                        # in case they have children also
-                        all_done = False
-            if all_done:
-                if not quiet:
-                    print
-                    _display_task_results(tasks)
-                break
-
-            time.sleep(1)
-    except (KeyboardInterrupt):
-        if tasks:
-            log.info(
-"""\nTasks still running. You can continue to watch with the 'koji watch-task' command.
-Running Tasks:
-%s""" % '\n'.join(['%s: %s' % (t.str(), t.display_state(t.info))
-                   for t in tasks.values() if not t.is_done()]))
-        # /us/rbin/koji considers a ^c while tasks are running to be a
-        # non-zero exit.  I don't quite agree, so I comment it out here.
-        #rv = 1
-    return rv
-
-# Stole these three functions from /usr/bin/koji
-def _format_size(size):
-    if (size / 1073741824 >= 1):
-        return "%0.2f GiB" % (size / 1073741824.0)
-    if (size / 1048576 >= 1):
-        return "%0.2f MiB" % (size / 1048576.0)
-    if (size / 1024 >=1):
-        return "%0.2f KiB" % (size / 1024.0)
-    return "%0.2f B" % (size)
-
-def _format_secs(t):
-    h = t / 3600
-    t = t % 3600
-    m = t / 60
-    s = t % 60
-    return "%02d:%02d:%02d" % (h, m, s)
-
-def _progress_callback(uploaded, total, piece, time, total_time):
-    percent_done = float(uploaded)/float(total)
-    percent_done_str = "%02d%%" % (percent_done * 100)
-    data_done = _format_size(uploaded)
-    elapsed = _format_secs(total_time)
-
-    speed = "- B/sec"
-    if (time):
-        if (uploaded != total):
-            speed = _format_size(float(piece)/float(time)) + "/sec"
-        else:
-            speed = _format_size(float(total)/float(total_time)) + "/sec"
-
-    # write formated string and flush
-    sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" % ('='*(int(percent_done*36)), percent_done_str, elapsed, data_done, speed))
-    sys.stdout.flush()
-
-def build(args, sets=False):
-    # We may not actually nave an srpm arg if we come directly from the build task
-    if hasattr(args, 'srpm') and args.srpm and not args.scratch:
-        log.error('Non-scratch builds cannot be from srpms.')
-        sys.exit(1)
-    # We may have gotten arches by way of scratch build, so handle them
-    arches = None
-    if hasattr(args, 'arches'):
-        arches = args.arches
-    # Place holder for if we build with an uploaded srpm or not
-    url = None
-    # See if this is a chain or not
-    chain = None
-    if hasattr(args, 'chain'):
-        chain = args.chain
-    user = getuser(args.user)
-    # Need to do something with BUILD_FLAGS or KOJI_FLAGS here for compat
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-    except pyfedpkg.FedpkgError, e:
-        # This error needs a better print out
-        log.error('Could not use module: %s' % e)
-        sys.exit(1)
-    kojiconfig = _get_secondary_config(mymodule)
-    if args.target:
-        mymodule.target = args.target
-    try:
-        mymodule.init_koji(user, kojiconfig)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not log into koji: %s' % e)
-        sys.exit(1)
-    # handle uploading the srpm if we got one
-    if hasattr(args, 'srpm') and args.srpm:
-        # Figure out if we want a verbose output or not
-        callback = None
-        if not args.q:
-            callback = _progress_callback
-        # define a unique path for this upload.  Stolen from /usr/bin/koji
-        uniquepath = 'cli-build/%r.%s' % (time.time(),
-                                         ''.join([random.choice(string.ascii_letters)
-                                                 for i in range(8)]))
-        # Should have a try here, not sure what errors we'll get yet though
-        mymodule.koji_upload(args.srpm, uniquepath, callback=callback)
-        if not args.q:
-            # print an extra blank line due to callback oddity
-            print('')
-        url = '%s/%s' % (uniquepath, os.path.basename(args.srpm))
-    # Should also try this, again not sure what errors to catch
-    try:
-        task_id = mymodule.build(args.skip_tag, args.scratch, args.background,
-                                 url, chain, arches, sets)
-    except Exception, e:
-        log.error('Could not initiate build: %s' % e)
-        sys.exit(1)
-    # Now that we have the task ID we need to deal with it.
-    if args.nowait:
-        # Log out of the koji session
-        mymodule.kojisession.logout()
-        return
-    # pass info off to our koji task watcher
-    try:
-        mymodule.kojisession.logout()
-        return _watch_koji_tasks(mymodule.kojisession, [task_id], quiet=args.q)
-    except:
-        # We could get an auth error if credentials have expired
-        # use exc_info here to get what kind of error this is
-        log.error('Could not watch build: %s' % sys.exc_info()[0])
-        sys.exit(1)
-
-def chainbuild(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not use module %s' % e)
-        sys.exit(1)
-    # make sure we don't try to chain ourself
-    if mymodule.module in args.package:
-        log.error('%s must not be in the chain' % mymodule.module)
-        sys.exit(1)
-    # make sure we didn't get an empty chain
-    if args.package == [':']:
-        log.error('Must provide at least one dependency build')
-        sys.exit(1)
-    # Break the chain up into sections
-    sets = False
-    urls = []
-    build_set = []
-    log.debug('Processing chain %s' % ' '.join(args.package))
-    for component in args.package:
-        if component == ':':
-            # We've hit the end of a set, add the set as a unit to the
-            # url list and reset the build_set.
-            urls.append(build_set)
-            log.debug('Created a build set: %s' % ' '.join(build_set))
-            build_set = []
-            sets = True
-        else:
-            # Figure out the scm url to build from package name
-            try:
-                hash = pyfedpkg.get_latest_commit(component)
-                url = pyfedpkg.ANONGITURL % {'module':
-                                             component} + '#%s' % hash
-            except pyfedpkg.FedpkgError, e:
-                log.error('Could not get a build url for %s: %s'
-                          % (component, e))
-                sys.exit(1)
-            # If there are no ':' in the chain list, treat each object as an
-            # individual chain
-            if ':' in args.package:
-                build_set.append(url)
-            else:
-                urls.append([url])
-                log.debug('Created a build set: %s' % url)
-    # Take care of the last build set if we have one
-    if build_set:
-        log.debug('Created a build set: %s' % ' '.join(build_set))
-        urls.append(build_set)
-    # See if we ended in a : making our last build it's own group
-    if args.package[-1] == ':':
-        log.debug('Making the last build its own set.')
-        urls.append([])
-    # pass it off to build
-    args.chain = urls
-    args.skip_tag = False
-    args.scratch = False
-    build(args, sets=sets)
-
-def getuser(user=None):
-    if user:
-        return user
-    else:
-        try:
-            return fedora_cert.read_user_cert()
-        except:
-            log.debug('Could not read Fedora cert, using login name')
-            return os.getlogin()
-
-
-def check(args):
-    # not implimented; Not planned
-    log.warning('Not implimented yet, got %s' % args)
-
-def clean(args):
-    dry = False
-    useignore = True
-    if args.dry_run:
-        dry = True
-    if args.x:
-        useignore = False
-    try:
-        return pyfedpkg.clean(dry, useignore)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not clean: %s' % e)
-        sys.exit(1)
-
-def clog(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.clog()
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not generate clog: %s' % e)
-        sys.exit(1)
-
-def clone(args):
-    user = None
-    if not args.anonymous:
-        # Doing a try doesn't really work since the fedora_cert library just
-        # exits on error, but if that gets fixed this will work better.
-        user = getuser(args.user)
-    try:
-        if args.branches:
-            pyfedpkg.clone_with_dirs(args.module[0], user)
-        else:
-            pyfedpkg.clone(args.module[0], user, args.path, args.branch)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not clone: %s' % e)
-        sys.exit(1)
-
-def commit(args):
-    mymodule = None
-    if args.clog:
-        try:
-            mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-            mymodule.clog()
-        except pyfedpkg.FedpkgError, e:
-            log.error('coult not create clog: %s' % e)
-            sys.exit(1)
-        args.file = os.path.abspath(os.path.join(args.path, 'clog'))
-    try:
-        pyfedpkg.commit(args.path, args.message, args.file, args.files)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not commit: %s' % e)
-        sys.exit(1)
-    if args.tag:
-        try:
-            if not mymodule:
-                mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-            tagname = mymodule.nvr
-            pyfedpkg.add_tag(tagname, True, args.message, args.file)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Coult not create a tag: %s' % e)
-            sys.exit(1)
-    if args.push:
-        push(args)
-
-def compile(args):
-    arch = None
-    short = False
-    if args.arch:
-        arch = args.arch
-    if args.short_circuit:
-        short = True
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.compile(arch=arch, short=short)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not compile: %s' % e)
-        sys.exit(1)
-
-def diff(args):
-    try:
-        return pyfedpkg.diff(args.path, args.cached, args.files)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not diff: %s' % e)
-        sys.exit(1)
-
-def export(args):
-    # not implimented; not planned
-    log.warning('Not implimented yet, got %s' % args)
-
-def gimmespec(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        print(mymodule.spec)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not get spec file: %s' % e)
-        sys.exit(1)
-
-def giturl(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        print(mymodule.giturl())
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not get the giturl: %s' % e)
-        sys.exit(1)
-
-def import_srpm(args):
-    # See if we need to create a module from scratch, and do so
-    if args.create:
-        log.warning('Not implimented yet.')
-        sys.exit(0)
-    if not args.create:
-        try:
-            uploadfiles = pyfedpkg.import_srpm(args.srpm, path=args.path)
-            mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-            mymodule.upload(uploadfiles, replace=True)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Could not import srpm: %s' % e)
-            sys.exit(1)
-        # replace this system call with a proper diff target when it is
-        # readys
-        try:
-            pyfedpkg.diff(args.path, cached=True)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Could not diff the repo: %s' % e)
-            sys.exit(1)
-        print('--------------------------------------------')
-        print("New content staged and new sources uploaded.")
-        print("Commit if happy or revert with: git reset --hard HEAD")
-    return
-
-def install(args):
-    arch = None
-    short = False
-    if args.arch:
-        arch = args.arch
-    if args.short_circuit:
-        short = True
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.install(arch=arch, short=short)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not install: %s' % e)
-        sys.exit(1)
-
-def lint(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.lint(args.info)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not run rpmlint: %s' % e)
-        sys.exit(1)
-
-def local(args):
-    arch = None
-    if args.arch:
-        arch = args.arch
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        if args.md5:
-            return mymodule.local(arch=arch, hashtype='md5')
-        else:
-            return mymodule.local(arch=arch)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not build locally: %s' % e)
-        sys.exit(1)
-
-def mockbuild(args):
-    try:
-        pyfedpkg.sources(args.path)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not download sources: %s' % e)
-        sys.exit(1)
-
-    # Pick up any mockargs from the env
-    mockargs = []
-    try:
-        mockargs = os.environ['MOCKARGS'].split()
-    except KeyError:
-        # there were no args
-        pass
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.mockbuild(mockargs)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not run mockbuild: %s' % e)
-        sys.exit(1)
-
-def new(args):
-    try:
-        print(pyfedpkg.new(args.path))
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not get new changes: %s' % e)
-        sys.exit(1)
-
-def new_sources(args):
-    # Check to see if the files passed exist
-    for file in args.files:
-        if not os.path.isfile(file):
-            log.error('Path does not exist or is not a file: %s' % file)
-            sys.exit(1)
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        mymodule.upload(args.files, replace=args.replace)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not upload new sources: %s' % e)
-        sys.exit(1)
-    print("Source upload succeeded. Don't forget to commit the sources file")
-
-def patch(args):
-    # not implimented
-    log.warning('Not implimented yet, got %s' % args)
-
-def prep(args):
-    arch = None
-    if args.arch:
-        arch = args.arch
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.prep(arch=arch)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not prep: %s' % e)
-        sys.exit(1)
-
-def pull(args):
-    try:
-        pyfedpkg.pull(path=args.path, rebase=args.rebase, norebase=args.no_rebase)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not pull: %s' % e)
-        sys.exit(1)
-
-def push(args):
-    try:
-        pyfedpkg.push(path=args.path)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not push: %s' % e)
-        sys.exit(1)
-
-def retire(args):
-    try:
-        pyfedpkg.retire(args.path, args.msg)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not retire package: %s' % e)
-        sys.exit(1)
-    if args.push:
-        push()
-
-def scratchbuild(args):
-    # A scratch build is just a build with --scratch
-    args.scratch = True
-    args.skip_tag = False
-    build(args)
-
-def sources(args):
-    try:
-        pyfedpkg.sources(args.path, args.outdir)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not download sources: %s' % e)
-        sys.exit(1)
-
-def srpm(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        pyfedpkg.sources(args.path)
-        if args.md5:
-            mymodule.srpm('md5')
-        else:
-            mymodule.srpm()
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not make an srpm: %s' % e)
-        sys.exit(1)
-
-def switch_branch(args):
-    if args.branch:
-        try:
-            pyfedpkg.switch_branch(args.branch, args.path)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Unable to switch to another branch: %s' % e)
-            sys.exit(1)
-    else:
-        try:
-            (locals, remotes) = pyfedpkg._list_branches(path=args.path)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Unable to list branches: %s' % e)
-            sys.exit(1)
-        # This is some ugly stuff here, but trying to emulate
-        # the way git branch looks
-        locals = ['  %s  ' % branch for branch in locals]
-        local_branch = pyfedpkg._find_branch(args.path)
-        locals[locals.index('  %s  ' % local_branch)] = '* %s' % local_branch
-        print('Locals:\n%s\nRemotes:\n  %s' %
-              ('\n'.join(locals), '\n  '.join(remotes)))
-
-def tag(args):
-    if args.list:
-        try:
-            pyfedpkg.list_tag(args.tag)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Could not create a list of the tag: %s' % e)
-            sys.exit(1)
-    elif args.delete:
-        try:
-            pyfedpkg.delete_tag(args.tag, args.path)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Coult not delete tag: %s' % e)
-            sys.exit(1)
-    else:
-        filename = args.file
-        tagname = args.tag
-        try:
-            if not tagname or args.clog:
-                mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-                if not tagname:
-                    tagname = mymodule.nvr
-                if clog:
-                    mymodule.clog()
-                    filename = 'clog'
-            pyfedpkg.add_tag(tagname, args.force, args.message, filename)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Coult not create a tag: %s' % e)
-            sys.exit(1)
-
-def tagrequest(args):
-    user = getuser(args.user)
-    passwd = getpass.getpass('Password for %s: ' % user)
-
-    if not args.desc:
-        args.desc = raw_input('\nAdd a description to your request: ')
-
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        ticket = mymodule.new_ticket(user, passwd, args.desc, args.build)
-        print('Ticket #%s filed successfully' % ticket)
-    except pyfedpkg.FedpkgError, e:
-        print('Could not request a tag release: %s' % e)
-        sys.exit(1)
-
-def unusedfedpatches(args):
-    # not implimented; not planned
-    log.warning('Not implimented yet, got %s' % args)
-
-def unusedpatches(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        unused = mymodule.unused_patches()
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not get unused patches: %s' % e)
-        sys.exit(1)
-    print('\n'.join(unused))
-
-def update(args):
-    """Submit a new update to bodhi"""
-    user = getuser(args.user)
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not use module: %s' % e)
-        sys.exit(1)
-    nvr = '%s-%s-%s' % (mymodule.module, mymodule.ver, mymodule.rel)
-    template = """\
-    [ %(nvr)s ]
-
-    # bugfix, security, enhancement, newpackage (required)
-    type=
-
-    # testing, stable
-    request=testing
-
-    # Bug numbers: 1234,9876
-    bugs=%(bugs)s
-
-    # Description of your update
-    notes=Here is where you
-        give an explanation of
-        your update.
-
-    # Enable request automation based on the stable/unstable karma thresholds
-    autokarma=True
-    stable_karma=3
-    unstable_karma=-3
-
-    # Automatically close bugs when this marked as stable
-    close_bugs=True
-
-    # Suggest that users restart after update
-    suggest_reboot=False\
-    """
-
-    bodhi_args = {'nvr': nvr, 'bugs': ''}
-
-    # Extract bug numbers from the latest changelog entry
-    mymodule.clog()
-    clog = file('clog').read()
-    bugs = re.findall(r'#([0-9]*)', clog)
-    if bugs:
-        bodhi_args['bugs'] = ','.join(bugs)
-
-    template = textwrap.dedent(template) % bodhi_args
-
-    # Calculate the hash of the unaltered template
-    orig_hash = hashlib.new('sha1')
-    orig_hash.update(template)
-    orig_hash = orig_hash.hexdigest()
-
-    # Write out the template
-    out = file('bodhi.template', 'w')
-    out.write(template)
-    out.close()
-
-    # Open the template in a text editor
-    editor = os.getenv('EDITOR', 'vi')
-    pyfedpkg._run_command([editor, 'bodhi.template'], shell=True)
-
-    # Check to see if we got a template written out.  Bail otherwise
-    if not os.path.isfile('bodhi.template'):
-        log.error('No bodhi update details saved!')
-        sys.exit(1)
-    # If the template was changed, submit it to bodhi
-    hash = pyfedpkg._hash_file('bodhi.template', 'sha1')
-    if hash != orig_hash:
-        cmd = ['bodhi', '--new', '--release', mymodule.branch, '--file',
-               'bodhi.template', nvr, '--username', user]
-        try:
-            pyfedpkg._run_command(cmd, shell=True)
-        except pyfedpkg.FedpkgError, e:
-            log.error('Could not generate update request: %s' % e)
-            sys.exit(1)
-    else:
-        log.info('Bodhi update aborted!')
-
-    # Clean up
-    os.unlink('bodhi.template')
-    os.unlink('clog')
-
-def verify_files(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-        return mymodule.verify_files()
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not verify %%files list: %s' % e)
-        sys.exit(1)
-
-def verrel(args):
-    try:
-        mymodule = pyfedpkg.PackageModule(args.path, args.dist)
-    except pyfedpkg.FedpkgError, e:
-        log.error('Could not get ver-rel: %s' % e)
-        sys.exit(1)
-    print('%s-%s-%s' % (mymodule.module, mymodule.ver, mymodule.rel))
-
-
-def parse_cmdline(generate_manpage = False):
-    """Parse the command line"""
-
-    # Create the parser object
-    parser = argparse.ArgumentParser(description = 'Fedora Packaging utility',
-                                     prog = 'fedpkg',
-                                     epilog = "For detailed help pass " \
-                                               "--help to a target")
-
-    # Add top level arguments
-    # Let people override the "distribution"
-    parser.add_argument('--dist', default=None,
-                        help='Override the distribution, eg f15 or el6')
-    # Let somebody override the username found in fedora cert
-    parser.add_argument('-u', '--user',
-                        help = "Override the username found in the fedora cert")
-    # Let the user define which path to look at instead of pwd
-    parser.add_argument('--path', default = None,
-                    help='Directory to interact with instead of current dir')
-    # Verbosity
-    parser.add_argument('-v', action = 'store_true',
-                        help = 'Run with verbose debug output')
-    parser.add_argument('-q', action = 'store_true',
-                        help = 'Run quietly only displaying errors')
-
-    # Add a subparsers object to use for the actions
-    subparsers = parser.add_subparsers(title = 'Targets',
-                                       description = 'These are valid commands you can ask fedpkg to do.')
-
-    # Set up the various actions
-    # Add help to -h and --help
-    parser_help = subparsers.add_parser('help', help = 'Show usage')
-    parser_help.set_defaults(command = lambda args: usage(args, parser=parser))
-
-    # Add a common build parser to be used as a parent
-    parser_build_common = subparsers.add_parser('build_common',
-                                                add_help = False)
-    parser_build_common.add_argument('--nowait', action = 'store_true',
-                                     default = False,
-                                     help = "Don't wait on build")
-    parser_build_common.add_argument('--target',
-                                     default = None,
-                                     help = 'Define koji target to build into')
-    parser_build_common.add_argument('--background', action = 'store_true',
-                                     default = False,
-                                     help = 'Run the build at a lower priority')
-
-    # build target
-    parser_build = subparsers.add_parser('build',
-                                         help = 'Request build',
-                                         parents = [parser_build_common],
-                                         description = 'This command \
-                                         requests a build of the package \
-                                         in the build system.  By default \
-                                         it discovers the target to build for \
-                                         based on branch data, and uses the \
-                                         latest commit as the build source.')
-    parser_build.add_argument('--skip-tag', action = 'store_true',
-                              default = False,
-                              help = 'Do not attempt to tag package')
-    parser_build.add_argument('--scratch', action = 'store_true',
-                              default = False,
-                              help = 'Perform a scratch build')
-    parser_build.add_argument('--srpm',
-                              help = 'Build from an srpm.  Requires --scratch')
-    parser_build.set_defaults(command = build)
-
-    # chain build
-    parser_chainbuild = subparsers.add_parser('chain-build',
-                help = 'Build current package in order with other packages',
-                parents = [parser_build_common],
-                formatter_class=argparse.RawDescriptionHelpFormatter,
-                description = """
-Build current package in order with other packages.
-
-example: fedpkg chain-build libwidget libgizmo
-
-The current package is added to the end of the CHAIN list.
-Colons (:) can be used in the CHAIN parameter to define groups of
-packages.  Packages in any single group will be built in parallel
-and all packages in a group must build successfully and populate
-the repository before the next group will begin building.
-
-For example:
-
-fedpkg chain-build libwidget libaselib : libgizmo :
-
-will cause libwidget and libaselib to be built in parallel, followed
-by libgizmo and then the currect directory package. If no groups are
-defined, packages will be built sequentially.""")
-    parser_chainbuild.add_argument('package', nargs = '+',
-                                   help = 'List the packages and order you '
-                                   'want to build in')
-    parser_chainbuild.set_defaults(command = chainbuild)
-
-    # check preps; not planned
-    #parser_check = subparsers.add_parser('check',
-    #                            help = 'Check test srpm preps on all arches')
-    #parser_check.set_defaults(command = check)
-
-    # clean things up
-    parser_clean = subparsers.add_parser('clean',
-                                         help = 'Remove untracked files',
-                                         description = "This command can be \
-                                         used to clean up your working \
-                                         directory.  By default it will \
-                                         follow .gitignore rules.")
-    parser_clean.add_argument('--dry-run', '-n', action = 'store_true',
-                              help = 'Perform a dry-run')
-    parser_clean.add_argument('-x', action = 'store_true',
-                              help = 'Do not follow .gitignore rules')
-    parser_clean.set_defaults(command = clean)
-
-    # Create a changelog stub
-    parser_clog = subparsers.add_parser('clog',
-                                        help = 'Make a clog file containing '
-                                        'top changelog entry',
-                                        description = 'This will create a \
-                                        file named "clog" that contains the \
-                                        latest rpm changelog entry. The \
-                                        leading "- " text will be stripped.')
-    parser_clog.set_defaults(command = clog)
-
-    # clone take some options, and then passes the rest on to git
-    parser_clone = subparsers.add_parser('clone',
-                                         help = 'Clone and checkout a module',
-                                         description = 'This command will \
-                                         clone the named module from the \
-                                         configured repository base URL.  \
-                                         By default it will also checkout \
-                                         the master branch for your working \
-                                         copy.')
-    # Allow an old style clone with subdirs for branches
-    parser_clone.add_argument('--branches', '-B',
-                              action = 'store_true',
-                              help = 'Do an old style checkout with subdirs \
-                              for branches')
-    # provide a convenient way to get to a specific branch
-    parser_clone.add_argument('--branch', '-b',
-                              help = 'Check out a specific branch')
-    # allow to clone without needing a account on the fedora buildsystem
-    parser_clone.add_argument('--anonymous', '-a',
-                              action = 'store_true',
-                              help = 'Check out a branch anonymously')
-    # store the module to be cloned
-    parser_clone.add_argument('module', nargs = 1,
-                              help = 'Name of the module to clone')
-    parser_clone.set_defaults(command = clone)
-
-    parser_co = subparsers.add_parser('co', parents = [parser_clone],
-                                      conflict_handler = 'resolve',
-                                      help = 'Alias for clone',
-                                      description = 'This command will \
-                                      clone the named module from the \
-                                      configured repository base URL.  \
-                                      By default it will also checkout \
-                                      the master branch for your working \
-                                      copy.')
-    parser_co.set_defaults(command = clone)
-
-    # commit stuff
-    parser_commit = subparsers.add_parser('commit',
-                                          help = 'Commit changes',
-                                          description = 'This envokes a git \
-                                          commit.  All tracked files with \
-                                          changes will be committed unless \
-                                          a specific file list is provided.  \
-                                          $EDITOR will be used to generate a \
-                                          changelog message unless one is \
-                                          given to the command.  A push \
-                                          can be done at the same time.')
-    parser_commit.add_argument('-c', '--clog',
-                               default = False,
-                               action = 'store_true',
-                               help = 'Generate the commit message from the Changelog section')
-    parser_commit.add_argument('-t', '--tag',
-                               default = False,
-                               action = 'store_true',
-                               help = 'Create a tag for this commit')
-    parser_commit.add_argument('-m', '--message',
-                               default = None,
-                               help = 'Use the given <msg> as the commit message')
-    parser_commit.add_argument('-F', '--file',
-                               default = None,
-                               help = 'Take the commit message from the given file')
-    # allow one to commit /and/ push at the same time.
-    parser_commit.add_argument('-p', '--push',
-                               default = False,
-                               action = 'store_true',
-                               help = 'Commit and push as one action')
-    # Allow a list of files to be committed instead of everything
-    parser_commit.add_argument('files', nargs = '*',
-                               default = [],
-                               help = 'Optional list of specific files to commit')
-    parser_commit.set_defaults(command = commit)
-
-    parser_ci = subparsers.add_parser('ci', parents = [parser_commit],
-                                      conflict_handler = 'resolve',
-                                      help = 'Alias for commit',
-                                      description = 'This envokes a git \
-                                      commit.  All tracked files with \
-                                      changes will be committed unless \
-                                      a specific file list is provided.  \
-                                      $EDITOR will be used to generate a \
-                                      changelog message unless one is \
-                                      given to the command.  A push \
-                                      can be done at the same time.')
-    parser_ci.set_defaults(command = commit)
-
-    # compile locally
-    parser_compile = subparsers.add_parser('compile',
-                                           help = 'Local test rpmbuild compile',
-                                           description = 'This command calls \
-                                           rpmbuild to compile the source.  \
-                                           By default the prep and configure \
-                                           stages will be done as well, \
-                                           unless the short-circuit option \
-                                           is used.')
-    parser_compile.add_argument('--arch', help = 'Arch to compile for')
-    parser_compile.add_argument('--short-circuit', action = 'store_true',
-                                help = 'short-circuit compile')
-    parser_compile.set_defaults(command = compile)
-
-    # export the module; not planned
-    #parser_export = subparsers.add_parser('export',
-    #                                      help = 'Create a clean export')
-    #parser_export.set_defaults(command = export)
-
-    # diff, should work mostly like git diff
-    parser_diff = subparsers.add_parser('diff',
-                                        help = 'Show changes between commits, '
-                                        'commit and working tree, etc',
-                                        description = 'Use git diff to show \
-                                        changes that have been made to \
-                                        tracked files.  By default cached \
-                                        changes (changes that have been git \
-                                        added) will not be shown.')
-    parser_diff.add_argument('--cached', default = False,
-                             action = 'store_true',
-                             help = 'View staged changes')
-    parser_diff.add_argument('files', nargs = '*',
-                             default = [],
-                             help = 'Optionally diff specific files')
-    parser_diff.set_defaults(command = diff)
-
-    # gimmespec takes an optional path argument, defaults to cwd
-    parser_gimmespec = subparsers.add_parser('gimmespec',
-                                             help = 'Print the spec file name')
-    parser_gimmespec.set_defaults(command = gimmespec)
-
-    # giturl
-    parser_giturl = subparsers.add_parser('giturl',
-                                          help = 'Print the git url for '
-                                          'building',
-                                          description = 'This will show you \
-                                          which git URL would be used in a \
-                                          build command.  It uses the git \
-                                          hashsum of the HEAD of the current \
-                                          branch (which may not be pushed).')
-    parser_giturl.set_defaults(command = giturl)
-
-    # Import content into a module
-    parser_import_srpm = subparsers.add_parser('import',
-                                               help = 'Import srpm content '
-                                               'into a module',
-                                               description = 'This will \
-                                               extract sources, patches, and \
-                                               the spec file from an srpm and \
-                                               update the current module \
-                                               accordingly.  It will import \
-                                               to the current branch by \
-                                               default.')
-    parser_import_srpm.add_argument('--branch', '-b',
-                                    help = 'Branch to import onto',
-                                    default = 'devel')
-    parser_import_srpm.add_argument('--create', '-c',
-                                    help = 'Create a new local repo',
-                                    action = 'store_true')
-    parser_import_srpm.add_argument('srpm',
-                                    help = 'Source rpm to import')
-    parser_import_srpm.set_defaults(command = import_srpm)
-
-    # install locally
-    parser_install = subparsers.add_parser('install',
-                                           help = 'Local test rpmbuild install',
-                                           description = 'This will call \
-                                           rpmbuild to run the install \
-                                           section.  All leading sections \
-                                           will be processed as well, unless \
-                                           the short-circuit option is used.')
-    parser_install.add_argument('--arch', help = 'Arch to install for')
-    parser_install.add_argument('--short-circuit', action = 'store_true',
-                                help = 'short-circuit install')
-    parser_install.set_defaults(command = install)
-
-    # rpmlint target
-    parser_lint = subparsers.add_parser('lint',
-                                        help = 'Run rpmlint against local '
-                                        'build output')
-    parser_lint.add_argument('--info', '-i',
-                             default = False,
-                             action = 'store_true',
-                             help = 'Display explanations for reported messages')
-    parser_lint.set_defaults(command = lint)
-
-    # Build locally
-    parser_local = subparsers.add_parser('local',
-                                         help = 'Local test rpmbuild binary',
-                                         description = 'Locally test run of \
-                                         rpmbuild producing binary RPMs. The \
-                                         rpmbuild output will be logged into a \
-                                         file named \
-                                         .build-%{version}-%{release}.log')
-    parser_local.add_argument('--arch', help = 'Build for arch')
-    # optionally define old style hashsums
-    parser_local.add_argument('--md5', action = 'store_true',
-                              help = 'Use md5 checksums (for older rpm hosts)')
-    parser_local.set_defaults(command = local)
-
-    # Build in mock
-    parser_mockbuild = subparsers.add_parser('mockbuild',
-                                             help = 'Local test build using '
-                                             'mock',
-                                             description = 'This will use \
-                                             the mock utility to build the \
-                                             package for the distribution \
-                                             detected from branch \
-                                             information.  This can be \
-                                             overridden using the global \
-                                             --dist option.  Your user must \
-                                             be in the local "mock" group.')
-    parser_mockbuild.set_defaults(command = mockbuild)
-
-    # See what's different
-    parser_new = subparsers.add_parser('new',
-                                       help = 'Diff against last tag',
-                                       description = 'This will use git to \
-                                       show a diff of all the changes \
-                                       (even uncommited changes) since the \
-                                       last git tag was applied.')
-    parser_new.set_defaults(command = new)
-
-    # newsources target takes one or more files as input
-    parser_newsources = subparsers.add_parser('new-sources',
-                                              help = 'Upload new source files',
-                                              description = 'This will upload \
-                                              new source files to the \
-                                              lookaside cache and remove \
-                                              any existing files.  The \
-                                              "sources" and .gitignore file \
-                                              will be updated for the new \
-                                              file(s).')
-    parser_newsources.add_argument('files', nargs = '+')
-    parser_newsources.set_defaults(command = new_sources, replace = True)
-
-    # patch
-    parser_patch = subparsers.add_parser('patch',
-                                         help = 'Create and add a gendiff '
-                                         'patch file')
-    parser_patch.add_argument('--suffix')
-    parser_patch.add_argument('--rediff', action = 'store_true',
-                              help = 'Recreate gendiff file retaining comments')
-    parser_patch.set_defaults(command = patch)
-
-    # Prep locally
-    parser_prep = subparsers.add_parser('prep',
-                                        help = 'Local test rpmbuild prep',
-                                        description = 'Use rpmbuild to "prep" \
-                                        the sources (unpack the source \
-                                        archive(s) and apply any patches.)')
-    parser_prep.add_argument('--arch', help = 'Prep for a specific arch')
-    parser_prep.set_defaults(command = prep)
-
-    # Pull stuff
-    parser_pull = subparsers.add_parser('pull',
-                                        help = 'Pull changes from remote '
-                                        'repository and update working copy.',
-                                        description = 'This command uses git \
-                                        to fetch remote changes and apply \
-                                        them to the current working copy.  A \
-                                        rebase option is available which can \
-                                        be used to avoid merges.',
-                                        epilog = 'See git pull --help for \
-                                        more details')
-    parser_pull.add_argument('--rebase', action = 'store_true',
-                             help = 'Rebase the locally committed changes on \
-                             top of the remote changes after fetching.  This \
-                             can avoid a merge commit, but does rewrite local \
-                             history.')
-    parser_pull.add_argument('--no-rebase', action = 'store_true',
-                             help = 'Do not rebase, override .git settings to \
-                             automatically rebase')
-    parser_pull.set_defaults(command = pull)
-
-
-    # Push stuff
-    parser_push = subparsers.add_parser('push',
-                                        help = 'Push changes to remote '
-                                        'repository')
-    parser_push.set_defaults(command = push)
-
-    # retire stuff
-    parser_retire = subparsers.add_parser('retire',
-                                          help = 'Retire a package',
-                                          description = 'This command will \
-                                          remove all files from the repo \
-                                          and leave a dead.package file.')
-    parser_retire.add_argument('-p', '--push',
-                               default = False,
-                               action = 'store_true',
-                               help = 'Push changes to remote repository')
-    parser_retire.add_argument('msg',
-                               nargs = '?',
-                               help = 'Message for retiring the package')
-    parser_retire.set_defaults(command = retire)
-
-    # scratch build
-    parser_scratchbuild = subparsers.add_parser('scratch-build',
-                                                help = 'Request scratch build',
-                                                parents = [parser_build_common],
-                                                description = 'This command \
-                                                will request a scratch build \
-                                                of the package.  Without \
-                                                providing an srpm, it will \
-                                                attempt to build the latest \
-                                                commit, which must have been \
-                                                pushed.  By default all \
-                                                approprate arches will be \
-                                                built.')
-    parser_scratchbuild.add_argument('--arches', nargs = '*',
-                                     help = 'Build for specific arches')
-    parser_scratchbuild.add_argument('--srpm', help='Build from srpm')
-    parser_scratchbuild.set_defaults(command = scratchbuild)
-
-    # sources downloads all the source files, into an optional output dir
-    parser_sources = subparsers.add_parser('sources',
-                                           help = 'Download source files')
-    parser_sources.add_argument('--outdir',
-                default = os.curdir,
-                help = 'Directory to download files into (defaults to pwd)')
-    parser_sources.set_defaults(command = sources)
-
-    # srpm creates a source rpm from the module content
-    parser_srpm = subparsers.add_parser('srpm',
-                                        help = 'Create a source rpm')
-    # optionally define old style hashsums
-    parser_srpm.add_argument('--md5', action = 'store_true',
-                             help = 'Use md5 checksums (for older rpm hosts)')
-    parser_srpm.set_defaults(command = srpm)
-
-    # switch branches
-    parser_switchbranch = subparsers.add_parser('switch-branch',
-                                                help = 'Work with branches',
-                                                description = 'This command \
-                                                can create or switch to a \
-                                                local git branch.  It can \
-                                                also be used to list the \
-                                                existing local and remote \
-                                                branches.')
-    parser_switchbranch.add_argument('branch',  nargs = '?',
-                                     help = 'Switch to or create branch')
-    parser_switchbranch.add_argument('-l', '--list',
-                                help = 'List both remote-tracking branches and local branches',
-                                action = 'store_true')
-    parser_switchbranch.set_defaults(command = switch_branch)
-
-    # tag stuff
-    parser_tag = subparsers.add_parser('tag',
-                                       help = 'Management of git tags',
-                                       description = 'This command uses git \
-                                       to create, list, or delete tags.')
-    parser_tag.add_argument('-f', '--force',
-                            default = False,
-                            action = 'store_true',
-                            help = 'Force the creation of the tag')
-    parser_tag.add_argument('-m', '--message',
-                               default = None,
-                               help = 'Use the given <msg> as the tag message')
-    parser_tag.add_argument('-c', '--clog',
-                            default = False,
-                            action = 'store_true',
-                            help = 'Generate the tag message from the spec changelog section')
-    parser_tag.add_argument('-F', '--file',
-                            default = None,
-                            help = 'Take the tag message from the given file')
-    parser_tag.add_argument('-l', '--list',
-                            default = False,
-                            action = 'store_true',
-                            help = 'List all tags with a given pattern, or all if not pattern is given')
-    parser_tag.add_argument('-d', '--delete',
-                            default = False,
-                            action = 'store_true',
-                            help = 'Delete a tag')
-    parser_tag.add_argument('tag',
-                            nargs = '?',
-                            default = None,
-                            help = 'Name of the tag')
-    parser_tag.set_defaults(command = tag)
-
-    # Create a releng tag request
-    parser_tagrequest = subparsers.add_parser('tag-request',
-                                              help = 'Submit current build nvr '
-                                              'as a releng tag request',
-                                              description = 'This command \
-                                              files a ticket with release \
-                                              engineering, usually for a \
-                                              buildroot override.  It will \
-                                              discover the build n-v-r \
-                                              automatically but can be \
-                                              overridden.')
-    parser_tagrequest.add_argument('--desc', help="Description of tag request")
-    parser_tagrequest.add_argument('--build', help="Override the build n-v-r")
-    parser_tagrequest.set_defaults(command = tagrequest)
-
-    # Show unused Fedora patches; not planned
-    #parser_unusedfedpatches = subparsers.add_parser('unused-fedora-patches',
-    #        help = 'Print Fedora patches not used by Patch and/or ApplyPatch'
-    #               ' directives')
-    #parser_unusedfedpatches.set_defaults(command = unusedfedpatches)
-
-    # Show unused patches
-    parser_unusedpatches = subparsers.add_parser('unused-patches',
-                                                 help = 'Print list of patches '
-                                                 'not referenced by name in '
-                                                 'the specfile')
-    parser_unusedpatches.set_defaults(command = unusedpatches)
-
-    # Submit to bodhi for update
-    parser_update = subparsers.add_parser('update',
-                                          help = 'Submit last build as an '
-                                          'update',
-                                          description = 'This will create a \
-                                          bodhi update request for the \
-                                          current package n-v-r.')
-    parser_update.set_defaults(command = update)
-
-    # upload target takes one or more files as input
-    parser_upload = subparsers.add_parser('upload',
-                                          parents = [parser_newsources],
-                                          conflict_handler = 'resolve',
-                                          help = 'Upload source files',
-                                          description = 'This command will \
-                                          add a new source archive to the \
-                                          lookaside cache.  The sources and \
-                                          .gitignore file will be updated \
-                                          with the new file(s).')
-    parser_upload.set_defaults(command = new_sources, replace = False)
-
-    # Verify %files list locally
-    parser_verify_files = subparsers.add_parser('verify-files',
-                                                help='Locally verify %%files '
-                                                'section',
-                                                description="Locally run \
-                                                'rpmbuild -bl' to verify the \
-                                                spec file's %files sections. \
-                                                This requires a successful run \
-                                                of 'fedpkg compile'")
-    parser_verify_files.set_defaults(command = verify_files)
-
-    # Get version and release
-    parser_verrel = subparsers.add_parser('verrel',
-                                          help = 'Print the '
-                                          'name-version-release')
-    parser_verrel.set_defaults(command = verrel)
-
-    if not generate_manpage:
-        # Parse the args
-        return parser.parse_args()
-    else:
-        # Generate the man page
-        import fedpkg_man_page
-        fedpkg_man_page.generate(parser, subparsers)
-        sys.exit(0)
-        # no return possible
-
-
-# The main code goes here
 if __name__ == '__main__':
-    args = parse_cmdline()
+    client = cliClient()
+    client._do_imports()
+    client.parse_cmdline()
 
-    if not args.path:
+    if not client.args.path:
         try:
-            args.path=os.getcwd()
+            client.args.path=os.getcwd()
         except:
             print('Could not get current path, have you deleted it?')
             sys.exit(1)
-
-    # Import non-standard python stuff here
-    import fedora_cert
-    import koji
-    import pyfedpkg
 
     # setup the logger -- This logger will take things of INFO or DEBUG and
     # log it to stdout.  Anything above that (WARN, ERROR, CRITICAL) will go
     # to stderr.  Normal operation will show anything INFO and above.
     # Quiet hides INFO, while Verbose exposes DEBUG.  In all cases WARN or
     # higher are exposed (via stderr).
-    log = pyfedpkg.log
+    log = client.site.log
+    client.setupLogging(log)
 
-    if args.v:
+    if client.args.v:
         log.setLevel(logging.DEBUG)
-    elif args.q:
+    elif client.args.q:
         log.setLevel(logging.WARNING)
     else:
         log.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    # have to create a filter for the stdout stream to filter out WARN+
-    myfilt = StdoutFilter()
-    stdouthandler = logging.StreamHandler(sys.stdout)
-    stdouthandler.addFilter(myfilt)
-    stdouthandler.setFormatter(formatter)
-    stderrhandler = logging.StreamHandler()
-    stderrhandler.setLevel(logging.WARNING)
-    stderrhandler.setFormatter(formatter)
-    log.addHandler(stdouthandler)
-    log.addHandler(stderrhandler)
 
     # Run the necessary command
     try:
-        args.command(args)
+        client.args.command()
     except KeyboardInterrupt:
         pass
