@@ -1,0 +1,4 @@
+include COPYING
+include src/rpkg.bash
+include src/rpkg.conf
+include src/rpkg_man_page.py
