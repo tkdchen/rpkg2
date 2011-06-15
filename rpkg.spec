@@ -32,9 +32,11 @@ Summary:        Python library for interacting with rpm+git
 Group:          Applications/Databases
 Requires:       GitPython >= 0.2.0, python-argparse
 Requires:       python-pycurl, koji
-Requires:       rpm-build
+Requires:       rpm-build, rpm-python
+Requires:       rpmlint, mock, curl, openssh-clients, redhat-rpm-config
 %if 0%{?rhel} == 5 || 0%{?rhel} == 4
 Requires:       python-kitchen
+Requires:       python-hashlib
 %endif
 
 %description -n pyrpkg
