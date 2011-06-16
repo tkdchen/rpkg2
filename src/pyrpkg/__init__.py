@@ -1167,7 +1167,7 @@ class Commands():
         """Switch the working branch
 
         Will create a local branch if one doesn't already exist,
-        based on <remote>/<branch>/master
+        based on <remote>/<branch>
 
         Logs output and returns nothing.
         """
