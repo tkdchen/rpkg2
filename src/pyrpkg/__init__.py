@@ -1271,7 +1271,6 @@ class Commands():
             raise rpkgError('Lookaside failure.')
         curl.close()
 
-#TODO This needs to be turned into properties
     def site_setup(self):
         """Setup site definitions for the repo.
 
