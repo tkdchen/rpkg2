@@ -8,6 +8,9 @@
 # Free Software Foundation; either version 2 of the License, or (at your
 # option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
 # the full text of the license.
+#
+# There are 6 functions derived from /usr/bin/koji which are licensed under
+# LGPLv2.1.  See comments before those functions.
 
 import argparse
 import sys
@@ -1115,6 +1118,10 @@ defined, packages will be built sequentially.""" %
             sys.exit(1)
 
     # Other class stuff goes here
+    # The next 6 functions come from the koji project, from /usr/bin/koji
+    # They should be in a library somewhere, but I have to steal them.
+    # The code is licensed LGPLv2.1 and thus my (slightly) derived code
+    # is too.
     def _display_tasklist_status(self, tasks):
         free = 0
         open = 0
