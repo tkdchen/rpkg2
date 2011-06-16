@@ -3,11 +3,11 @@
 
 Name:           rpkg
 Version:        1.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
 Group:          Applications/System
-License:        GPLv2+
+License:        GPLv2+ and LGPLv2
 URL:            https://fedorahosted.org/rpkg
 Source0:        https://fedorahosted.org/releases/r/p/rpkg/rpkg-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -19,9 +19,10 @@ BuildArch:      noarch
 BuildRequires:  python-devel, python-setuptools
 # We br these things for man page generation due to imports
 BuildRequires:  GitPython, koji, python-pycurl
-%if 0%{?rhel} == 5 || 0%{?rhel} == 4
+%if 0%{?rhel} < 7
 BuildRequires:  python-hashlib
 BuildRequires:  python-argparse
+BuildRequires:  python-kitchen
 %endif
 
 %description
@@ -34,7 +35,7 @@ Requires:       GitPython >= 0.2.0, python-argparse
 Requires:       python-pycurl, koji
 Requires:       rpm-build, rpm-python
 Requires:       rpmlint, mock, curl, openssh-clients, redhat-rpm-config
-%if 0%{?rhel} == 5 || 0%{?rhel} == 4
+%if 0%{?rhel} < 7
 Requires:       python-kitchen
 Requires:       python-hashlib
 %endif
@@ -53,7 +54,7 @@ A python library for managing RPM package sources in a git repository.
 
 
 %install
-#rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
 %{__install} -d $RPM_BUILD_ROOT%{_mandir}/man1
 %{__install} -p -m 0644 rpkg.1 $RPM_BUILD_ROOT%{_mandir}/man1
@@ -64,19 +65,21 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %files
-%defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/rpkg
 %{_sysconfdir}/bash_completion.d
 %{_bindir}/%{name}
 %{_mandir}/*/*
 
 %files -n pyrpkg
-%doc COPYING README
+%doc COPYING COPYING-koji LGPL README
 # For noarch packages: sitelib
-%{python_sitelib}/*
+%{python_sitelib}/pyrpkg
+%{python_sitelib}/rpkg-1.0-py?.?.egg-info
 
 
 %changelog
+* Fri Jun 17 2011 Jesse Keating <jkeating@redhat.com> - 1.0-2
+- Fix up things found in review
+
 * Tue Jun 14 2011 Jesse Keating <jkeating@redhat.com> - 1.0-1
 - Initial package
-
