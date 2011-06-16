@@ -16,7 +16,7 @@ Requires:       python-argparse
 Requires:       pyrpkg => %{name}-%{version}
 
 BuildArch:      noarch
-BuildRequires:  python-devel
+BuildRequires:  python-devel, python-setuptools
 # We br these things for man page generation due to imports
 BuildRequires:  GitPython, koji, python-pycurl
 %if 0%{?rhel} == 5 || 0%{?rhel} == 4
