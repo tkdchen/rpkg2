@@ -4,7 +4,7 @@ from setuptools import setup, command
 
 setup(
     name = "rpkg",
-    version = "1.0",
+    version = "1.1",
     author = "Jesse Keating",
     author_email = "jkeating@redhat.com",
     description = ("A python library and runtime script for managing RPM"

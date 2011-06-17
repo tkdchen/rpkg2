@@ -1,4 +1,6 @@
 include COPYING
+include COPYING-koji
+include LGPL
 include src/rpkg.bash
 include src/rpkg.conf
 include src/rpkg_man_page.py
