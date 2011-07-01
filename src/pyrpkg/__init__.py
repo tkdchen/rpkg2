@@ -1343,38 +1343,6 @@ class Commands():
             raise rpkgError('Lookaside failure.')
         curl.close()
 
-    def site_setup(self):
-        """Setup site definitions for the repo.
-
-        May be discovered from branch data or overridden by the dist option.
-        This is where all the interesting stuff happens that may differ from
-        site to site, and most likely be overridden in site plugins.
-        """
-
-        try:
-            # This regex should find the 'rhel-5' or 'rhel-6.2' parts of the
-            # branch name.  There should only be one of those, and all branches
-            # should end in one.
-            osver = re.search(r'rhel-\d.*$', self.branch_merge).group()
-        except AttributeError:
-            raise rpkgError('Could not find the base OS ver from branch name \
-                             %s' % self.branch_merge)
-        self.distvar, self.distval = osver.split('-')
-        self.disttag = 'el%s' % self.distval
-        self.rpmdefines = ["--define '_sourcedir %s'" % self.path,
-                           "--define '_specdir %s'" % self.path,
-                           "--define '_builddir %s'" % self.path,
-                           "--define '_srcrpmdir %s'" % self.path,
-                           "--define '_rpmdir %s'" % self.path,
-                           "--define 'dist .%s'" % self.disttag,
-                           "--define '%s %s'" % (self.distvar, self.distval),
-                           "--define '%s 1'" % self.disttag]
-        # Define the hashtype to use for srpms
-        # Default to sha256 hash type
-        self.hashtype = 'sha256'
-        if self.distvar == 'rhel' and float(self.distval) <= 5:
-            self.hashtype = 'md5'
-
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False):
         """Initiate a build of the module.  Available options are:
