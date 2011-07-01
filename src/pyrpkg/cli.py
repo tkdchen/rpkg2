@@ -533,11 +533,20 @@ defined, packages will be built sequentially.""" %
         """Register the patch target"""
 
         patch_parser = self.subparsers.add_parser('patch',
-                                             help = 'Create and add a gendiff '
-                                             'patch file')
-        patch_parser.add_argument('--suffix')
-        patch_parser.add_argument('--rediff', action = 'store_true',
-                          help = 'Recreate gendiff file retaining comments')
+                                         help = 'Create and add a gendiff '
+                                         'patch file',
+                                         epilog = 'Patch file will be '
+                                         'named: package-version-suffix.patch '
+                                         'and the file will be added to the '
+                                         'repo index')
+        patch_parser.add_argument('--rediff',
+                          help = 'Recreate gendiff file retaining comments \
+                          Saves old patch file with a suffix of ~',
+                          action = 'store_true',
+                          default = False)
+        patch_parser.add_argument('suffix',
+                                  help = 'Look for files with this suffix \
+                                  to diff')
         patch_parser.set_defaults(command = self.patch)
 
     def register_prep(self):
@@ -995,7 +1004,11 @@ defined, packages will be built sequentially.""" %
               sources file")
 
     def patch(self):
-        self.log.warning('Not implimented yet')
+        try:
+            self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
+        except Exception, e:
+            self.log.error('Could not generate a patch: %s' % e)
+            sys.exit(1)
 
     def prep(self):
         try:
