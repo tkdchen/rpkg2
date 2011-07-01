@@ -26,7 +26,7 @@ except ImportError:
     import koji
 
 class cliClient():
-    """This is a client class for rhtpkg clients."""
+    """This is a client class for rpkg clients."""
 
     def __init__(self, config, name=None):
         """This requires a ConfigParser object
@@ -300,7 +300,7 @@ defined, packages will be built sequentially.""" %
         # provide a convenient way to get to a specific branch
         clone_parser.add_argument('--branch', '-b',
                                   help = 'Check out a specific branch')
-        # allow to clone without needing a account on the rht buildsystem
+        # allow to clone without needing a account on the scm server
         clone_parser.add_argument('--anonymous', '-a',
                                   action = 'store_true',
                                   help = 'Check out a module anonymously')
@@ -725,7 +725,7 @@ defined, packages will be built sequentially.""" %
                                             'rpmbuild -bl' to verify the \
                                             spec file's %files sections. \
                                             This requires a successful run \
-                                            of 'rhtpkg compile'")
+                                            of the 'compile' target.")
         verify_files_parser.set_defaults(command = self.verify_files)
 
     def register_verrel(self):
