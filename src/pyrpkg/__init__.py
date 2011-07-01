@@ -1083,6 +1083,78 @@ class Commands():
         self.log.debug('Diffing from tag %s' % tag)
         return self.repo.git.diff('-M', tag)
 
+    def patch(self, suffix, rediff=False):
+        """Generate a patch from the expanded source and add it to index
+
+        suffix: Look for files named with this suffix to diff
+        rediff: optionally retain any comments in the patch file and rediff
+
+        Will create a patch file named name-version-suffix.patch
+        """
+
+        # Create the outfile name based on arguments
+        outfile = '%s-%s-%s.patch' % (self.module_name, self.ver, suffix)
+
+        # If we want to rediff, the patch file has to already exist
+        if rediff and not os.path.exists(os.path.join(self.path, outfile)):
+            raise rpkgError('Patch file %s not found, unable to rediff' %
+                            os.path.join(self.path, outfile))
+
+        # See if there is a source dir to diff in
+        if not os.path.isdir(os.path.join(self.path,
+                                          '%s-%s' % (self.module_name,
+                                                     self.ver))):
+            raise rpkgError('Expanded source dir not found!')
+
+        # Setup the command
+        cmd = ['gendiff', '%s-%s' % (self.module_name, self.ver),
+               '.%s' % suffix]
+
+        # Try to run the command and capture the output
+        try:
+            self.log.debug('Running %s' % ' '.join(cmd))
+            (output, errors) = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                cwd=self.path).communicate()
+        except Exception, e:
+            raise rpkgError('Error running gendiff: %s' % e)
+
+        # log any errors
+        if errors:
+            self.log.error(errors)
+
+        # See if we got anything
+        if not output:
+            raise rpkgError('gendiff generated an empty patch!')
+
+        # See if we are rediffing and handle the old patch file
+        if rediff:
+            oldpatch = open(os.path.join(self.path, outfile), 'r').readlines()
+            # back up the old file
+            self.log.debug('Moving existing patch %s to %s~' % (outfile,
+                                                                outfile))
+            os.rename(os.path.join(self.path, outfile),
+                      '%s~' % os.path.join(self.path, outfile))
+            # Capture the lines preceeding the diff
+            newhead = []
+            for line in oldpatch:
+                if line.startswith('diff'):
+                    break
+                else:
+                    newhead.append(line)
+
+            log.debug('Saved from previous patch: \n%s' % ''.join(newhead))
+            # Stuff the new head in front of the existing output
+            output = ''.join(newhead) + output
+
+        # Write out the patch
+        open(os.path.join(self.path, outfile), 'w').write(output)
+
+        # Add it to the index
+        # Again this returns a blank line we want to keep quiet
+        rv = self.repo.index.add([outfile])
+        log.info('Created %s and added it to the index' % outfile)
+
     def pull(self, rebase=False, norebase=False):
         """Pull changes from the remote repository
 
