@@ -2,8 +2,8 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.1
-Release:        2%{?dist}
+Version:        1.2
+Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
 Group:          Applications/System
@@ -78,6 +78,14 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Jul 20 2011 Jesse Keating <jkeating@redhat.com> - 1.2-1
+- Fill out the krb_creds function (jkeating)
+- Fix the log message (jkeating)
+- site_setup is no longer needed (jkeating)
+- Remove some rhtisms (jkeating)
+- Wire up the patch command in client code (jkeating)
+- Add a patch command (jkeating)
+
 * Fri Jun 17 2011 Jesse Keating <jkeating@redhat.com> - 1.1-2
 - Use version macro in files
 
