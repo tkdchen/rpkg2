@@ -1000,8 +1000,8 @@ defined, packages will be built sequentially.""" %
         except Exception, e:
             self.log.error('Could not upload new sources: %s' % e)
             sys.exit(1)
-        print("Source upload succeeded. Don't forget to commit the \
-              sources file")
+        print("Source upload succeeded. Don't forget to commit the "
+              "sources file")
 
     def patch(self):
         try:
