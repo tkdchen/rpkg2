@@ -32,6 +32,11 @@ import stat
 import StringIO
 import fnmatch
 import cli
+# Try to import krb, it's OK if it fails
+try:
+    import krbV
+except ImportError:
+    pass
 
 
 # Define our own error class
@@ -491,6 +496,18 @@ class Commands():
         curl.setopt(pycurl.URL, self.lookaside_cgi)
 
         return curl
+
+    def _has_krb_creds(self):
+        # This function is lifted from /usr/bin/koji
+        if not sys.modules.has_key('krbV'):
+            return False
+        try:
+            ctx = krbV.default_context()
+            ccache = ctx.default_ccache()
+            princ = ccache.principal()
+            return True
+        except krbV.Krb5Error:
+            return False
 
     def _hash_file(self, file, hashtype):
         """Return the hash of a file given a hash type"""
