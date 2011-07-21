@@ -262,7 +262,7 @@ class Commands():
 
         if not self._kojiweburl:
             self.load_kojisession()
-        return self._kojisession
+        return self._kojiweburl
 
     @property
     def localarch(self):
