@@ -390,7 +390,7 @@ class Commands():
             raise rpkgError('Could not find the base OS ver from branch name \
                              %s' % self.branch_merge)
         self._distvar, self._distval = osver.split('-')
-        self._distval = self._distval
+        self._distval = self._distval.replace('.', '_')
         self._disttag = 'el%s' % self._distval
         self._rpmdefines = ["--define '_sourcedir %s'" % self.path,
                             "--define '_specdir %s'" % self.path,
@@ -399,7 +399,7 @@ class Commands():
                             "--define '_rpmdir %s'" % self.path,
                             "--define 'dist .%s'" % self.disttag,
                             "--define '%s %s'" % (self._distvar,
-                                                  int(float(self._distval))),
+                                                  self._distval.split('_')[0]),
                             # int and float this to remove the decimal
                             "--define '%s 1'" % self.disttag]
 
