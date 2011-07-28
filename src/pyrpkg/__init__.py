@@ -660,6 +660,21 @@ class Commands():
 
         return os.path.getmtime(file1) > os.path.getmtime(file2)
 
+    def _get_build_arches_from_spec(self):
+        """Given the path to an spec, retrieve the build arches
+
+        """
+
+        spec = os.path.join(self.path, self.spec)
+        try:
+            hdr = rpm.spec(spec)
+        except Exception, er:
+            raise rpkgError('%s is not a spec file' % spec)
+        archlist = [ pkg.header['arch'] for pkg in hdr.packages]
+        if not archlist:
+            raise rpkgError('No compatible build arches found in %s' % srpm)
+        return archlist
+    
     def _get_build_arches_from_srpm(self, srpm, arches):
         """Given the path to an srpm, determine the possible build arches
 
@@ -1603,28 +1618,41 @@ class Commands():
         self._run_command(cmd, shell=True)
         return
 
-    def lint(self, info=False):
+    def lint(self, info=False, rpmlintconf=None):
         """Run rpmlint over a built srpm
 
         Log the output and returns nothing
+        rpmlintconf is the name of the config file passed to rpmlint if
+        specified by the command line argument.
         """
 
-        # Make sure we have rpms to run on
+        # Check for srpm
         srpm = "%s-%s-%s.src.rpm" % (self.module_name, self.ver, self.rel)
         if not os.path.exists(os.path.join(self.path, srpm)):
-            raise rpkgError('Need to build srpm and rpm first')
+            log.warn('No srpm found')
+
         # Get the possible built arches
-        arches = self._get_build_arches_from_srpm(os.path.join(self.path, srpm),
-                                                  [self.localarch])
+        arches = self._get_build_arches_from_spec()
         rpms = []
         for arch in arches:
-            rpms.extend([os.path.join(self.path, arch, file) for file in
+            if os.path.exists(os.path.join(self.path, arch)):
+                # For each available arch folder, lists file and keep
+                # those ending with .rpm
+                rpms.extend([os.path.join(self.path, arch, file) for file in
                          os.listdir(os.path.join(self.path, arch))
                          if file.endswith('.rpm')])
+        if rpms is []:
+            log.warn('No rpm found')
         cmd = ['rpmlint']
         if info:
             cmd.extend(['-i'])
-        cmd.extend([os.path.join(self.path, srpm)])
+        if rpmlintconf:
+            cmd.extend(["-f", os.path.join(self.path, rpmlintconf)])
+        elif os.path.exists(os.path.join(self.path, ".rpmlint")):
+            cmd.extend(["-f", os.path.join(self.path, ".rpmlint")])
+        cmd.append(os.path.join(self.path, self.spec))
+        if os.path.exists(os.path.join(self.path, srpm)):
+            cmd.append(os.path.join(self.path, srpm))
         cmd.extend(rpms)
         # Run the command
         self._run_command(cmd, shell=True)

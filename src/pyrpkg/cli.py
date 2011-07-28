@@ -479,12 +479,20 @@ defined, packages will be built sequentially.""" %
 
         lint_parser = self.subparsers.add_parser('lint',
                                             help = 'Run rpmlint against local '
-                                            'build output')
+                                            'spec and build output if present. \
+                                            Rpmlint can be configured using the \
+                                            --rpmlintconf/-r option or by setting \
+                                            a .rpmlint file in the working \
+                                            directory')
         lint_parser.add_argument('--info', '-i',
                                  default = False,
                                  action = 'store_true',
                                  help = 'Display explanations for reported \
                                  messages')
+        lint_parser.add_argument('--rpmlintconf', '-r',
+                                 default = None,
+                                 help = 'Use a specific configuration file \
+                                 for rpmlint')
         lint_parser.set_defaults(command = self.lint)
 
     def register_local(self):
@@ -905,7 +913,7 @@ defined, packages will be built sequentially.""" %
                          short=self.args.short_circuit)
 
     def lint(self):
-        self.cmd.lint(self.args.info)
+        self.cmd.lint(self.args.info, self.args.rpmlintconf)
 
     def local(self):
         if self.args.md5:

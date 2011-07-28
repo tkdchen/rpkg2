@@ -140,6 +140,7 @@ _rpkg()
             ;;
         lint)
             options="--info"
+            options_file="--rpmlintconf"
             ;;
         local)
             options="--md5"
