@@ -1481,8 +1481,8 @@ class Commands():
             self.log.info('Chain building %s + %s for %s' % (self.nvr,
                                                              chain[:-1],
                                                              self.target))
-            self.log.debug('Building chain %s for %s with options %s and a \
-                           priority of %s' %
+            self.log.debug('Building chain %s for %s with options %s and a '
+                           'priority of %s' %
                            (chain, self.target, opts, priority))
             self.log.debug(' '.join(cmd))
             task_id = self.kojisession.chainBuild(chain, self.target, opts,
