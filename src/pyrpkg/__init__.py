@@ -86,6 +86,8 @@ class Commands():
         self.build_client = build_client
         # A way to override the discovered "distribution"
         self.dist = dist
+        # Set the default hashtype
+        self.hashtype = 'sha256'
         # Set place holders for properties
         # Anonymous buildsys session
         self._anon_kojisession = None
