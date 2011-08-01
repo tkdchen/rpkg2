@@ -226,7 +226,7 @@ class Commands():
         """
 
         if self.dist:
-            self._branch = self.dist
+            self._branch_merge = self.dist
         else:
             try:
                 localbranch = self.repo.active_branch.name
