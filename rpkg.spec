@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.2
+Version:        1.3
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,13 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Aug 01 2011 Jesse Keating <jkeating@redhat.com> - 1.3-1
+- Fix a debug string (jkeating)
+- Set the right property (jkeating)
+- Make sure we have a default hashtype (jkeating)
+- Use underscore for the dist tag (jkeating)
+- Fix the kojiweburl property (jkeating)
+
 * Wed Jul 20 2011 Jesse Keating <jkeating@redhat.com> - 1.2-1
 - Fill out the krb_creds function (jkeating)
 - Fix the log message (jkeating)
