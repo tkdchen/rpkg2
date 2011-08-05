@@ -61,6 +61,6 @@ else:
 
 # Run the necessary command
 try:
-    client.args.command()
+    sys.exit(client.args.command())
 except KeyboardInterrupt:
     pass

@@ -1221,9 +1221,9 @@ Tasks still running. You can continue to watch with the 'brew watch-task' comman
     Running Tasks:
     %s""" % '\n'.join(['%s: %s' % (t.str(), t.display_state(t.info))
                        for t in tasks.values() if not t.is_done()]))
-            # /usr/bin/koji considers a ^c while tasks are running to be a
-            # non-zero exit.  I don't quite agree, so I comment it out here.
-            #rv = 1
+            # A ^c should return non-zero so that it doesn't continue
+            # on to any && commands.
+            rv = 1
         return rv
     
     # Stole these three functions from /usr/bin/koji
