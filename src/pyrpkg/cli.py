@@ -220,8 +220,10 @@ class cliClient():
         build_parser.add_argument('--scratch', action = 'store_true',
                                   default = False,
                                   help = 'Perform a scratch build')
-        build_parser.add_argument('--srpm',
-                                  help = 'Build from an srpm.')
+        build_parser.add_argument('--srpm', nargs = '?', const = 'CONSTRUCT',
+                                  help = 'Build from an srpm.  If no srpm \
+                                  is provided with this option an srpm will \
+                                  be generated from current module content.')
         build_parser.set_defaults(command = self.build)
 
     def register_chainbuild(self):
@@ -608,7 +610,11 @@ defined, packages will be built sequentially.""" %
                                         built.')
         scratch_build_parser.add_argument('--arches', nargs = '*',
                                           help = 'Build for specific arches')
-        scratch_build_parser.add_argument('--srpm', help='Build from srpm')
+        scratch_build_parser.add_argument('--srpm', nargs = '?',
+                                  const = 'CONSTRUCT',
+                                  help = 'Build from an srpm.  If no srpm \
+                                  is provided with this option an srpm will \
+                                  be generated from current module content.')
         scratch_build_parser.set_defaults(command = self.scratch_build)
 
     def register_sources(self):
@@ -754,7 +760,12 @@ defined, packages will be built sequentially.""" %
         if self.args.target:
             self.cmd._target = self.args.target
         # handle uploading the srpm if we got one
-        if hasattr(self.args, 'srpm') and self.args.srpm:
+        if (self.args, 'srpm') and self.args.srpm:
+            # See if we need to generate the srpm first
+            if self.args.srpm == 'CONSTRUCT':
+                self.log.debug('Generating an srpm')
+                self.srpm()
+                self.args.srpm = '%s.src.rpm' % self.cmd.nvr
             # Figure out if we want a verbose output or not
             callback = None
             if not self.args.q:
@@ -1048,7 +1059,7 @@ defined, packages will be built sequentially.""" %
     def srpm(self):
         try:
             self.cmd.sources()
-            if self.args.md5:
+            if hasattr(self.args, 'md5') and self.args.md5:
                 self.cmd.srpm('md5')
             else:
                 self.cmd.srpm()
