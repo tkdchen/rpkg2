@@ -298,7 +298,7 @@ class Commands():
         self.log.debug('Running: %s' % ' '.join(cmd))
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
+                                    cwd=self.path, stderr=subprocess.PIPE)
             output, error = proc.communicate()
         except OSError, e:
             raise rpkgError(e)
