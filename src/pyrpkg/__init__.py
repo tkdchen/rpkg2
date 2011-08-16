@@ -839,8 +839,8 @@ class Commands():
             raise rpkgError('Cannot combine bare cloning with a branch')
         elif branch:
             # For now we have to use switch branch
-            self.log.debug('Cloning %s without a checkout' % giturl)
-            cmd.extend(['-n', giturl])
+            self.log.debug('Checking out a specific branch %s' % giturl)
+            cmd.extend(['-b', branch, giturl])
         elif bare_dir:
             self.log.debug('Cloning %s bare' % giturl)
             cmd.extend(['--bare', giturl, bare_dir])
@@ -848,10 +848,6 @@ class Commands():
             self.log.debug('Cloning %s' % giturl)
             cmd.extend([giturl])
         self._run_command(cmd, cwd=path)
-
-        # Check if we're supposed to work on a branch and if so, switch_branch
-        if branch:
-            self.switch_branch(branch, path=os.path.join(path, module))
 
         return
 
