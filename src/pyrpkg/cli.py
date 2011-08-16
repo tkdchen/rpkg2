@@ -885,7 +885,7 @@ defined, packages will be built sequentially.""" %
                 self.cmd.clone_with_dirs(self.args.module[0],
                                          anon=self.args.anonymous)
             else:
-                self.cmd.clone(self.args.module[0], self.args.branch,
+                self.cmd.clone(self.args.module[0], branch=self.args.branch,
                                anon=self.args.anonymous)
         except Exception, e:
             self.log.error('Could not clone: %s' % e)
