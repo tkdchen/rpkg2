@@ -430,7 +430,7 @@ class Commands():
         if deadpackage:
             raise rpkgError('No spec file found. This package is retired')
         else:
-            raise rpkgError('No spec file found. Please import a new package')
+            raise rpkgError('No spec file found.')
 
     @property
     def target(self):
