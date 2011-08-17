@@ -1489,8 +1489,8 @@ class Commands():
         else:
             cmd.append(url)
             self.log.info('Building %s for %s' % (self.nvr, self.target))
-            self.log.debug('Building %s for %s with options %s and a priority \
-                           of %s' % (url, self.target, opts, priority))
+            self.log.debug('Building %s for %s with options %s and a priority '
+                           'of %s' % (url, self.target, opts, priority))
             self.log.debug(' '.join(cmd))
             task_id = self.kojisession.build(url, self.target, opts,
                                              priority=priority)
