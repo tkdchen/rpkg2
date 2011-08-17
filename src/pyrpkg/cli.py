@@ -780,39 +780,27 @@ defined, packages will be built sequentially.""" %
                 # print an extra blank line due to callback oddity
                 print('')
             url = '%s/%s' % (uniquepath, os.path.basename(self.args.srpm))
-        # Should also try this, again not sure what errors to catch
-        try:
-            task_id = self.cmd.build(self.args.skip_tag, self.args.scratch,
-                                     self.args.background, url, chain, arches,
-                                     sets)
-        except Exception, e:
-            self.log.error('Could not initiate build: %s' % e)
-            sys.exit(1)
+        task_id = self.cmd.build(self.args.skip_tag, self.args.scratch,
+                                 self.args.background, url, chain, arches,
+                                 sets)
         # Now that we have the task ID we need to deal with it.
         if self.args.nowait:
             # Log out of the koji session
             self.cmd.kojisession.logout()
             return
         # pass info off to our koji task watcher
-        try:
-            self.cmd.kojisession.logout()
-            return self._watch_koji_tasks(self.cmd.kojisession,
-                                          [task_id])
-        except:
-            # We could get an auth error if credentials have expired
-            # use exc_info here to get what kind of error this is
-            self.log.error('Could not watch build: %s' % sys.exc_info()[0])
-            sys.exit(1)
+        self.cmd.kojisession.logout()
+        return self._watch_koji_tasks(self.cmd.kojisession,
+                                      [task_id])
 
     def chainbuild(self):
         if self.cmd.module_name in self.args.package:
-            self.log.error('%s must not be in the chain' %
-                           self.cmd.module_name)
-            sys.exit(1)
+            raise Exception('%s must not be in the chain' %
+                            self.cmd.module_name)
         # make sure we didn't get an empty chain
         if self.args.package == [':']:
-            self.log.error('Must provide at least one dependency build')
-            sys.exit(1)
+            raise Exception('Must provide at least one dependency '
+                            'build')
         # Break the chain up into sections
         sets = False
         urls = []
@@ -828,14 +816,9 @@ defined, packages will be built sequentially.""" %
                 sets = True
             else:
                 # Figure out the scm url to build from package name
-                try:
-                    hash = self.cmd.get_latest_commit(component)
-                    url = self.cmd.anongiturl % {'module':
-                                                 component} + '#%s' % hash
-                except Exception, e:
-                    self.log.error('Could not get a build url for %s: %s'
-                                   % (component, e))
-                    sys.exit(1)
+                hash = self.cmd.get_latest_commit(component)
+                url = self.cmd.anongiturl % {'module':
+                                             component} + '#%s' % hash
                 # If there are no ':' in the chain list, treat each object as an
                 # individual chain
                 if ':' in self.args.package:
@@ -864,56 +847,30 @@ defined, packages will be built sequentially.""" %
             dry = True
         if self.args.x:
             useignore = False
-        try:
-            return self.cmd.clean(dry, useignore)
-        except Exception, e:
-            self.log.error('Could not clean: %s' % e)
-            sys.exit(1)
+        return self.cmd.clean(dry, useignore)
 
     def clog(self):
-        try:
-            self.cmd.clog()
-        except Exception, e:
-            self.log.error('Could not generate clog: %s' % e)
-            sys.exit(1)
+        self.cmd.clog()
 
     def clone(self):
-        if not self.args.anonymous:
-            user = self.user
-        try:
-            if self.args.branches:
-                self.cmd.clone_with_dirs(self.args.module[0],
-                                         anon=self.args.anonymous)
-            else:
-                self.cmd.clone(self.args.module[0], branch=self.args.branch,
-                               anon=self.args.anonymous)
-        except Exception, e:
-            self.log.error('Could not clone: %s' % e)
-            sys.exit(1)
+        if self.args.branches:
+            self.cmd.clone_with_dirs(self.args.module[0],
+                                     anon=self.args.anonymous)
+        else:
+            self.cmd.clone(self.args.module[0], branch=self.args.branch,
+                           anon=self.args.anonymous)
 
     def commit(self):
         if self.args.clog:
-            try:
-                self.cmd.clog()
-            except Exception, e:
-                self.log.error('Could not create clog: %s' % e)
-                sys.exit(1)
+            self.cmd.clog()
             self.args.file = os.path.abspath(os.path.join(self.args.path,
                                                           'clog'))
-        try:
-            self.cmd.commit(self.args.message, self.args.file,
-                            self.args.files)
-        except Exception, e:
-            self.log.error('Could not commit: %s' % e)
-            sys.exit(1)
+        self.cmd.commit(self.args.message, self.args.file,
+                        self.args.files)
         if self.args.tag:
-            try:
-                tagname = self.cmd.nvr
-                self.cmd.add_tag(tagname, True, self.args.message,
-                                 self.args.file)
-            except Exception, e:
-                self.log.error('Could not create a tag: %s' % e)
-                sys.exit(1)
+            tagname = self.cmd.nvr
+            self.cmd.add_tag(tagname, True, self.args.message,
+                             self.args.file)
         if self.args.push:
             self.push()
 
@@ -924,124 +881,63 @@ defined, packages will be built sequentially.""" %
             arch = self.args.arch
         if self.args.short_circuit:
             short = True
-        try:
-            self.cmd.compile(arch=arch, short=short)
-        except Exception, e:
-            self.log.error('Could not compile: %s' % e)
-            sys.exit(1)
+        self.cmd.compile(arch=arch, short=short)
 
     def diff(self):
-        try:
-            self.cmd.diff(self.args.cached, self.args.files)
-        except Exception, e:
-            self.log.error('Could not diff: %s' % e)
-            sys.exit(1)
+        self.cmd.diff(self.args.cached, self.args.files)
 
     def gimmespec(self):
-        try:
-            print(self.cmd.spec)
-        except Exception, e:
-            self.log.error('Could not get spec file: %s' % e)
-            sys.exit(1)
+        print(self.cmd.spec)
 
     def giturl(self):
-        try:
-            print(self.cmd.giturl())
-        except Exception, e:
-            self.log.error('Could not get the giturl: %s' % e)
-            sys.exit(1)
+        print(self.cmd.giturl())
 
     def import_srpm(self):
-        try:
-            uploadfiles = self.cmd.import_srpm(self.args.srpm)
-            self.cmd.upload(uploadfiles, replace=True)
-        except Exception, e:
-            self.log.error('Could not import srpm: %s' % e)
-            sys.exit(1)
-        try:
-            self.cmd.diff(cached=True)
-        except Exception, e:
-            self.log.error('Could not diff the repo: %s' % e)
-            sys.exit(1)
+        uploadfiles = self.cmd.import_srpm(self.args.srpm)
+        self.cmd.upload(uploadfiles, replace=True)
+        self.cmd.diff(cached=True)
         print('--------------------------------------------')
         print("New content staged and new sources uploaded.")
         print("Commit if happy or revert with: git reset --hard HEAD")
 
     def install(self):
-        try:
-            self.cmd.install(arch=self.args.arch,
-                             short=self.args.short_circuit)
-        except Exception, e:
-            self.log.error('Could not install: %s' % e)
-            sys.exit(1)
+        self.cmd.install(arch=self.args.arch,
+                         short=self.args.short_circuit)
 
     def lint(self):
-        try:
-            self.cmd.lint(self.args.info)
-        except Exception, e:
-            self.log.error('Could not run rpmlint: %s' % e)
-            sys.exit(1)
+        self.cmd.lint(self.args.info)
 
     def local(self):
-        try:
-            if self.args.md5:
-                self.cmd.local(arch=self.args.arch, hashtype='md5')
-            else:
-                self.cmd.local(arch=self.args.arch)
-        except Exception, e:
-            self.log.error('Could not build locally: %s' % e)
-            sys.exit(1)
+        if self.args.md5:
+            self.cmd.local(arch=self.args.arch, hashtype='md5')
+        else:
+            self.cmd.local(arch=self.args.arch)
 
     def new(self):
-        try:
-            print(self.cmd.new())
-        except Exception, e:
-            self.log.error('Could not get new changes: %s' % e)
-            sys.exit(1)
+        print(self.cmd.new())
 
     def new_sources(self):
         # Check to see if the files passed exist
         for file in self.args.files:
             if not os.path.isfile(file):
-                self.log.error('Path does not exist or is not a file: %s' %
-                               file)
-                sys.exit(1)
-        try:
-            self.cmd.upload(self.args.files, replace=self.args.replace)
-        except Exception, e:
-            self.log.error('Could not upload new sources: %s' % e)
-            sys.exit(1)
+                raise Exception('Path does not exist or is '
+                                'not a file: %s' % file)
+        self.cmd.upload(self.args.files, replace=self.args.replace)
         print("Source upload succeeded. Don't forget to commit the "
               "sources file")
 
     def patch(self):
-        try:
-            self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
-        except Exception, e:
-            self.log.error('Could not generate a patch: %s' % e)
-            sys.exit(1)
+        self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
 
     def prep(self):
-        try:
-            self.cmd.prep(arch=self.args.arch)
-        except Exception, e:
-            self.log.error('Could not prep: %s' % e)
-            sys.exit(1)
+        self.cmd.prep(arch=self.args.arch)
 
     def pull(self):
-        try:
-            self.cmd.pull(rebase=self.args.rebase,
-                          norebase=self.args.no_rebase)
-        except Exception, e:
-            self.log.error('Could not pull: %s' % e)
-            sys.exit(1)
+        self.cmd.pull(rebase=self.args.rebase,
+                      norebase=self.args.no_rebase)
 
     def push(self):
-        try:
-            self.cmd.push()
-        except Exception, e:
-            self.log.error('Could not push: %s' % e)
-            sys.exit(1)
+        self.cmd.push()
 
     def scratch_build(self):
         # A scratch build is just a build with --scratch
@@ -1050,36 +946,20 @@ defined, packages will be built sequentially.""" %
         self.build()
 
     def sources(self):
-        try:
-            self.cmd.sources(self.args.outdir)
-        except Exception, e:
-            self.log.error('Could not download sources: %s' % e)
-            sys.exit(1)
+        self.cmd.sources(self.args.outdir)
 
     def srpm(self):
-        try:
-            self.cmd.sources()
-            if hasattr(self.args, 'md5') and self.args.md5:
-                self.cmd.srpm('md5')
-            else:
-                self.cmd.srpm()
-        except Exception, e:
-            self.log.error('Could not make an srpm: %s' % e)
-            sys.exit(1)
+        self.cmd.sources()
+        if hasattr(self.args, 'md5') and self.args.md5:
+            self.cmd.srpm('md5')
+        else:
+            self.cmd.srpm()
 
     def switch_branch(self):
         if self.args.branch:
-            try:
-                self.cmd.switch_branch(self.args.branch)
-            except Exception, e:
-                self.log.error('Unable to switch to another branch: %s' % e)
-                sys.exit(1)
+            self.cmd.switch_branch(self.args.branch)
         else:
-            try:
-                (locals, remotes) = self.cmd._list_branches()
-            except Exception, e:
-                self.log.error('Unable to list branches: %s' % e)
-                sys.exit(1)
+            (locals, remotes) = self.cmd._list_branches()
             # This is some ugly stuff here, but trying to emulate
             # the way git branch looks
             locals = ['  %s  ' % branch for branch in locals]
@@ -1091,55 +971,31 @@ defined, packages will be built sequentially.""" %
 
     def tag(self):
         if self.args.list:
-            try:
-                self.cmd.list_tag(self.args.tag)
-            except Exception, e:
-                self.log.error('Could not create a list of the tag: %s' % e)
-                sys.exit(1)
+            self.cmd.list_tag(self.args.tag)
         elif self.args.delete:
-            try:
-                self.cmd.delete_tag(self.args.tag)
-            except Exception, e:
-                self.log.error('Could not delete tag: %s' % e)
-                sys.exit(1)
+            self.cmd.delete_tag(self.args.tag)
         else:
             filename = self.args.file
             tagname = self.args.tag
-            try:
-                if not tagname or self.args.clog:
-                    if not tagname:
-                        tagname = self.cmd.nvr
-                    if self.args.clog:
-                        self.cmd.clog()
-                        filename = 'clog'
-                self.cmd.add_tag(tagname, self.args.force,
-                                  self.args.message, filename)
-            except Exception, e:
-                self.log.error('Could not create a tag: %s' % e)
-                sys.exit(1)
+            if not tagname or self.args.clog:
+                if not tagname:
+                    tagname = self.cmd.nvr
+                if self.args.clog:
+                    self.cmd.clog()
+                    filename = 'clog'
+            self.cmd.add_tag(tagname, self.args.force,
+                             self.args.message, filename)
 
     def unused_patches(self):
-        try:
-            unused = self.cmd.unused_patches()
-        except Exception, e:
-            self.log.error('Could not get unused patches: %s' % e)
-            sys.exit(1)
+        unused = self.cmd.unused_patches()
         print('\n'.join(unused))
 
     def verify_files(self):
-        try:
-            self.cmd.verify_files()
-        except Exception, e:
-            self.log.error('Could not verify %%files list: %s' % e)
-            sys.exit(1)
+        self.cmd.verify_files()
 
     def verrel(self):
-        try:
-            print('%s-%s-%s' % (self.cmd.module_name, self.cmd.ver,
-                                self.cmd.rel))
-        except Exception, e:
-            self.log.error('Could not get ver-rel: %s' % e)
-            sys.exit(1)
+        print('%s-%s-%s' % (self.cmd.module_name, self.cmd.ver,
+                            self.cmd.rel))
 
     # Other class stuff goes here
     # The next 6 functions come from the koji project, from /usr/bin/koji
@@ -1372,8 +1228,7 @@ class TaskWatcher(object):
         last = self.info
         self.info = self.session.getTaskInfo(self.id, request=True)
         if self.info is None:
-            self.log.error("No such task id: %i" % self.id)
-            sys.exit(1)
+            raise Exception("No such task id: %i" % self.id)
         state = self.info['state']
         if last:
             #compare and note status changes
