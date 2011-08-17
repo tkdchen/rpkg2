@@ -896,9 +896,9 @@ defined, packages will be built sequentially.""" %
         uploadfiles = self.cmd.import_srpm(self.args.srpm)
         self.cmd.upload(uploadfiles, replace=True)
         self.cmd.diff(cached=True)
-        print('--------------------------------------------')
-        print("New content staged and new sources uploaded.")
-        print("Commit if happy or revert with: git reset --hard HEAD")
+        self.log.info('--------------------------------------------')
+        self.log.info("New content staged and new sources uploaded.")
+        self.log.info("Commit if happy or revert with: git reset --hard HEAD")
 
     def install(self):
         self.cmd.install(arch=self.args.arch,
@@ -923,8 +923,8 @@ defined, packages will be built sequentially.""" %
                 raise Exception('Path does not exist or is '
                                 'not a file: %s' % file)
         self.cmd.upload(self.args.files, replace=self.args.replace)
-        print("Source upload succeeded. Don't forget to commit the "
-              "sources file")
+        self.log.info("Source upload succeeded. Don't forget to commit the "
+                      "sources file")
 
     def patch(self):
         self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
