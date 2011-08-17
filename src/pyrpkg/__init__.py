@@ -1265,7 +1265,8 @@ class Commands():
 
         # See if the repo is dirty first
         if self.repo.is_dirty():
-            raise rpkgError('%s has uncommitted changes.' % self.path)
+            raise rpkgError('%s has uncommitted changes.  Use git status '
+                            'too see details' % self.path)
 
         # Get our list of branches
         (locals, remotes) = self._list_branches()
@@ -1389,7 +1390,8 @@ class Commands():
             # We don't have a url, so build from the latest commit
             # Check to see if the tree is dirty
             if self.repo.is_dirty():
-                raise rpkgError('There are uncommitted changes in your repo')
+                raise rpkgError('%s has uncommitted changes.  Use git status '
+                                'too see details' % self.path)
             # Need to check here to see if the local commit you want to build is
             # pushed or not
             branch = self.repo.active_branch
