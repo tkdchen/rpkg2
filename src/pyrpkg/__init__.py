@@ -1455,7 +1455,7 @@ class Commands():
         cmd.append(self.target)
         # see if this build has been done.  Does not check builds within
         # a chain
-        if not scratch:
+        if not scratch and not url.endswith('.src.rpm'):
             build = self.kojisession.getBuild(self.nvr)
             if build:
                 if build['state'] == 1:
@@ -1488,7 +1488,11 @@ class Commands():
         # Now handle the normal build
         else:
             cmd.append(url)
-            self.log.info('Building %s for %s' % (self.nvr, self.target))
+            if url.endswith('.src.rpm'):
+                srpm = os.path.basename(url)
+                self.log.info('Building %s for %s' % (srpm, self.target))
+            else:
+                self.log.info('Building %s for %s' % (self.nvr, self.target))
             self.log.debug('Building %s for %s with options %s and a priority '
                            'of %s' % (url, self.target, opts, priority))
             self.log.debug(' '.join(cmd))
