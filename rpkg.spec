@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.3
+Version:        1.4
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,17 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Aug 17 2011 Jesse Keating <jkeating@redhat.com> - 1.4-1
+- Be more generic when no spec file is found (jkeating)
+- Hint about use of git status when dirty (jkeating)
+- Don't use print when we can log.info it (jkeating)
+- Don't exit from a library (jkeating)
+- Do the rpm query in our module path (jkeating)
+- Use git's native ability to checkout a branch (jkeating)
+- Use keyword arg with clone (jkeating)
+- Allow the on-demand generation of an srpm (jkeating)
+- Fix up exit codes (jkeating)
+
 * Mon Aug 01 2011 Jesse Keating <jkeating@redhat.com> - 1.3-1
 - Fix a debug string (jkeating)
 - Set the right property (jkeating)
