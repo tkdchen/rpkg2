@@ -674,7 +674,7 @@ class Commands():
         if not archlist:
             raise rpkgError('No compatible build arches found in %s' % srpm)
         return archlist
-    
+
     def _get_build_arches_from_srpm(self, srpm, arches):
         """Given the path to an srpm, determine the possible build arches
 
@@ -1641,7 +1641,7 @@ class Commands():
                 rpms.extend([os.path.join(self.path, arch, file) for file in
                          os.listdir(os.path.join(self.path, arch))
                          if file.endswith('.rpm')])
-        if rpms is []:
+        if not rpms:
             log.warn('No rpm found')
         cmd = ['rpmlint']
         if info:
