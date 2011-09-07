@@ -20,6 +20,7 @@ import time
 import random
 import string
 import xmlrpclib
+import pwd
 try:
     import brew as koji
 except ImportError:
@@ -1183,7 +1184,7 @@ Tasks still running. You can continue to watch with the 'brew watch-task' comman
         if self.args.user:
             self.user = self.args.user
         else:
-            self.user = os.getlogin()
+            self.user = pwd.getpwuid(os.getuid())[0]
 
 # Add a class stolen from /usr/bin/koji to watch tasks
 # this was cut/pasted from koji, and then modified for local use.
