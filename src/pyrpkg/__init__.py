@@ -1063,7 +1063,7 @@ class Commands():
 
         cmd = ['git', 'tag']
         cmd.extend(['-l'])
-        if tagname != '*':
+        if tagname and tagname != '*':
             cmd.extend([tagname])
         # make it so
         self._run_command(cmd)
