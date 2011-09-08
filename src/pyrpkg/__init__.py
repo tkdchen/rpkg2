@@ -286,33 +286,8 @@ class Commands():
         """This property ensures the module attribute"""
 
         if not self._module_name:
-            self.load_module_name()
+            self.load_nameverrel()
         return(self._module_name)
-
-    def load_module_name(self):
-        """Set the base package name from the spec."""
-
-        # get the name
-        cmd = ['rpm', '-q', '--qf', '%{NAME} ', '--specfile', self.spec]
-        # Run the command
-        self.log.debug('Running: %s' % ' '.join(cmd))
-        try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                    cwd=self.path, stderr=subprocess.PIPE)
-            output, error = proc.communicate()
-        except OSError, e:
-            raise rpkgError(e)
-        if error:
-            if sys.stdout.isatty():
-                sys.stderr.write(error)
-            else:
-                # Yes, we could wind up sending error output to stdout in the
-                # case of no local tty, but I don't have a better way to do this.
-                self.log.info(error)
-        if proc.returncode:
-            raise rpkgError('Could not parse the spec, exited %s' %
-                              proc.returncode)
-        self._module_name = output.split()[0]
 
     @property
     def nvr(self):
@@ -331,10 +306,10 @@ class Commands():
     def rel(self):
         """This property ensures the rel attribute"""
         if not self._rel:
-            self.load_rel()
+            self.load_nameverrel()
         return(self._rel)
 
-    def load_rel(self):
+    def load_nameverrel(self):
         """Set the release of a package module."""
 
         cmd = ['rpm']
@@ -342,16 +317,24 @@ class Commands():
         # We make sure there is a space at the end of our query so that
         # we can split it later.  When ther eare sub packages, we get a
         # listing for each subpackage.  We only care about the first.
-        cmd.extend(['-q', '--qf', '"%{RELEASE} "', '--specfile',
-                    os.path.join(self.path, self.spec)])
+        cmd.extend(['-q', '--qf', '"%{NAME} %{VERSION} %{RELEASE}??"',
+                    '--specfile', os.path.join(self.path, self.spec)])
         try:
-            output = subprocess.Popen(' '.join(cmd), shell=True,
+            output, err = subprocess.Popen(' '.join(cmd), shell=True,
+                                      stderr=subprocess.PIPE,
                                       stdout=subprocess.PIPE).communicate()
-        except subprocess.CalledProcessError, e:
-            raise rpkgError('Could not get release of %s: %s' % (self.module_name,
+        except Exception, e:
+            if err:
+                self.log.error(err)
+            raise rpkgError('Could not query n-v-r of %s: %s' % (self.module_name,
                                                                  e))
-        # Get just the output, then split it by space, grab the first
-        self._rel = output[0].split()[0]
+        if err:
+            self.log.error(err)
+        # Get just the output, then split it by ??, grab the first and split
+        # again to get ver and rel
+        (self._module_name,
+         self._ver,
+         self._rel) = output.split('??')[0].split()
 
     @property
     def repo(self):
@@ -466,27 +449,8 @@ class Commands():
     def ver(self):
         """This property ensures the ver attribute"""
         if not self._ver:
-            self.load_ver()
+            self.load_nameverrel()
         return(self._ver)
-
-    def load_ver(self):
-        """Set the version of a package module."""
-
-        cmd = ['rpm']
-        cmd.extend(self.rpmdefines)
-        # We make sure there is a space at the end of our query so that
-        # we can split it later.  When ther eare sub packages, we get a
-        # listing for each subpackage.  We only care about the first.
-        cmd.extend(['-q', '--qf', '"%{VERSION} "', '--specfile',
-                    os.path.join(self.path, self.spec)])
-        try:
-            output = subprocess.Popen(' '.join(cmd), shell=True,
-                                      stdout=subprocess.PIPE).communicate()
-        except subprocess.CalledProcessError, e:
-            raise rpkgError('Could not get version of %s: %s' % (self.module_name,
-                                                                 e))
-        # Get just the output, then split it by space, grab the first
-        self._ver = output[0].split()[0]
 
     # Define some helper functions, they start with _
     def _create_curl(self):
