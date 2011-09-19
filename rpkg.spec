@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.4
+Version:        1.5
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,14 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Sep 19 2011 Jesse Keating <jkeating@redhat.com> - 1.5-1
+- Fix tag listing (#717528) (jkeating)
+- Revamp n-v-r property loading (#721389) (jkeating)
+- Don't use os.getlogin (jkeating)
+- Code style changes (jkeating)
+- Allow fedpkg lint to be configurable and to check spec file. (pingou)
+- Handle non-scratch srpm builds better (jkeating)
+
 * Wed Aug 17 2011 Jesse Keating <jkeating@redhat.com> - 1.4-1
 - Be more generic when no spec file is found (jkeating)
 - Hint about use of git status when dirty (jkeating)
