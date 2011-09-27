@@ -93,6 +93,8 @@ class Commands():
         self._anon_kojisession = None
         # The upstream branch a downstream branch is tracking
         self._branch_merge = None
+        # The latest commit
+        self._commit = None
         # The disttag rpm value
         self._disttag = None
         # The distval rpm value
@@ -241,6 +243,25 @@ class Commands():
             # the branch name
             merge = merge.replace('refs/heads/', '')
             self._branch_merge = merge
+
+    @property
+    def commithash(self):
+        """This property ensures the commit attribute"""
+
+        if not self._commit:
+            self.load_commit()
+        return self._commit
+
+    def load_commit(self):
+        """Discover the latest commit to the package"""
+
+        # Get the commit hash
+        comobj = self.repo.iter_commits().next()
+        # Work around different versions of GitPython
+        if hasattr(comobj, 'sha'):
+            self._commit = comobj.sha
+        else:
+            self._commit = comobj.hexsha
 
     @property
     def disttag(self):
@@ -407,11 +428,11 @@ class Commands():
                             "--define '_builddir %s'" % self.path,
                             "--define '_srcrpmdir %s'" % self.path,
                             "--define '_rpmdir %s'" % self.path,
-                            "--define 'dist .%s'" % self.disttag,
+                            "--define 'dist .%s'" % self._disttag,
                             "--define '%s %s'" % (self._distvar,
                                                   self._distval.split('_')[0]),
                             # int and float this to remove the decimal
-                            "--define '%s 1'" % self.disttag]
+                            "--define '%s 1'" % self._disttag]
 
     @property
     def spec(self):
@@ -1410,9 +1431,8 @@ class Commands():
             except git.errors.GitCommandError:
                 raise rpkgError('You must provide a srpm or push your \
                                    changes to the remote repo.')
-            # Get the commit hash to build
-            commit = self.repo.iter_commits().next().sha
-            url = self.anongiturl % {'module': self.module_name} + '?#%s' % commit
+            url = self.anongiturl % {'module': self.module_name} + \
+                '?#%s' % self.commithash
         # Check to see if the target is valid
         build_target = self.kojisession.getBuildTarget(self.target)
         if not build_target:
@@ -1559,9 +1579,8 @@ class Commands():
     def giturl(self):
         """Return the git url that would be used for building"""
 
-        # Get the commit hash
-        commit = self.repo.iter_commits().next().sha
-        url = self.anongiturl % {'module': self.module_name} + '?#%s' % commit
+        url = self.anongiturl % {'module': self.module_name} + \
+            '?#%s' % self.commithash
         return url
 
     def koji_upload(self, file, path, callback=None):
@@ -1690,6 +1709,8 @@ class Commands():
         cmd.extend(['-r', self.mockconfig, '--resultdir',
                     os.path.join(self.path, self.module_name, self.ver, self.rel),
                     '--rebuild', self.srpmname])
+        import pdb
+        pdb.set_trace()
         # Run the command
         self._run_command(cmd)
 
