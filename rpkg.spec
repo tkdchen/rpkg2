@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.5
+Version:        1.6
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Sep 20 2011 Jesse Keating <jkeating@redhat.com> - 1.6-1
+- Allow name property to load by itself (jkeating)
+
 * Mon Sep 19 2011 Jesse Keating <jkeating@redhat.com> - 1.5-1
 - Fix tag listing (#717528) (jkeating)
 - Revamp n-v-r property loading (#721389) (jkeating)
