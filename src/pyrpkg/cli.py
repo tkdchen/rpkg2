@@ -23,7 +23,7 @@ import xmlrpclib
 import pwd
 import koji
 
-class cliClient():
+class cliClient(object):
     """This is a client class for rpkg clients."""
 
     def __init__(self, config, name=None):

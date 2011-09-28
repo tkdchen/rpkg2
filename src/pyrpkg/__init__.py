@@ -53,7 +53,7 @@ log = logging.getLogger("rpkg")
 # Add the null handler
 log.addHandler(h)
 
-class Commands():
+class Commands(object):
     """This is a class to hold all the commands that will be called
     by clients
     """
