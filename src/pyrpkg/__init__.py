@@ -107,6 +107,8 @@ class Commands():
         self._kojiweburl = None
         # The local arch to use in rpm building
         self._localarch = None
+        # A property to load the mock config
+        self._mockconfig = None
         # The name of the cloned module
         self._module_name = None
         # The rpm name-version-release of the cloned module
@@ -301,6 +303,19 @@ class Commands():
         self._localarch = subprocess.Popen(['rpm --eval %{_arch}'],
                        shell=True,
                        stdout=subprocess.PIPE).communicate()[0].strip('\n')
+
+    @property
+    def mockconfig(self):
+        """This property ensures the mockconfig attribute"""
+
+        if not self._mockconfig:
+            self.load_mockconfig()
+        return self._mockconfig
+
+    def load_mockconfig(self):
+        """This sets the mockconfig attribute"""
+
+        self._mockconfig = '%s-%s' % (self.target, self.localarch)
 
     @property
     def module_name(self):
