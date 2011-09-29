@@ -243,7 +243,7 @@ class Commands():
             try:
                 merge = self.repo.git.config('--get',
                                              'branch.%s.merge' % localbranch)
-            except git.errors.GitCommandError, e:
+            except git.GitCommandError, e:
                 raise rpkgError('Unable to find remote branch.  Use --dist')
             # Trim off the refs/heads so that we're just working with
             # the branch name
@@ -415,7 +415,7 @@ class Commands():
         self.log.debug('Creating repo object from %s' % self.path)
         try:
             self._repo = git.Repo(self.path)
-        except git.errors.InvalidGitRepositoryError:
+        except git.InvalidGitRepositoryError:
             raise rpkgError('%s is not a valid repo' % self.path)
 
     @property
@@ -1456,7 +1456,7 @@ class Commands():
                     'branch.%s.merge' % branch).replace('refs/heads', remote)
                 if self.repo.git.rev_list('%s...%s' % (branch, merge)):
                     raise rpkgError('There are unpushed changes in your repo')
-            except git.errors.GitCommandError:
+            except git.GitCommandError:
                 raise rpkgError('You must provide a srpm or push your \
                                    changes to the remote repo.')
             url = self.anongiturl % {'module': self.module_name} + \
