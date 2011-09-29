@@ -123,6 +123,8 @@ class Commands():
         self._spec = None
         # The build target within the buildsystem
         self._target = target
+        # The top url to our build server
+        self._topurl = None
         # The user to use or discover
         self._user = user
         # The rpm version of the cloned module
@@ -157,7 +159,8 @@ class Commands():
                     'cert': '~/.koji/client.crt',
                     'ca': '~/.koji/clientca.crt',
                     'serverca': '~/.koji/serverca.crt',
-                    'authtype': None
+                    'authtype': None,
+                    'topurl': None
                     }
         # Process the configs in order, global, user, then any option passed
         if os.access(self.kojiconfig, os.F_OK):
@@ -171,7 +174,7 @@ class Commands():
                     if defaults.has_key(name):
                         defaults[name] = value
         # Expand out the directory options
-        for name in ('topdir', 'cert', 'ca', 'serverca'):
+        for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl'):
             if defaults[name]:
                 defaults[name] = os.path.expanduser(defaults[name])
         self.log.debug('Initiating a %s session to %s' %
@@ -187,8 +190,9 @@ class Commands():
         except:
             raise rpkgError('Could not initiate %s session' %
                             os.path.basename(self.build_client))
-        # save the weburl for later use too
+        # save the weburl and topurl for later use too
         self._kojiweburl = defaults['weburl']
+        self._topurl = defaults['topurl']
         if not anon:
                 # Default to ssl if not otherwise specified and we have
                 # the cert
@@ -490,6 +494,15 @@ class Commands():
         # If a site has a different naming scheme, this would be where
         # a site would override
         self._target = '%s-candidate' % self.branch_merge
+
+    @property
+    def topurl(self):
+        """This property ensures the topurl attribute"""
+
+        if not self._topurl:
+            # Assume anon here, whatever.
+            self.load_kojisession(anon=True)
+        return self._topurl
 
     @property
     def user(self):
