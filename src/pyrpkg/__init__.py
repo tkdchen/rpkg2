@@ -710,7 +710,7 @@ class Commands():
             raise rpkgError('%s is not a spec file' % spec)
         archlist = [ pkg.header['arch'] for pkg in hdr.packages]
         if not archlist:
-            raise rpkgError('No compatible build arches found in %s' % srpm)
+            raise rpkgError('No compatible build arches found in %s' % spec)
         return archlist
 
     def _get_build_arches_from_srpm(self, srpm, arches):
