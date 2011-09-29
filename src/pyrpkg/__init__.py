@@ -1753,7 +1753,7 @@ class Commands():
         # Return the mess
         return(config)
 
-    def mockbuild(self, mockargs=[]):
+    def mockbuild(self, mockargs=[], root=None):
         """Build the package in mock, using mockargs
 
         Log the output and returns nothing
@@ -1765,7 +1765,9 @@ class Commands():
         # setup the command
         cmd = ['mock']
         cmd.extend(mockargs)
-        cmd.extend(['-r', self.mockconfig, '--resultdir',
+        if not root:
+            root=self.mockconfig
+        cmd.extend(['-r', root, '--resultdir',
                     os.path.join(self.path, self.module_name, self.ver, self.rel),
                     '--rebuild', self.srpmname])
         # Run the command
