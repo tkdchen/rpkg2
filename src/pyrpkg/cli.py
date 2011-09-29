@@ -161,6 +161,7 @@ class cliClient():
         self.register_install()
         self.register_lint()
         self.register_local()
+        self.register_mock_config()
         self.register_new()
         self.register_new_sources()
         self.register_patch()
@@ -522,6 +523,21 @@ defined, packages will be built sequentially.""" %
                                        (even uncommited changes) since the \
                                        last git tag was applied.')
         new_parser.set_defaults(command = self.new)
+
+    def register_mock_config(self):
+        """Register the mock-config target"""
+
+        mock_config_parser = self.subparsers.add_parser('mock-config',
+                                        help='Generate a mock config',
+                                        description='This will generate a \
+                                        mock config based on the buildsystem \
+                                        target')
+        mock_config_parser.add_argument('--target',
+                                        help='Override target used for config',
+                                        default=None)
+        mock_config_parser.add_argument('--arch',
+                                        help='Override local arch')
+        mock_config_parser.set_defaults(command=self.mock_config)
 
     def register_new_sources(self):
         """Register the new-sources target"""
@@ -921,6 +937,13 @@ defined, packages will be built sequentially.""" %
             self.cmd.local(arch=self.args.arch, hashtype='md5')
         else:
             self.cmd.local(arch=self.args.arch)
+
+    def mock_config(self):
+        try:
+            print(self.cmd.mock_config(self.args.target, self.args.arch))
+        except Exception, e:
+            self.log.error('Could not generate the mock config: %s' % e)
+            sys.exit(1)
 
     def new(self):
         print(self.cmd.new())

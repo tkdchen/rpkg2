@@ -1722,6 +1722,37 @@ class Commands():
         # Run the command
         self._run_command(cmd, shell=True, pipe=['tee', logfile])
 
+    # Not to be confused with mockconfig the property
+    def mock_config(self, target=None, arch=None):
+        """Generate a mock config based on branch data.
+
+        Can use option target and arch to override autodiscovery.
+        Will return the mock config file text.
+        """
+
+        # Figure out some things about ourself.
+        if not target:
+            target = self.target
+        if not arch:
+            arch = self.localarch
+
+        # Figure out if we have a valid build target
+        build_target = self.anon_kojisession.getBuildTarget(target)
+        if not build_target:
+            raise rpkgError('Unknown build target: %s' % target)
+
+        repoid = self.anon_kojisession.getRepo(build_target['id'])['id']
+
+        # Generate the config
+        config = koji.genMockConfig('%s-%s' % (target, arch), arch,
+                                   distribution=self.disttag,
+                                   tag_name=build_target['build_tag_name'],
+                                   repoid=repoid,
+                                   topurl=self.topurl)
+
+        # Return the mess
+        return(config)
+
     def mockbuild(self, mockargs=[]):
         """Build the package in mock, using mockargs
 
