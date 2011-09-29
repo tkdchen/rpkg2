@@ -1737,8 +1737,6 @@ class Commands():
         cmd.extend(['-r', self.mockconfig, '--resultdir',
                     os.path.join(self.path, self.module_name, self.ver, self.rel),
                     '--rebuild', self.srpmname])
-        import pdb
-        pdb.set_trace()
         # Run the command
         self._run_command(cmd)
 
