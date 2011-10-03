@@ -1306,7 +1306,7 @@ class TaskWatcher(object):
 
 if __name__ == '__main__':
     client = cliClient()
-    client._do_imports()
+    client.do_imports()
     client.parse_cmdline()
 
     if not client.args.path:
