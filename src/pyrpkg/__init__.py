@@ -43,7 +43,7 @@ class rpkgError(Exception):
     pass
 
 # Setup our logger
-# Null logger to avoid spurrious messages, add a handler in app code
+# Null logger to avoid spurious messages, add a handler in app code
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
@@ -385,7 +385,7 @@ class Commands(object):
         cmd = ['rpm']
         cmd.extend(self.rpmdefines)
         # We make sure there is a space at the end of our query so that
-        # we can split it later.  When ther eare sub packages, we get a
+        # we can split it later.  When there are subpackages, we get a
         # listing for each subpackage.  We only care about the first.
         cmd.extend(['-q', '--qf', '"%{NAME} %{VERSION} %{RELEASE}??"',
                     '--specfile', os.path.join(self.path, self.spec)])
@@ -1117,7 +1117,7 @@ class Commands(object):
         hash = None
         buildsource = taskinfo[0]
         if buildsource.startswith('cvs://'):
-            # snag everyting after the last # mark
+            # snag everything after the last # mark
             cvstag = buildsource.rsplit('#')[-1]
             # Now read the remote repo to figure out the hash from the tag
             giturl = self.anongiturl % {'module': bdata['name']}
@@ -1291,7 +1291,7 @@ class Commands(object):
                                                                 outfile))
             os.rename(os.path.join(self.path, outfile),
                       '%s~' % os.path.join(self.path, outfile))
-            # Capture the lines preceeding the diff
+            # Capture the lines preceding the diff
             newhead = []
             for line in oldpatch:
                 if line.startswith('diff'):
@@ -1442,7 +1442,7 @@ class Commands(object):
         else:
             try:
                 output = self.repo.git.checkout(branch)
-                # The above shoudl have no output, but stash it anyway
+                # The above should have no output, but stash it anyway
                 self.log.info("Switched to branch '%s'" % branch)
             except: # This needs to be finer grained I think...
                 raise rpkgError('Could not check out %s' % branch)
@@ -2191,7 +2191,7 @@ class GitIgnore(object):
             gitignore_file.close()
 
         # Set to True if we end up making any modifications, used to
-        # prevent unecessary writes.
+        # prevent unnecessary writes.
         self.modified = False
 
     def add(self, line):

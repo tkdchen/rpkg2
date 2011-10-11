@@ -268,7 +268,7 @@ For example:
 %(name)s chain-build libwidget libaselib : libgizmo :
 
 will cause libwidget and libaselib to be built in parallel, followed
-by libgizmo and then the currect directory package. If no groups are
+by libgizmo and then the current directory package. If no groups are
 defined, packages will be built sequentially.""" %
                     {'name': self.name})
         chainbuild_parser.add_argument('package', nargs = '+',
@@ -351,7 +351,7 @@ defined, packages will be built sequentially.""" %
 
         commit_parser = self.subparsers.add_parser('commit',
                                           help = 'Commit changes',
-                                          description = 'This envokes a git \
+                                          description = 'This invokes a git \
                                           commit.  All tracked files with \
                                           changes will be committed unless \
                                           a specific file list is provided.  \
@@ -395,7 +395,7 @@ defined, packages will be built sequentially.""" %
         ci_parser = self.subparsers.add_parser('ci', parents = [commit_parser],
                                           conflict_handler = 'resolve',
                                           help = 'Alias for commit',
-                                          description = 'This envokes a git \
+                                          description = 'This invokes a git \
                                           commit.  All tracked files with \
                                           changes will be committed unless \
                                           a specific file list is provided.  \
@@ -560,7 +560,7 @@ defined, packages will be built sequentially.""" %
                                        help = 'Diff against last tag',
                                        description = 'This will use git to \
                                        show a diff of all the changes \
-                                       (even uncommited changes) since the \
+                                       (even uncommitted changes) since the \
                                        last git tag was applied.')
         new_parser.set_defaults(command = self.new)
 
@@ -694,7 +694,7 @@ defined, packages will be built sequentially.""" %
                                         attempt to build the latest \
                                         commit, which must have been \
                                         pushed.  By default all \
-                                        approprate arches will be \
+                                        appropriate arches will be \
                                         built.')
         scratch_build_parser.add_argument('--srpm', nargs = '?',
                                   const = 'CONSTRUCT',
@@ -1263,7 +1263,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
                 speed = self._format_size(float(total)/float(total_time)) + \
                 "/sec"
     
-        # write formated string and flush
+        # write formatted string and flush
         sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" %
                          ('='*(int(percent_done*36)),
                           percent_done_str, elapsed, data_done, speed))
@@ -1344,7 +1344,7 @@ class TaskWatcher(object):
         return self.str()
 
     def get_failure(self):
-        """Print infomation about task completion"""
+        """Print information about task completion"""
         if self.info['state'] != koji.TASK_STATES['FAILED']:
             return ''
         error = None
