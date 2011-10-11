@@ -865,7 +865,7 @@ class Commands():
         if not useignore:
             cmd.append('-x')
         # Run it!
-        self._run_command(cmd)
+        self._run_command(cmd, cwd=self.path)
         return
 
     def clone(self, module, path=None, branch=None, bare_dir=None, anon=False):
