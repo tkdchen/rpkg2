@@ -1,7 +1,5 @@
 # rpkg bash completion
 
-have rpkg || return 1
-
 _rpkg()
 {
     COMPREPLY=()
