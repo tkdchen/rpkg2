@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.6
+Version:        1.7
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,16 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Oct 25 2011 Jesse Keating <jkeating@redhat.com> - 1.7-1
+- Support a manually specified mock root (jkeating)
+- Add a mock-config subcommand (jkeating)
+- Fix a traceback on error. (jkeating)
+- Remove debugging code (jkeating)
+- More git api updates (jkeating)
+- Add topurl as a koji config and property (jkeating)
+- Add a mockconfig property (jkeating)
+- Turn the latest commit into a property (jkeating)
+
 * Tue Sep 20 2011 Jesse Keating <jkeating@redhat.com> - 1.6-1
 - Allow name property to load by itself (jkeating)
 
