@@ -698,6 +698,15 @@ class Commands():
 
         return os.path.getmtime(file1) > os.path.getmtime(file2)
 
+    def _do_curl(self, file_hash, file):
+        """Use curl manually to upload a file"""
+
+        cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
+        '--progress-bar', '-F', 'name=%s' % self.module_name, '-F',
+        'md5sum=%s' % file_hash, '-F', 'file=@%s' % file,
+        self.lookaside_cgi]
+        self._run_command(cmd)
+
     def _get_build_arches_from_spec(self):
         """Given the path to an spec, retrieve the build arches
 
@@ -1816,11 +1825,7 @@ class Commands():
                 # For now don't use the pycurl upload function as it does
                 # not produce any progress output.  Cheat and use curl
                 # directly.
-                cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
-                       '--progress-bar', '-F', 'name=%s' % self.module_name, '-F',
-                       'md5sum=%s' % file_hash, '-F', 'file=@%s' % f,
-                       self.lookaside_cgi]
-                self._run_command(cmd)
+                self._do_curl(file_hash, f)
                 uploaded.append(file_basename)
 
         sources_file.close()
