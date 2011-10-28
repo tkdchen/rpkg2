@@ -1384,8 +1384,8 @@ class Commands():
 
         try:
             curl.perform()
-        except:
-            raise rpkgError('Lookaside failure.')
+        except Exception, e:
+            raise rpkgError('Lookaside failure: %s' % e)
         curl.close()
         output = buf.getvalue().strip()
 
