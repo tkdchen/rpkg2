@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.7
+Version:        1.8
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Oct 28 2011 Jesse Keating <jkeating@redhat.com> - 1.8-1
+- Get more detailed error output from lookaside (jkeating)
+- Move the curl call out to it's own function (jkeating)
+- Hide build_common from help/usage (jkeating)
+- Fix the help command (jkeating)
+
 * Tue Oct 25 2011 Jesse Keating <jkeating@redhat.com> - 1.7-1
 - Support a manually specified mock root (jkeating)
 - Add a mock-config subcommand (jkeating)
