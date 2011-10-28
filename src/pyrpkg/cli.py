@@ -183,7 +183,7 @@ class cliClient():
         """Register the help command."""
 
         help_parser = self.subparsers.add_parser('help', help = 'Show usage')
-        help_parser.set_defaults(command = lambda args: self.usage())
+        help_parser.set_defaults(command = self.parser.print_help)
 
     def register_build_common(self):
         """Create a common build parser to use in other commands"""
