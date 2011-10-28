@@ -188,7 +188,7 @@ class cliClient():
     def register_build_common(self):
         """Create a common build parser to use in other commands"""
 
-        self.build_parser_common = self.subparsers.add_parser('build_common',
+        self.build_parser_common = argparse.ArgumentParser('build_common',
                                                          add_help = False)
         self.build_parser_common.add_argument('--nowait',
                                          action = 'store_true',
