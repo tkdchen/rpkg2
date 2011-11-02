@@ -161,6 +161,7 @@ class cliClient():
         self.register_install()
         self.register_lint()
         self.register_local()
+        self.register_mockbuild()
         self.register_mock_config()
         self.register_new()
         self.register_new_sources()
@@ -523,6 +524,20 @@ defined, packages will be built sequentially.""" %
                                        (even uncommited changes) since the \
                                        last git tag was applied.')
         new_parser.set_defaults(command = self.new)
+
+    def register_mockbuild(self):
+        """Register the mockbuild target"""
+
+        mockbuild_parser = self.subparsers.add_parser('mockbuild',
+                                       help='Local test build using mock',
+                                       description='This will use the mock \
+                                       utility to build the package for the \
+                                       distribution detected from branch \
+                                       information.  This can be overridden \
+                                       using the global --dist option. Your \
+                                       user must be in the local "mock" group.')
+        mockbuild_parser.add_argument('--root', help='Override mock root')
+        mockbuild_parser.set_defaults(command=self.mockbuild)
 
     def register_mock_config(self):
         """Register the mock-config target"""
@@ -937,6 +952,26 @@ defined, packages will be built sequentially.""" %
             self.cmd.local(arch=self.args.arch, hashtype='md5')
         else:
             self.cmd.local(arch=self.args.arch)
+
+    def mockbuild(self):
+        try:
+            self.cmd.sources()
+        except Exception, e:
+            self.log.error('Could not download sources: %s' % e)
+            sys.exit(1)
+
+        # Pick up any mockargs from the env
+        mockargs = []
+        try:
+            mockargs = os.environ['MOCKARGS'].split()
+        except KeyError:
+            # there were no args
+            pass
+        try:
+            self.cmd.mockbuild(mockargs)
+        except Exception, e:
+            self.log.error('Could not run mockbuild: %s' % e)
+            sys.exit(1)
 
     def mock_config(self):
         try:
