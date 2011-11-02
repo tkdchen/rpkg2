@@ -968,7 +968,7 @@ defined, packages will be built sequentially.""" %
             # there were no args
             pass
         try:
-            self.cmd.mockbuild(mockargs)
+            self.cmd.mockbuild(mockargs, self.args.root)
         except Exception, e:
             self.log.error('Could not run mockbuild: %s' % e)
             sys.exit(1)
