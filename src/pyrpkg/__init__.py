@@ -318,6 +318,10 @@ class Commands(object):
             self.load_mockconfig()
         return self._mockconfig
 
+    @mockconfig.setter
+    def mockconfig(self, config):
+        self._mockconfig = config
+
     def load_mockconfig(self):
         """This sets the mockconfig attribute"""
 
