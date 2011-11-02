@@ -1777,7 +1777,8 @@ class Commands():
         if not root:
             root=self.mockconfig
         cmd.extend(['-r', root, '--resultdir',
-                    os.path.join(self.path, self.module_name, self.ver, self.rel),
+                    os.path.join(self.path, "results_%s" % self.module_name,
+                                 self.ver, self.rel),
                     '--rebuild', self.srpmname])
         # Run the command
         self._run_command(cmd)
