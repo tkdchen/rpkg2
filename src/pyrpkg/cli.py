@@ -529,13 +529,17 @@ defined, packages will be built sequentially.""" %
         """Register the mockbuild target"""
 
         mockbuild_parser = self.subparsers.add_parser('mockbuild',
-                                       help='Local test build using mock',
-                                       description='This will use the mock \
-                                       utility to build the package for the \
-                                       distribution detected from branch \
-                                       information.  This can be overridden \
-                                       using the global --dist option. Your \
-                                       user must be in the local "mock" group.')
+                               help='Local test build using mock',
+                               description='This will use the mock \
+                               utility to build the package for the \
+                               distribution detected from branch \
+                               information.  This can be overridden \
+                               using the global --dist option. Your \
+                               user must be in the local "mock" group.',
+                               epilog='To generate a mock \
+                               config for the current branch \
+                               use mock-config target and save it \
+                               to /etc/mock/<branch>-candidate-<arch>.cfg')
         mockbuild_parser.add_argument('--root', help='Override mock root')
         mockbuild_parser.set_defaults(command=self.mockbuild)
 
