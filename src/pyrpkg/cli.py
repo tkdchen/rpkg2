@@ -938,7 +938,8 @@ defined, packages will be built sequentially.""" %
 
     def import_srpm(self):
         uploadfiles = self.cmd.import_srpm(self.args.srpm)
-        self.cmd.upload(uploadfiles, replace=True)
+        if uploadfiles:
+            self.cmd.upload(uploadfiles, replace=True)
         self.cmd.diff(cached=True)
         self.log.info('--------------------------------------------')
         self.log.info("New content staged and new sources uploaded.")
