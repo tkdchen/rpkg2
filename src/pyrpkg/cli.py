@@ -450,9 +450,9 @@ defined, packages will be built sequentially.""" %
                                                accordingly.  It will import \
                                                to the current branch by \
                                                default.')
-        import_srpm_parser.add_argument('--branch', '-b',
-                                        help = 'Branch to import onto',
-                                        default = 'devel')
+        #import_srpm_parser.add_argument('--branch', '-b',
+        #                                help = 'Branch to import onto',
+        #                                default = 'devel')
         #import_srpm_parser.add_argument('--create', '-c',
         #                                help = 'Create a new local repo',
         #                                action = 'store_true')
