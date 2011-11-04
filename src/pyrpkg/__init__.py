@@ -160,11 +160,16 @@ class Commands():
                     'topurl': None
                     }
         # Process the configs in order, global, user, then any option passed
-        if os.access(self.kojiconfig, os.F_OK):
+        try:
             f = open(self.kojiconfig)
-            config = ConfigParser.ConfigParser()
-            config.readfp(f)
-            f.close()
+        except IOError as e:
+            self.log.debug("Could not read %s, using the default koji config values")
+
+        else:
+            with f:
+                config = ConfigParser.ConfigParser()
+                config.readfp(f)
+
             if config.has_section(os.path.basename(self.build_client)):
                 for name, value in config.items(os.path.basename(
                                                 self.build_client)):
