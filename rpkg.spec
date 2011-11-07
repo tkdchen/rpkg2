@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.8
+Version:        1.9
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,18 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Nov 07 2011 Jesse Keating <jkeating@redhat.com> - 1.9-1
+- Don't upload if there is nothing to upload. (jkeating)
+- --branch option for import is not supported yet (jkeating)
+- Add epilog about mock-config generation (jkeating)
+- Don't assume we can create a folder named after the module. (bochecha)
+- Fix passing the optional mock root to mockbuild (bochecha)
+- Add missing registration for mockbuild target (bochecha)
+- Make the clean target work with --path. (bochecha)
+- Fix typo in a comment. (bochecha)
+- Fix syntax error in main script. (bochecha)
+- Fix typo. (bochecha)
+
 * Fri Oct 28 2011 Jesse Keating <jkeating@redhat.com> - 1.8-1
 - Get more detailed error output from lookaside (jkeating)
 - Move the curl call out to it's own function (jkeating)
