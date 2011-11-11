@@ -1156,10 +1156,12 @@ defined, packages will be built sequentially.""" %
             if tasks:
                 self.log.info(
     """
-Tasks still running. You can continue to watch with the 'brew watch-task' command.
+Tasks still running. You can continue to watch with the '%s watch-task' command.
     Running Tasks:
-    %s""" % '\n'.join(['%s: %s' % (t.str(), t.display_state(t.info))
-                       for t in tasks.values() if not t.is_done()]))
+    %s""" % (self.config.get(os.path.basename(sys.argv[0]), 'build_client'),
+                             '\n'.join(['%s: %s' % (t.str(),
+                                                    t.display_state(t.info))
+                       for t in tasks.values() if not t.is_done()])))
             # A ^c should return non-zero so that it doesn't continue
             # on to any && commands.
             rv = 1
