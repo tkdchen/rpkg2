@@ -941,7 +941,12 @@ class Commands():
                     (module, e))
 
         # Create a bare clone first. This gives us a good list of branches
-        self.clone(module, top_path, bare_dir=repo_path, anon=anon)
+        try:
+            self.clone(module, top_path, bare_dir=repo_path, anon=anon)
+        except Exception, e:
+            # Clean out our directory
+            shutil.rmtree(top_path)
+            raise
         # Get the full path to, and a git object for, our new bare repo
         repo_git = git.Git(repo_path)
 
