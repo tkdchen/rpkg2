@@ -804,7 +804,7 @@ defined, packages will be built sequentially.""" %
         if self.args.target:
             self.cmd._target = self.args.target
         # handle uploading the srpm if we got one
-        if (self.args, 'srpm') and self.args.srpm:
+        if hasattr(self.args, 'srpm') and self.args.srpm:
             # See if we need to generate the srpm first
             if self.args.srpm == 'CONSTRUCT':
                 self.log.debug('Generating an srpm')
