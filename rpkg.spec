@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.9
+Version:        1.10
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Nov 21 2011 Jesse Keating <jkeating@redhat.com> - 1.10-1
+- Use -C for --config shortcut (jkeating)
+- Don't leave a directory on failure (#754082) (jkeating)
+- Fix chain build (#754189) (jkeating)
+- Don't hardcode brew here (jkeating)
+
 * Mon Nov 07 2011 Jesse Keating <jkeating@redhat.com> - 1.9-1
 - Don't upload if there is nothing to upload. (jkeating)
 - --branch option for import is not supported yet (jkeating)
