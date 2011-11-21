@@ -19,7 +19,7 @@ import argparse
 
 # Setup an argparser and parse the known commands to get the config file
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('-c', '--config', help='Specify a config file to use',
+parser.add_argument('-C', '--config', help='Specify a config file to use',
                     default='/etc/rpkg/rpkg.conf')
 
 (args, other) = parser.parse_known_args()
