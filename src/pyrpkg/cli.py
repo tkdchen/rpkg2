@@ -339,7 +339,7 @@ defined, packages will be built sequentially.""" %
                                           changelog message unless one is \
                                           given to the command.  A push \
                                           can be done at the same time.')
-        commit_parser.add_argument('--clog',
+        commit_parser.add_argument('-c', '--clog',
                                    default = False,
                                    action = 'store_true',
                                    help = 'Generate the commit message from \
