@@ -1603,6 +1603,7 @@ class Commands(object):
         # %% with %
 
         cloglines = []
+        first = True
         spec = open(os.path.join(self.path, self.spec), 'r').readlines()
         for line in spec:
             if line.startswith('%changelog'):
@@ -1617,7 +1618,13 @@ class Commands(object):
                     if line2.startswith('*'):
                         # skip the email n/v/r line.  Redundant
                         continue
-                    cloglines.append(line2.lstrip('- ').replace('%%', '%'))
+                    if first:
+                        cloglines.append(line2.lstrip('- ').replace('%%', '%'))
+                        cloglines.append("\n")
+                        first = False
+                    else:
+                        cloglines.append(line2.replace('%%', '%'))
+ 
         # Now open the clog file and write out the lines
         clogfile = open(os.path.join(self.path, 'clog'), 'w')
         clogfile.writelines(cloglines)
