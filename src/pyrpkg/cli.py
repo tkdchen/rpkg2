@@ -21,10 +21,7 @@ import random
 import string
 import xmlrpclib
 import pwd
-try:
-    import brew as koji
-except ImportError:
-    import koji
+import koji
 
 class cliClient():
     """This is a client class for rpkg clients."""

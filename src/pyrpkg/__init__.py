@@ -20,10 +20,7 @@ else:
     # We need a subprocess that has check_call
     from kitchen.pycompat27 import subprocess
 import hashlib
-try:
-    import brew as koji
-except ImportError:
-    import koji
+import koji
 import rpm
 import logging
 import git
