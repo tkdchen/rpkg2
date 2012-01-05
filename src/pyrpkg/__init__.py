@@ -64,7 +64,7 @@ class Commands():
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
-        self.path = path
+        self.path = os.path.abspath(path)
         # The url of the lookaside for source archives
         self.lookaside = lookaside
         # The type of hash to use with the lookaside
