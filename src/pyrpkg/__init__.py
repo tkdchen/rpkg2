@@ -1064,6 +1064,25 @@ class Commands():
         # Return the hash sum
         return output.split()[0]
 
+    def gitbuildhash(self, build):
+        """Determine the git hash used to produce a particular N-V-R"""
+
+        # Get the build data from the nvr
+        bdata = self.anon_kojisession.getBuild(build)
+        if not bdata:
+            raise rpkgError('Unknown build: %s' % build)
+
+        # Get the task data out of that build data
+        taskinfo = self.anon_kojisession.getTaskRequest(bdata['task_id'])
+        # taskinfo is a list of items, first item is the task url.
+        # second is the build target.
+        # Match a 40 char block of text on the url line, that'll be our hash
+        try:
+            hash = re.search(r'[0-9A-Za-z]{40}', taskinfo[0]).group(0)
+        except AttributeError:
+            raise rpkgError('Build %s did not use git' % build)
+        return (hash)
+
     def import_srpm(self, srpm):
         """Import the contents of an srpm into a repo.
 

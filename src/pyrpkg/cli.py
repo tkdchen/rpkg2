@@ -153,6 +153,7 @@ class cliClient():
         self.register_compile()
         self.register_diff()
         self.register_gimmespec()
+        self.register_gitbuildhash()
         self.register_giturl()
         self.register_import_srpm()
         self.register_install()
@@ -420,6 +421,20 @@ defined, packages will be built sequentially.""" %
         gimmespec_parser = self.subparsers.add_parser('gimmespec',
                                          help = 'Print the spec file name')
         gimmespec_parser.set_defaults(command = self.gimmespec)
+
+    def register_gitbuildhash(self):
+        """Register the gitbuildhash target"""
+
+        gitbuildhash_parser = self.subparsers.add_parser('gitbuildhash',
+                                          help = 'Print the git hash used '
+                                          'to build the provided n-v-r',
+                                          description = 'This will show you \
+                                          the commit hash string used to \
+                                          build the provided build n-v-r')
+        gitbuildhash_parser.add_argument('build',
+                                         help='name-version-release of the \
+                                         build to query.')
+        gitbuildhash_parser.set_defaults(command = self.gitbuildhash)
 
     def register_giturl(self):
         """Register the giturl target"""
@@ -929,6 +944,9 @@ defined, packages will be built sequentially.""" %
 
     def gimmespec(self):
         print(self.cmd.spec)
+
+    def gitbuildhash(self):
+        print(self.cmd.gitbuildhash(self.args.build))
 
     def giturl(self):
         print(self.cmd.giturl())
