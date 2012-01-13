@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.10
+Version:        1.11
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -78,6 +78,15 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Jan 13 2012 Jesse Keating <jkeating@redhat.com> - 1.11-1
+- Change clog output to be more git-like (sochotnicky)
+- Fix mockconfig property (bochecha)
+- Use only new-style classes everywhere. (bochecha)
+- Testing for access before opening a file is unsafe (bochecha)
+- Add a gitbuildhash command (jkeating)
+- Always make sure you have a absolute path (aj) (jkeating)
+- don't try to import brew, just do koji (jkeating)
+
 * Mon Nov 21 2011 Jesse Keating <jkeating@redhat.com> - 1.10-1
 - Use -C for --config shortcut (jkeating)
 - Don't leave a directory on failure (#754082) (jkeating)
