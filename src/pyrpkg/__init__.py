@@ -1624,7 +1624,7 @@ class Commands(object):
                         first = False
                     else:
                         cloglines.append(line2.replace('%%', '%'))
- 
+
         # Now open the clog file and write out the lines
         clogfile = open(os.path.join(self.path, 'clog'), 'w')
         clogfile.writelines(cloglines)
