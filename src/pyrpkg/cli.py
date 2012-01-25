@@ -189,6 +189,8 @@ class cliClient(object):
 
         self.build_parser_common = argparse.ArgumentParser('build_common',
                                                          add_help = False)
+        self.build_parser_common.add_argument('--arches', nargs = '*',
+                                         help = 'Build for specific arches')
         self.build_parser_common.add_argument('--nowait',
                                          action = 'store_true',
                                          default = False,
@@ -664,8 +666,6 @@ defined, packages will be built sequentially.""" %
                                         pushed.  By default all \
                                         approprate arches will be \
                                         built.')
-        scratch_build_parser.add_argument('--arches', nargs = '*',
-                                          help = 'Build for specific arches')
         scratch_build_parser.add_argument('--srpm', nargs = '?',
                                   const = 'CONSTRUCT',
                                   help = 'Build from an srpm.  If no srpm \
