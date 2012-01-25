@@ -19,11 +19,9 @@ BuildArch:      noarch
 BuildRequires:  python-devel, python-setuptools
 # We br these things for man page generation due to imports
 BuildRequires:  GitPython, koji, python-pycurl
-%if 0%{?rhel} < 7
 BuildRequires:  python-hashlib
 BuildRequires:  python-argparse
 BuildRequires:  python-kitchen
-%endif
 
 %description
 A tool for managing RPM package sources in a git repository.
@@ -35,10 +33,8 @@ Requires:       GitPython >= 0.2.0, python-argparse
 Requires:       python-pycurl, koji
 Requires:       rpm-build, rpm-python
 Requires:       rpmlint, mock, curl, openssh-clients, redhat-rpm-config
-%if 0%{?rhel} < 7
 Requires:       python-kitchen
 Requires:       python-hashlib
-%endif
 
 %description -n pyrpkg
 A python library for managing RPM package sources in a git repository.

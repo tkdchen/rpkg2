@@ -1368,7 +1368,8 @@ class Commands(object):
             self.log.debug('No local branch found, creating a new one')
             totrack = None
             for remote in remotes:
-                if remote.endswith(branch):
+                # bad use of "origin" here, will have to be fixed
+                if remote.replace('origin/', '') == branch:
                     totrack = remote
                     break
             else:
