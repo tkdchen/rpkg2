@@ -99,7 +99,8 @@ _rpkg()
         help|clog|gimmespec|gitbuildhash|giturl|lint|new|push|unused-patches|verrel)
             ;;
         build)
-            options="--nowait --background --skip-tag --scratch"
+            options="--nowait --background --skip-tag --scratch --md5"
+            options_arches="--arches"
             options_srpm="--srpm"
             options_target="--target"
             ;;
@@ -157,7 +158,7 @@ _rpkg()
             options="--rebase --no-rebase"
             ;;
         scratch-build)
-            options="--nowait --background"
+            options="--nowait --background --md5"
             options_target="--target"
             options_arches="--arches"
             options_srpm="--srpm"

@@ -191,6 +191,9 @@ class cliClient(object):
                                                          add_help = False)
         self.build_parser_common.add_argument('--arches', nargs = '*',
                                          help = 'Build for specific arches')
+        self.build_parser_common.add_argument('--md5', action = 'store_true',
+                                 help = 'Use md5 checksums (for older rpm \
+                                 hosts)')
         self.build_parser_common.add_argument('--nowait',
                                          action = 'store_true',
                                          default = False,
