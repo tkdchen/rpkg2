@@ -1788,7 +1788,11 @@ class Commands(object):
         if not build_target:
             raise rpkgError('Unknown build target: %s' % target)
 
-        repoid = self.anon_kojisession.getRepo(build_target['id'])['id']
+        try:
+            repoid = self.anon_kojisession.getRepo(
+                                build_target['build_tag_name'])['id']
+        except Exception, e:
+            raise rpkgError('Could not find a valid build repo')
 
         # Generate the config
         config = koji.genMockConfig('%s-%s' % (target, arch), arch,
