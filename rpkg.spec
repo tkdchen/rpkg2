@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.11
+Version:        1.12
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -74,6 +74,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Jan 24 2012 Jesse Keating <jkeating@redhat.com> - 1.12-1
+- Fix mock-config (ticket #13) (jkeating)
+- Make md5 a common build argument (jkeating)
+- Move arches to be a common build argument (ticket #3) (jkeating)
+- Find remote branch to track better (jkeating)
+
 * Fri Jan 13 2012 Jesse Keating <jkeating@redhat.com> - 1.11-1
 - Change clog output to be more git-like (sochotnicky)
 - Fix mockconfig property (bochecha)
