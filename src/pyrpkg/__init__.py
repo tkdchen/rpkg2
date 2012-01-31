@@ -789,7 +789,7 @@ class Commands(object):
                       'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem']
 
         # get the name
-        cmd = ['rpm', '-qp', '--qf', '%{NAME}', srpm]
+        cmd = ['rpm', '-qp', '--nosignature', '--qf', '%{NAME}', srpm]
                 # Run the command
         self.log.debug('Running: %s' % ' '.join(cmd))
         try:
