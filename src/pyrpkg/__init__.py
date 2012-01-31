@@ -1804,14 +1804,14 @@ class Commands(object):
         # Return the mess
         return(config)
 
-    def mockbuild(self, mockargs=[], root=None):
+    def mockbuild(self, mockargs=[], root=None, hashtype='sha256'):
         """Build the package in mock, using mockargs
 
         Log the output and returns nothing
         """
 
         # Make sure we have an srpm to run on
-        self.srpm()
+        self.srpm(hashtype=hashtype)
 
         # setup the command
         cmd = ['mock']

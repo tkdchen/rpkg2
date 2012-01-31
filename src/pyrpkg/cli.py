@@ -558,6 +558,11 @@ defined, packages will be built sequentially.""" %
                                use mock-config target and save it \
                                to /etc/mock/<branch>-candidate-<arch>.cfg')
         mockbuild_parser.add_argument('--root', help='Override mock root')
+        # Allow the user to just pass "--md5" which will set md5 as the
+        # hash, otherwise use the default of sha256
+        mockbuild_parser.add_argument('--md5', action='store_const',
+                              const='md5', default='sha256', dest='hash',
+                              help='Use md5 checksums (for older rpm hosts)')
         mockbuild_parser.set_defaults(command=self.mockbuild)
 
     def register_mock_config(self):
@@ -991,7 +996,8 @@ defined, packages will be built sequentially.""" %
             # there were no args
             pass
         try:
-            self.cmd.mockbuild(mockargs, self.args.root)
+            self.cmd.mockbuild(mockargs, self.args.root,
+                               hashtype=self.args.hash)
         except Exception, e:
             self.log.error('Could not run mockbuild: %s' % e)
             sys.exit(1)
