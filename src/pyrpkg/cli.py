@@ -113,7 +113,7 @@ class cliClient(object):
                                               'pass --help to a target')
         # Add some basic arguments that should be used by all.
         # Add a config file
-        self.parser.add_argument('--config', '-c',
+        self.parser.add_argument('--config', '-C',
                                  default=None,
                                  help='Specify a config file to use')
         # Allow forcing the dist value
