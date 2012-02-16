@@ -1803,12 +1803,14 @@ class Commands(object):
             self.rpmdefines.append("--define '_builddir %s'" %
                                    os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
+        # Figure out the hash type to use
+        if not hashtype:
+            # Try to determine the dist
+            hashtype = self._guess_hashtype()
         # This may need to get updated if we ever change our checksum default
-        if hashtype:
-            cmd.extend(["--define '_source_filedigest_algorithm %s'" %
-                        hashtype,
-                        "--define '_binary_filedigest_algorithm %s'" %
-                        hashtype])
+        if not hashtype == 'sha256':
+            cmd.extend(["--define '_source_filedigest_algorithm %s'" % hashtype,
+                    "--define '_binary_filedigest_algorithm %s'" % hashtype])
         if arch:
             cmd.extend(['--target', arch])
         cmd.extend(['-ba', os.path.join(self.path, self.spec)])
@@ -1851,7 +1853,7 @@ class Commands(object):
         # Return the mess
         return(config)
 
-    def mockbuild(self, mockargs=[], root=None, hashtype='sha256'):
+    def mockbuild(self, mockargs=[], root=None, hashtype=None):
         """Build the package in mock, using mockargs
 
         Log the output and returns nothing

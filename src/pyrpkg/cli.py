@@ -574,7 +574,7 @@ defined, packages will be built sequentially.""" %
         # Allow the user to just pass "--md5" which will set md5 as the
         # hash, otherwise use the default of sha256
         mockbuild_parser.add_argument('--md5', action='store_const',
-                              const='md5', default='sha256', dest='hash',
+                              const='md5', default=None, dest='hash',
                               help='Use md5 checksums (for older rpm hosts)')
         mockbuild_parser.set_defaults(command=self.mockbuild)
 
@@ -711,9 +711,9 @@ defined, packages will be built sequentially.""" %
         srpm_parser = self.subparsers.add_parser('srpm',
                                                  help = 'Create a source rpm')
         # optionally define old style hashsums
-        srpm_parser.add_argument('--md5', action = 'store_true',
-                                 help = 'Use md5 checksums (for older rpm \
-                                 hosts)')
+        srpm_parser.add_argument('--md5', action='store_const',
+                              const='md5', default=None, dest='hash',
+                              help='Use md5 checksums (for older rpm hosts)')
         srpm_parser.set_defaults(command = self.srpm)
 
     def register_switch_branch(self):
@@ -1060,10 +1060,7 @@ defined, packages will be built sequentially.""" %
 
     def srpm(self):
         self.cmd.sources()
-        if hasattr(self.args, 'md5') and self.args.md5:
-            self.cmd.srpm('md5')
-        else:
-            self.cmd.srpm()
+        self.cmd.srpm(hashtype=self.args.hash)
 
     def switch_branch(self):
         if self.args.branch:
