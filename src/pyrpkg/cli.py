@@ -140,8 +140,9 @@ class cliClient(object):
         # help command
         self.register_help()
 
-        # Add a common build parser to be used as a parent
+        # Add a common parsers
         self.register_build_common()
+        self.register_rpm_common()
 
         # Other targets
         self.register_build()
@@ -184,6 +185,7 @@ class cliClient(object):
         help_parser = self.subparsers.add_parser('help', help = 'Show usage')
         help_parser.set_defaults(command = self.parser.print_help)
 
+    # Setup a couple common parsers to save code duplication
     def register_build_common(self):
         """Create a common build parser to use in other commands"""
 
@@ -207,6 +209,16 @@ class cliClient(object):
                                          default = False,
                                          help = 'Run the build at a low '
                                          'priority')
+
+    def register_rpm_common(self):
+        """Create a common parser for rpm commands"""
+
+        self.rpm_parser_common = argparse.ArgumentParser('rpm_common',
+                                                         add_help=False)
+        self.rpm_parser_common.add_argument('--builddir', default=None,
+                                        help='Define an alternate builddir')
+        self.rpm_parser_common.add_argument('--arch',
+                                            help='Prep for a specific arch')
 
     def register_build(self):
         """Register the build target"""
@@ -389,6 +401,7 @@ defined, packages will be built sequentially.""" %
         """Register the compile target"""
 
         compile_parser = self.subparsers.add_parser('compile',
+                                       parents=[self.rpm_parser_common],
                                        help = 'Local test rpmbuild compile',
                                        description = 'This command calls \
                                        rpmbuild to compile the source.  \
@@ -396,7 +409,6 @@ defined, packages will be built sequentially.""" %
                                        stages will be done as well, \
                                        unless the short-circuit option \
                                        is used.')
-        compile_parser.add_argument('--arch', help = 'Arch to compile for')
         compile_parser.add_argument('--short-circuit', action = 'store_true',
                                     help = 'short-circuit compile')
         compile_parser.set_defaults(command = self.compile)
@@ -481,14 +493,13 @@ defined, packages will be built sequentially.""" %
         """Register the install target"""
 
         install_parser = self.subparsers.add_parser('install',
+                                       parents=[self.rpm_parser_common],
                                        help = 'Local test rpmbuild install',
                                        description = 'This will call \
                                        rpmbuild to run the install \
                                        section.  All leading sections \
                                        will be processed as well, unless \
                                        the short-circuit option is used.')
-        install_parser.add_argument('--arch', help = 'Arch to install for',
-                                    default = None)
         install_parser.add_argument('--short-circuit', action = 'store_true',
                                     help = 'short-circuit install',
                                     default = False)
@@ -519,16 +530,18 @@ defined, packages will be built sequentially.""" %
         """Register the local target"""
 
         local_parser = self.subparsers.add_parser('local',
+                                     parents=[self.rpm_parser_common],
                                      help = 'Local test rpmbuild binary',
                                      description = 'Locally test run of \
                                      rpmbuild producing binary RPMs. The \
                                      rpmbuild output will be logged into a \
                                      file named \
                                      .build-%{version}-%{release}.log')
-        local_parser.add_argument('--arch', help = 'Build for arch')
-        # optionally define old style hashsums
-        local_parser.add_argument('--md5', action = 'store_true',
-                              help = 'Use md5 checksums (for older rpm hosts)')
+        # Allow the user to just pass "--md5" which will set md5 as the
+        # hash, otherwise use the default of sha256
+        local_parser.add_argument('--md5', action='store_const',
+                              const='md5', default=None, dest='hash',
+                              help='Use md5 checksums (for older rpm hosts)')
         local_parser.set_defaults(command = self.local)
 
     def register_new(self):
@@ -621,11 +634,11 @@ defined, packages will be built sequentially.""" %
         """Register the prep target"""
 
         prep_parser = self.subparsers.add_parser('prep',
+                                        parents=[self.rpm_parser_common],
                                         help = 'Local test rpmbuild prep',
                                         description = 'Use rpmbuild to "prep" \
                                         the sources (unpack the source \
                                         archive(s) and apply any patches.)')
-        prep_parser.add_argument('--arch', help = 'Prep for a specific arch')
         prep_parser.set_defaults(command = self.prep)
 
     def register_pull(self):
@@ -789,6 +802,7 @@ defined, packages will be built sequentially.""" %
         """Register the verify-files target"""
 
         verify_files_parser = self.subparsers.add_parser('verify-files',
+                                            parents=[self.rpm_parser_common],
                                             help='Locally verify %%files '
                                             'section',
                                             description="Locally run \
@@ -945,7 +959,8 @@ defined, packages will be built sequentially.""" %
             arch = self.args.arch
         if self.args.short_circuit:
             short = True
-        self.cmd.compile(arch=arch, short=short)
+        self.cmd.compile(arch=arch, short=short,
+                         builddir=self.args.builddir)
 
     def diff(self):
         self.cmd.diff(self.args.cached, self.args.files)
@@ -970,16 +985,15 @@ defined, packages will be built sequentially.""" %
 
     def install(self):
         self.cmd.install(arch=self.args.arch,
-                         short=self.args.short_circuit)
+                         short=self.args.short_circuit,
+                         builddir=self.args.builddir)
 
     def lint(self):
         self.cmd.lint(self.args.info, self.args.rpmlintconf)
 
     def local(self):
-        if self.args.md5:
-            self.cmd.local(arch=self.args.arch, hashtype='md5')
-        else:
-            self.cmd.local(arch=self.args.arch)
+        self.cmd.local(arch=self.args.arch, hashtype=self.args.hash,
+                       builddir=self.args.builddir)
 
     def mockbuild(self):
         try:
@@ -1026,7 +1040,7 @@ defined, packages will be built sequentially.""" %
         self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
 
     def prep(self):
-        self.cmd.prep(arch=self.args.arch)
+        self.cmd.prep(arch=self.args.arch, builddir=self.args.builddir)
 
     def pull(self):
         self.cmd.pull(rebase=self.args.rebase,
@@ -1087,7 +1101,7 @@ defined, packages will be built sequentially.""" %
         print('\n'.join(unused))
 
     def verify_files(self):
-        self.cmd.verify_files()
+        self.cmd.verify_files(builddir=self.args.builddir)
 
     def verrel(self):
         print('%s-%s-%s' % (self.cmd.module_name, self.cmd.ver,

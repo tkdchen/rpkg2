@@ -1663,10 +1663,11 @@ class Commands(object):
         clogfile = open(os.path.join(self.path, 'clog'), 'w')
         clogfile.writelines(cloglines)
 
-    def compile(self, arch=None, short=False):
+    def compile(self, arch=None, short=False, builddir=None):
         """Run rpm -bc on a module
 
-        optionally for a specific arch, or short-circuit it
+        optionally for a specific arch, or short-circuit it, or
+        define an alternate builddir
 
         Logs the output and returns nothing
         """
@@ -1675,6 +1676,10 @@ class Commands(object):
         self.sources()
         # setup the rpm command
         cmd = ['rpmbuild']
+        if builddir:
+            # Tack on a new builddir to the end of the defines
+            self.rpmdefines.append("--define '_builddir %s'" %
+                                   os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
         if arch:
             cmd.extend(['--target', arch])
@@ -1712,10 +1717,11 @@ class Commands(object):
         # This should have a try and catch koji errors
         self.kojisession.uploadWrapper(file, path, callback=callback)
 
-    def install(self, arch=None, short=False):
+    def install(self, arch=None, short=False, builddir=None):
         """Run rpm -bi on a module
 
-        optionally for a specific arch, or short-circuit it
+        optionally for a specific arch, short-circuit it, or
+        define an alternative builddir
 
         Logs the output and returns nothing
         """
@@ -1724,6 +1730,10 @@ class Commands(object):
         self.sources()
         # setup the rpm command
         cmd = ['rpmbuild']
+        if builddir:
+            # Tack on a new builddir to the end of the defines
+            self.rpmdefines.append("--define '_builddir %s'" %
+                                   os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
         if arch:
             cmd.extend(['--target', arch])
@@ -1773,7 +1783,7 @@ class Commands(object):
         # Run the command
         self._run_command(cmd, shell=True)
 
-    def local(self, arch=None, hashtype='sha256'):
+    def local(self, arch=None, hashtype=None, builddir=None):
         """rpmbuild locally for given arch.
 
         Takes arch to build for, and hashtype to build with.
@@ -1788,9 +1798,13 @@ class Commands(object):
         self.sources()
         # build up the rpm command
         cmd = ['rpmbuild']
+        if builddir:
+            # Tack on a new builddir to the end of the defines
+            self.rpmdefines.append("--define '_builddir %s'" %
+                                   os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
         # This may need to get updated if we ever change our checksum default
-        if not hashtype == 'sha256':
+        if hashtype:
             cmd.extend(["--define '_source_filedigest_algorithm %s'" %
                         hashtype,
                         "--define '_binary_filedigest_algorithm %s'" %
@@ -1918,10 +1932,11 @@ class Commands(object):
         self.log.info('Uploaded and added to .gitignore: %s' %
                       ' '.join(uploaded))
 
-    def prep(self, arch=None):
+    def prep(self, arch=None, builddir=None):
         """Run rpm -bp on a module
 
-        optionally for a specific arch
+        optionally for a specific arch, or
+        define an alternative builddir
 
         Logs the output and returns nothing
         """
@@ -1930,6 +1945,10 @@ class Commands(object):
         self.sources()
         # setup the rpm command
         cmd = ['rpmbuild']
+        if builddir:
+            # Tack on a new builddir to the end of the defines
+            self.rpmdefines.append("--define '_builddir %s'" %
+                                   os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
         if arch:
             cmd.extend(['--target', arch])
@@ -1983,11 +2002,18 @@ class Commands(object):
                 unused.append(file)
         return unused
 
-    def verify_files(self):
-        """Run rpmbuild -bl on a module to verify the %files section"""
+    def verify_files(self, builddir=None):
+        """Run rpmbuild -bl on a module to verify the %files section
+
+        optionally define an alternate builddir
+        """
 
         # setup the rpm command
         cmd = ['rpmbuild']
+        if builddir:
+            # Tack on a new builddir to the end of the defines
+            self.rpmdefines.append("--define '_builddir %s'" %
+                                   os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
         cmd.extend(['-bl', os.path.join(self.path, self.spec)])
         # Run the command
