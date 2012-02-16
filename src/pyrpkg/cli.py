@@ -300,6 +300,10 @@ defined, packages will be built sequentially.""" %
                                         file named "clog" that contains the \
                                         latest rpm changelog entry. The \
                                         leading "- " text will be stripped.')
+        clog_parser.add_argument('--raw', action='store_true',
+                                 default=False,
+                                 help='Generate a more "raw" clog without \
+                                 twiddling the contents')
         clog_parser.set_defaults(command = self.clog)
 
     def register_clone(self):
@@ -360,6 +364,9 @@ defined, packages will be built sequentially.""" %
                                    action = 'store_true',
                                    help = 'Generate the commit message from \
                                    the Changelog section')
+        commit_parser.add_argument('--raw', action='store_true',
+                                   default=False,
+                                   help='Make the clog raw')
         commit_parser.add_argument('-t', '--tag',
                                    default = False,
                                    action = 'store_true',
@@ -756,6 +763,9 @@ defined, packages will be built sequentially.""" %
                                 action = 'store_true',
                                 help = 'Generate the tag message from the \
                                 spec changelog section')
+        tag_parser.add_argument('--raw', action='store_true',
+                                default=False,
+                                help='Make the clog raw')
         tag_parser.add_argument('-F', '--file',
                                 default = None,
                                 help = 'Take the tag message from the given \
@@ -929,7 +939,7 @@ defined, packages will be built sequentially.""" %
         return self.cmd.clean(dry, useignore)
 
     def clog(self):
-        self.cmd.clog()
+        self.cmd.clog(raw=self.args.raw)
 
     def clone(self):
         if self.args.branches:
@@ -941,7 +951,7 @@ defined, packages will be built sequentially.""" %
 
     def commit(self):
         if self.args.clog:
-            self.cmd.clog()
+            self.cmd.clog(self.args.raw)
             self.args.file = os.path.abspath(os.path.join(self.args.path,
                                                           'clog'))
         self.cmd.commit(self.args.message, self.args.file,
@@ -1089,7 +1099,7 @@ defined, packages will be built sequentially.""" %
                 if not tagname:
                     tagname = self.cmd.nvr
                 if self.args.clog:
-                    self.cmd.clog()
+                    self.cmd.clog(self.args.raw)
                     filename = 'clog'
             self.cmd.add_tag(tagname, self.args.force,
                              self.args.message, filename)

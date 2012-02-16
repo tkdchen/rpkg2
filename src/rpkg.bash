@@ -96,7 +96,7 @@ _rpkg()
     local after= after_more=
 
     case $command in
-        help|clog|gimmespec|gitbuildhash|giturl|lint|new|push|unused-patches|verrel)
+        help|gimmespec|gitbuildhash|giturl|lint|new|push|unused-patches|verrel)
             ;;
         build)
             options="--nowait --background --skip-tag --scratch --md5"
@@ -113,13 +113,16 @@ _rpkg()
         clean)
             options="--dry-run -x"
             ;;
+        clog)
+            options="--raw"
+            ;;
         clone|co)
             options="--branches --anonymous"
             options_branch="-b"
             after="package"
             ;;
         commit|ci)
-            options="--push --clog --tag"
+            options="--push --clog --raw --tag"
             options_string="--message"
             options_file="--file"
             after="file"
@@ -174,7 +177,7 @@ _rpkg()
             after="branch"
             ;;
         tag)
-            options="--clog --force --list --delete"
+            options="--clog --raw --force --list --delete"
             options_string="--message"
             options_file="--file"
             after_more=true

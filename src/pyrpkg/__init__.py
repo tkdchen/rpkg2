@@ -1645,7 +1645,7 @@ class Commands(object):
                                                             task_id))
         return task_id
 
-    def clog(self):
+    def clog(self, raw=False):
         """Write the latest spec changelog entry to a clog file"""
 
         # This is a little ugly.  We want to find where %changelog starts,
@@ -1670,8 +1670,12 @@ class Commands(object):
                         # skip the email n/v/r line.  Redundant
                         continue
                     if first:
-                        cloglines.append(line2.lstrip('- ').replace('%%', '%'))
-                        cloglines.append("\n")
+                        if not raw:
+                            cloglines.append(line2.lstrip('- ').replace('%%',
+                                                                        '%'))
+                            cloglines.append("\n")
+                        else:
+                            cloglines.append(line2.replace('%%', '%'))
                         first = False
                     else:
                         cloglines.append(line2.replace('%%', '%'))
