@@ -84,7 +84,8 @@ class cliClient(object):
                                        items['build_client'],
                                        user=self.args.user,
                                        dist=self.args.dist,
-                                       target=target)
+                                       target=target,
+                                       quiet=self.args.q)
 
     # This function loads the extra stuff once we figure out what site
     # we are

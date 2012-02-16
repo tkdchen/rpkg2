@@ -60,7 +60,8 @@ class Commands(object):
 
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
-                 build_client, user=None, dist=None, target=None):
+                 build_client, user=None, dist=None, target=None,
+                 quiet=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -85,6 +86,8 @@ class Commands(object):
         self.dist = dist
         # Set the default hashtype
         self.hashtype = 'sha256'
+        # Set an attribute for quiet or not
+        self.quiet = quiet
         # Set place holders for properties
         # Anonymous buildsys session
         self._anon_kojisession = None
