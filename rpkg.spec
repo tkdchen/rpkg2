@@ -15,6 +15,9 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires:       python-argparse
 Requires:       pyrpkg => %{name}-%{version}
 
+# Use this to force plugins to update
+Conflicts:      fedpkg <= 1.7
+
 BuildArch:      noarch
 BuildRequires:  python-devel, python-setuptools
 # We br these things for man page generation due to imports
