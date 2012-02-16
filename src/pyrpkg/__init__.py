@@ -280,6 +280,22 @@ class Commands(object):
         return self._disttag
 
     @property
+    def distval(self):
+        """This property ensures the distval attribute"""
+
+        if not self._distval:
+            self.load_rpmdefines()
+        return self._distval
+
+    @property
+    def distvar(self):
+        """This property ensures the distvar attribute"""
+
+        if not self._distvar:
+            self.load_rpmdefines()
+        return self._distvar
+
+    @property
     def kojisession(self):
         """This property ensures the kojisession attribute"""
 
