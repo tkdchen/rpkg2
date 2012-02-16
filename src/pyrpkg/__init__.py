@@ -776,6 +776,23 @@ class Commands(object):
             raise rpkgError('No compatible build arches found in %s' % srpm)
         return archlist
 
+    def _guess_hashtype(self):
+        """Attempt to figure out the hash type based on branch data"""
+
+        # We may not be able to determine the rpmdefine, if so, fall back.
+        try:
+            # This works, except for the small range of Fedoras
+            # between FC5 and FC12 or so.  Nobody builds for that old
+            # anyway.
+            if int(re.search(r'\d', self.distval).group()) < 6:
+                return('md5')
+        except:
+            # An error here is OK, don't bother the user.
+            pass
+
+        # Fall back to the default hash type
+        return(self.hashtype)
+
     def _list_branches(self):
         """Returns a tuple of local and remote branch names"""
 
@@ -1937,7 +1954,8 @@ class Commands(object):
         cmd.extend(self.rpmdefines)
         # Figure out which hashtype to use, if not provided one
         if not hashtype:
-            hashtype = self.hashtype
+            # Try to determine the dist
+            hashtype = self._guess_hashtype()
         # This may need to get updated if we ever change our checksum default
         if not hashtype == 'sha256':
             cmd.extend(["--define '_source_filedigest_algorithm %s'" % hashtype,
