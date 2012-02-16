@@ -728,8 +728,10 @@ class Commands(object):
 
         cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
         '--progress-bar', '-F', 'name=%s' % self.module_name, '-F',
-        'md5sum=%s' % file_hash, '-F', 'file=@%s' % file,
-        self.lookaside_cgi]
+        'md5sum=%s' % file_hash, '-F', 'file=@%s' % file]
+        if self.quiet:
+            cmd.append('-s')
+        cmd.append(self.lookaside_cgi)
         self._run_command(cmd)
 
     def _get_build_arches_from_spec(self):
@@ -906,6 +908,8 @@ class Commands(object):
             cmd.append('--dry-run')
         if not useignore:
             cmd.append('-x')
+        if self.quiet:
+            cmd.append('-q')
         # Run it!
         self._run_command(cmd, cwd=self.path)
         return
@@ -938,6 +942,8 @@ class Commands(object):
 
         # Create the command
         cmd = ['git', 'clone']
+        if self.quiet:
+            cmd.append('-q')
         # do the clone
         if branch and bare_dir:
             raise rpkgError('Cannot combine bare cloning with a branch')
@@ -1037,6 +1043,8 @@ class Commands(object):
         # construct the git command
         # We do this via subprocess because the git module is terrible.
         cmd = ['git', 'commit']
+        if self.quiet:
+            cmd.append('-q')
         if message:
             cmd.extend(['-m', message])
         elif file:
@@ -1308,6 +1316,8 @@ class Commands(object):
         """
 
         cmd = ['git', 'pull']
+        if self.quiet:
+            cmd.append('-q')
         if rebase:
             cmd.append('--rebase')
         if norebase:
@@ -1319,6 +1329,8 @@ class Commands(object):
         """Push changes to the remote repository"""
 
         cmd = ['git', 'push']
+        if self.quiet:
+            cmd.append('-q')
         self._run_command(cmd, cwd=self.path)
         return
 
@@ -1371,8 +1383,10 @@ class Commands(object):
             #output.close()
             # These options came from Makefile.common.
             # Probably need to support wget too
-            command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S', '--fail',
-                       '--show-error', url]
+            command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S', '--fail']
+            if self.quiet:
+                command.append('-s')
+            command.append(url)
             self._run_command(command)
             if not self._verify_file(outfile, csum, self.lookasidehash):
                 raise rpkgError('%s failed checksum' % file)
@@ -1688,6 +1702,8 @@ class Commands(object):
             cmd.extend(['--target', arch])
         if short:
             cmd.append('--short-circuit')
+        if self.quiet:
+            cmd.append('--quiet')
         cmd.extend(['-bc', os.path.join(self.path, self.spec)])
         # Run the command
         self._run_command(cmd, shell=True)
@@ -1742,6 +1758,8 @@ class Commands(object):
             cmd.extend(['--target', arch])
         if short:
             cmd.append('--short-circuit')
+        if self.quiet:
+            cmd.append('--quiet')
         cmd.extend(['-bi', os.path.join(self.path, self.spec)])
         # Run the command
         self._run_command(cmd, shell=True)
@@ -1816,6 +1834,8 @@ class Commands(object):
                     "--define '_binary_filedigest_algorithm %s'" % hashtype])
         if arch:
             cmd.extend(['--target', arch])
+        if self.quiet:
+            cmd.append('--quiet')
         cmd.extend(['-ba', os.path.join(self.path, self.spec)])
         logfile = '.build-%s-%s.log' % (self.ver, self.rel)
         # Run the command
@@ -1868,6 +1888,8 @@ class Commands(object):
         # setup the command
         cmd = ['mock']
         cmd.extend(mockargs)
+        if self.quiet:
+            cmd.append('--quiet')
         if not root:
             root=self.mockconfig
         cmd.extend(['-r', root, '--resultdir',
@@ -1957,6 +1979,8 @@ class Commands(object):
         cmd.extend(self.rpmdefines)
         if arch:
             cmd.extend(['--target', arch])
+        if self.quiet:
+            cmd.append('--quiet')
         cmd.extend(['--nodeps', '-bp', os.path.join(self.path, self.spec)])
         # Run the command
         self._run_command(cmd, shell=True)
@@ -1976,6 +2000,8 @@ class Commands(object):
 
         cmd = ['rpmbuild']
         cmd.extend(self.rpmdefines)
+        if self.quiet:
+            cmd.append('--quiet')
         # Figure out which hashtype to use, if not provided one
         if not hashtype:
             # Try to determine the dist
@@ -2020,6 +2046,8 @@ class Commands(object):
             self.rpmdefines.append("--define '_builddir %s'" %
                                    os.path.abspath(builddir))
         cmd.extend(self.rpmdefines)
+        if self.quiet:
+            cmd.append('--quiet')
         cmd.extend(['-bl', os.path.join(self.path, self.spec)])
         # Run the command
         self._run_command(cmd, shell=True)
