@@ -1,6 +1,7 @@
 # rpkg bash completion
 
-have rpkg &&
+have rpkg || return 1
+
 _rpkg()
 {
     COMPREPLY=()
@@ -258,19 +259,16 @@ _rpkg()
 } &&
 complete -F _rpkg rpkg
 
-have _rpkg &&
 _rpkg_target()
 {
     koji list-targets --quiet 2>/dev/null | cut -d" " -f1
 }
 
-have _rpkg &&
 _rpkg_arch()
 {
     echo "i386 x86_64 ppc ppc64 s390 s390x sparc sparc64"
 }
 
-have _rpkg &&
 _rpkg_branch()
 {
     local git_options= format="--format %(refname:short)"
@@ -281,7 +279,6 @@ _rpkg_branch()
     git $git_options for-each-ref $format 'refs/heads'
 }
 
-have _rpkg &&
 _rpkg_package()
 {
     repoquery -C --qf=%{sourcerpm} "$1*" 2>/dev/null | sort -u | sed -r 's/(-[^-]*){2}\.src\.rpm$//'
