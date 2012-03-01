@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.12
+Version:        1.13
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -77,6 +77,23 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Mar 01 2012 Jesse Keating <jkeating@redhat.com> - 1.13-1
+- Return proper exit code from builds (#20) (jkeating)
+- Fix md5 option in the build parser (jkeating)
+- More completion fixes (jkeating)
+- Add mock-config and mockbuild completion (jkeating)
+- Simplify test for rpkg availability. (ville.skytta)
+- Fix ~/... path completion. (ville.skytta (jkeating)
+- Add a --raw option to clog (#15) (jkeating)
+- Make things quiet when possible (jkeating)
+- Fix up figuring out srpm hash type (jkeating)
+- Allow defining an alternative builddir (jkeating)
+- Conflict with older fedpkg (jkeating)
+- Attempt to automatically set the md5 flag (jkeating)
+- Use -C not -c for config.  (#752411) (jkeating)
+- Don't check gpg sigs when importing srpms (ticket #16) (jkeating)
+- Enable md5 option in mockbuild (twaugh) (jkeating)
+
 * Tue Jan 24 2012 Jesse Keating <jkeating@redhat.com> - 1.12-1
 - Fix mock-config (ticket #13) (jkeating)
 - Make md5 a common build argument (jkeating)
