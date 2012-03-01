@@ -927,7 +927,7 @@ defined, packages will be built sequentially.""" %
         self.args.chain = urls
         self.args.skip_tag = False
         self.args.scratch = False
-        self.build(sets=sets)
+        return self.build(sets=sets)
 
     def clean(self):
         dry = False
@@ -1064,7 +1064,7 @@ defined, packages will be built sequentially.""" %
         # A scratch build is just a build with --scratch
         self.args.scratch = True
         self.args.skip_tag = False
-        self.build()
+        return self.build()
 
     def sources(self):
         self.cmd.sources(self.args.outdir)
