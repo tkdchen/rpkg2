@@ -37,7 +37,7 @@ _rpkg()
     local options="--help -v -q"
     local options_value="--dist --user --path"
     local commands="build chain-build ci clean clog clone co commit compile diff gimmespec giturl help \
-    gitbuildhash import install lint local new new-sources patch prep pull push scratch-build sources \
+    gitbuildhash import install lint local mockbuild mock-config new new-sources patch prep pull push scratch-build sources \
     srpm switch-branch tag unused-patches upload verify-files verrel"
 
     # parse main options and get command
@@ -150,6 +150,14 @@ _rpkg()
         local)
             options="--md5"
             options_arch="--arch"
+            ;;
+        mock-config)
+            options="--target"
+            options_arch="--arch"
+            ;;
+        mockbuild)
+            options="--md5"
+            options_mroot="--root"
             ;;
         patch)
             options="--rediff"
