@@ -132,6 +132,7 @@ _rpkg()
         compile|install)
             options="--short-circuit"
             options_arch="--arch"
+            options_dir="--builddir"
             ;;
         diff)
             options="--cached"
@@ -150,6 +151,7 @@ _rpkg()
         local)
             options="--md5"
             options_arch="--arch"
+            options_dir="--builddir"
             ;;
         mock-config)
             options="--target"
@@ -163,8 +165,9 @@ _rpkg()
             options="--rediff"
             options_string="--suffix"
             ;;
-        prep)
+        prep|verify-files)
             options_arch="--arch"
+            options_dir="--builddir"
             ;;
         pull)
             options="--rebase --no-rebase"
