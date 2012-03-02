@@ -730,13 +730,16 @@ defined, packages will be built sequentially.""" %
         switch_branch_parser = self.subparsers.add_parser('switch-branch',
                                                 help = 'Work with branches',
                                                 description = 'This command \
-                                                can create or switch to a \
-                                                local git branch.  It can \
+                                                can switch to a local git \
+                                                branch.  If provided with a \
+                                                remote branch name that does \
+                                                not have a local match it \
+                                                will create one.  It can \
                                                 also be used to list the \
                                                 existing local and remote \
                                                 branches.')
         switch_branch_parser.add_argument('branch',  nargs = '?',
-                                          help = 'Switch to or create branch')
+                                          help = 'Branch name to switch to')
         switch_branch_parser.add_argument('-l', '--list',
                                           help = 'List both remote-tracking \
                                           branches and local branches',
