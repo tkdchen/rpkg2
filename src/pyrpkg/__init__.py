@@ -163,21 +163,26 @@ class Commands(object):
                     'topurl': None
                     }
         # Process the configs in order, global, user, then any option passed
-        try:
-            f = open(self.kojiconfig)
-        except IOError as e:
-            self.log.debug("Could not read %s, using the default koji config values")
+        # This ~/.<build_client>/config is a bit ugly.  Other build clients
+        # might put it elsewhere, but this works for now.
+        for configfile in (self.kojiconfig, os.path.expanduser('~/.%s/config'
+                                      % self.build_client)):
+            try:
+                f = open(configfile)
+            except IOError:
+                self.log.debug("Could not read %s for config values" %
+                               configfile)
 
-        else:
-            with f:
-                config = ConfigParser.ConfigParser()
-                config.readfp(f)
+            else:
+                with f:
+                    config = ConfigParser.ConfigParser()
+                    config.readfp(f)
 
-            if config.has_section(os.path.basename(self.build_client)):
-                for name, value in config.items(os.path.basename(
-                                                self.build_client)):
-                    if defaults.has_key(name):
-                        defaults[name] = value
+                if config.has_section(os.path.basename(self.build_client)):
+                    for name, value in config.items(os.path.basename(
+                                                    self.build_client)):
+                        if defaults.has_key(name):
+                            defaults[name] = value
         # Expand out the directory options
         for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl'):
             if defaults[name]:
