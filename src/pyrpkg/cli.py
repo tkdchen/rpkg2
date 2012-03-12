@@ -957,12 +957,26 @@ defined, packages will be built sequentially.""" %
             self.cmd.clog(self.args.raw)
             self.args.file = os.path.abspath(os.path.join(self.args.path,
                                                           'clog'))
-        self.cmd.commit(self.args.message, self.args.file,
-                        self.args.files)
-        if self.args.tag:
-            tagname = self.cmd.nvr
-            self.cmd.add_tag(tagname, True, self.args.message,
-                             self.args.file)
+        try:
+            self.cmd.commit(self.args.message, self.args.file,
+                            self.args.files)
+        except Exception:
+            if self.args.tag:
+                self.log.error('Could not commit, will not tag!')
+            if self.args.push:
+                self.log.error('Could not commit, will not push!')
+            raise
+
+        try:
+            if self.args.tag:
+                tagname = self.cmd.nvr
+                self.cmd.add_tag(tagname, True, self.args.message,
+                                 self.args.file)
+        except Exception:
+            if self.args.push:
+                self.log.error('Could not tag, will not push!')
+            raise
+
         if self.args.push:
             self.push()
 
