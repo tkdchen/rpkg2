@@ -1333,6 +1333,11 @@ class Commands(object):
     def push(self):
         """Push changes to the remote repository"""
 
+        # see if our branch is tracking anything
+        try:
+            self.branch_merge()
+        except Exception:
+            self.log.warn('Current branch cannot be pushed anywhere!')
         cmd = ['git', 'push']
         if self.quiet:
             cmd.append('-q')
