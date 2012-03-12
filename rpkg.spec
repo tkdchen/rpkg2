@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.13
+Version:        1.14
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -77,6 +77,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Mar 12 2012 Jesse Keating <jkeating@redhat.com> - 1.14-1
+- Warn if the checked out branch cannot be pushed (jkeating)
+- Warn if commit or tag fails and we don't push (#21) (jkeating)
+- Honor ~/.koji/config (rhbz#785776) (jkeating)
+- Update help output for switch-branch (rhbz#741742) (jkeating)
+
 * Thu Mar 01 2012 Jesse Keating <jkeating@redhat.com> - 1.13-1
 - Return proper exit code from builds (#20) (jkeating)
 - Fix md5 option in the build parser (jkeating)
