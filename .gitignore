@@ -4,3 +4,8 @@
 py-compile
 *~
 *.swp
+/*.tar.gz
+/*.rpm
+dist/
+src/rpkg.egg-info/
+/sources
