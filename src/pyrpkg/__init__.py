@@ -1357,8 +1357,8 @@ class Commands(object):
 
         # see if our branch is tracking anything
         try:
-            self.branch_merge()
-        except Exception:
+            self.load_branch_merge()
+        except:
             self.log.warn('Current branch cannot be pushed anywhere!')
         cmd = ['git', 'push']
         if self.quiet:
