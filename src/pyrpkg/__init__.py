@@ -1126,6 +1126,7 @@ class Commands(object):
         """Determine the git hash used to produce a particular N-V-R"""
 
         # Get the build data from the nvr
+        self.log.debug('Getting task data from the build system')
         bdata = self.anon_kojisession.getBuild(build)
         if not bdata:
             raise rpkgError('Unknown build: %s' % build)
@@ -1134,11 +1135,32 @@ class Commands(object):
         taskinfo = self.anon_kojisession.getTaskRequest(bdata['task_id'])
         # taskinfo is a list of items, first item is the task url.
         # second is the build target.
-        # Match a 40 char block of text on the url line, that'll be our hash
-        try:
-            hash = re.search(r'[0-9A-Za-z]{40}', taskinfo[0]).group(0)
-        except AttributeError:
-            raise rpkgError('Build %s did not use git' % build)
+        # See if the build target starts with cvs or git
+        hash = None
+        buildsource = taskinfo[0]
+        if buildsource.startswith('cvs://'):
+            # snag everyting after the last # mark
+            cvstag = buildsource.rsplit('#')[-1]
+            # Now read the remote repo to figure out the hash from the tag
+            giturl = self.anongiturl % {'module': bdata['name']}
+            cmd = ['git', 'ls-remote', '--tags', giturl, cvstag]
+            self.log.debug('Querying git server for tag info')
+            try:
+                output = subprocess.check_output(cmd)
+                hash = output.split()[0]
+            except:
+                # don't do anything here, we'll handle not having hash
+                # later
+                pass
+        elif buildsource.startswith('git://'):
+            # Match a 40 char block of text on the url line, that'll be
+            # our hash
+            hash = buildsource.rsplit('#')[-1]
+        else:
+            # Unknown build source
+            raise rpkgError('Unhandled build source %s' % buildsource)
+        if not hash:
+            raise rpkgError('Could not find hash of build %s' % build)
         return (hash)
 
     def import_srpm(self, srpm):
