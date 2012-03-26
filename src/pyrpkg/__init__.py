@@ -163,10 +163,8 @@ class Commands(object):
                     'topurl': None
                     }
         # Process the configs in order, global, user, then any option passed
-        # This ~/.<build_client>/config is a bit ugly.  Other build clients
-        # might put it elsewhere, but this works for now.
-        for configfile in (self.kojiconfig, os.path.expanduser('~/.%s/config'
-                                      % self.build_client)):
+        for configfile in (self.kojiconfig,
+                           os.path.expanduser('~/.koji/config')):
             try:
                 f = open(configfile)
             except IOError:
