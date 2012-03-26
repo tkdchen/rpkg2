@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.15
+Version:        1.16
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -77,6 +77,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Mar 26 2012 Jesse Keating <jkeating@redhat.com> - 1.16-1
+- Only read from .koji/config (jkeating)
+
 * Wed Mar 21 2012 Jesse Keating <jkeating@redhat.com> - 1.15-1
 - Fix branch push warning (jkeating)
 - Handle CVS based builds when getting build hash (jkeating)
