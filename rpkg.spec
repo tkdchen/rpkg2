@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.16
+Version:        1.17
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -77,6 +77,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Apr 09 2012 Jesse Keating <jkeating@redhat.com> - 1.17-1
+- Don't assume master branch for chain builds (jkeating)
+
 * Mon Mar 26 2012 Jesse Keating <jkeating@redhat.com> - 1.16-1
 - Only read from .koji/config (jkeating)
 
