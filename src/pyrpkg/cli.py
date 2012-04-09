@@ -907,8 +907,9 @@ defined, packages will be built sequentially.""" %
                 build_set = []
                 sets = True
             else:
-                # Figure out the scm url to build from package name
-                hash = self.cmd.get_latest_commit(component)
+                # Figure out the scm url to build from package namee
+                hash = self.cmd.get_latest_commit(component,
+                                                  self.cmd.branch_merge)
                 url = self.cmd.anongiturl % {'module':
                                              component} + '#%s' % hash
                 # If there are no ':' in the chain list, treat each object as an

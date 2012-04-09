@@ -1100,14 +1100,14 @@ class Commands(object):
         os.chdir(oldpath)
         return
 
-    def get_latest_commit(self, module):
+    def get_latest_commit(self, module, branch):
         """Discover the latest commit has for a given module and return it"""
 
         # This is stupid that I have to use subprocess :/
         url = self.anongiturl % {'module': module}
         # This cmd below only works to scratch build rawhide
         # We need something better for epel
-        cmd = ['git', 'ls-remote', url, 'refs/heads/master']
+        cmd = ['git', 'ls-remote', url, 'refs/heads/%s' % branch]
         try :
             proc = subprocess.Popen(cmd, stderr=subprocess.PIPE,
                                     stdout=subprocess.PIPE)
@@ -1115,9 +1115,12 @@ class Commands(object):
         except OSError, e:
             raise rpkgError(e)
         if error:
-            raise rpkgError('Got an error finding head for %s: %s' %
-                              (module, error))
+            raise rpkgError('Got an error finding %s head for %s: %s' %
+                              (branch, module, error))
         # Return the hash sum
+        if not output:
+            raise rpkgError('Could not find remote branch %s for %s' %
+                            (branch, module))
         return output.split()[0]
 
     def gitbuildhash(self, build):
