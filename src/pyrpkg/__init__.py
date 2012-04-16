@@ -354,33 +354,8 @@ class Commands(object):
         """This property ensures the module attribute"""
 
         if not self._module_name:
-            self.load_module_name()
+            self.load_nameverrel()
         return(self._module_name)
-
-    def load_module_name(self):
-        """Set the base package name from the spec."""
-
-        # get the name
-        cmd = ['rpm', '-q', '--qf', '%{NAME} ', '--specfile', self.spec]
-        # Run the command
-        self.log.debug('Running: %s' % ' '.join(cmd))
-        try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                    cwd=self.path, stderr=subprocess.PIPE)
-            output, error = proc.communicate()
-        except OSError, e:
-            raise rpkgError(e)
-        if error:
-            if sys.stdout.isatty():
-                sys.stderr.write(error)
-            else:
-                # Yes, we could wind up sending error output to stdout in the
-                # case of no local tty, but I don't have a better way to do this.
-                self.log.info(error)
-        if proc.returncode:
-            raise rpkgError('Could not parse the spec, exited %s' %
-                              proc.returncode)
-        self._module_name = output.split()[0]
 
     @property
     def nvr(self):
