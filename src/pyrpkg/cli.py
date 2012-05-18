@@ -518,8 +518,9 @@ defined, packages will be built sequentially.""" %
 
         lint_parser = self.subparsers.add_parser('lint',
                                             help = 'Run rpmlint against local '
-                                            'spec and build output if present. \
-                                            Rpmlint can be configured using the \
+                                            'spec and build output if present.',
+                                            description = 'Rpmlint can be \
+                                            configured using the \
                                             --rpmlintconf/-r option or by setting \
                                             a .rpmlint file in the working \
                                             directory')
