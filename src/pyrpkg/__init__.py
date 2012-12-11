@@ -9,6 +9,7 @@
 # option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
 # the full text of the license.
 
+import errno
 import os
 import sys
 import shutil
@@ -27,6 +28,7 @@ import git
 import ConfigParser
 import stat
 import StringIO
+import tempfile
 import fnmatch
 import cli
 # Try to import krb, it's OK if it fails
@@ -1888,6 +1890,78 @@ class Commands(object):
         # Return the mess
         return(config)
 
+    def _config_dir_other(self, config_dir, filenames=('site-defaults.cfg',
+                                                       'logging.ini')):
+        """Populates mock config directory with other necessary files
+
+        If files are found in system config directory for mock they are copied
+        to mock config directory defined as method's argument. Otherwise empty
+        files are created."""
+        for filename in filenames:
+            system_filename = '/etc/mock/%s' % filename
+            tmp_filename = os.path.join(config_dir, filename)
+            if os.path.exists(system_filename):
+                try:
+                    shutil.copy2(system_filename, tmp_filename)
+                except Exception, error:
+                    raise rpkgError('Failed to create copy system config file'
+                                    ' %s: %s' % (filename, error))
+            else:
+                try:
+                    open(tmp_filename, 'w').close()
+                except Exception, error:
+                    raise rpkgError('Failed to create empty mock config'
+                                    ' file %s: %s'
+                                    % (tmp_filename, error))
+
+    def _config_dir_basic(self, config_dir=None, root=None):
+        """Setup directory with essential mock config
+
+        If config directory doesn't exist it will be created. If temporary
+        directory was created by this method and error occours during
+        processing, temporary directory is removed. Otherwise it caller's
+        responsibility to remove this directory.
+
+        Returns used config directory"""
+        if not root:
+            root = self.mockconfig
+        if not config_dir:
+            my_config_dir = tempfile.mkdtemp(suffix=root)
+            config_dir = my_config_dir
+            self.log.debug('New mock config directory: %s', config_dir)
+        else:
+            my_config_dir = None
+
+        try:
+            config_content = self.mock_config()
+        except rpkgError, error:
+            self._cleanup_tmp_dir(my_config_dir)
+            raise rpkgError('Could not generate config file: %s'
+                            % error)
+
+        config_file = os.path.join(config_dir, '%s.cfg' % root)
+        try:
+            open(config_file, 'wb').write(config_content)
+        except IOError, error:
+            self._cleanup_tmp_dir(my_config_dir)
+            raise rpkgError('Could not write config file: %s' % error)
+
+        return config_dir
+
+    def _cleanup_tmp_dir(self, tmp_dir):
+        """Tries to remove directory and ignores EEXIST error
+
+        If occoured directory not exist error (EEXIST) it silently continue.
+        Otherwise raise rpkgError exception."""
+        if not tmp_dir:
+            return
+        try:
+            shutil.rmtree(tmp_dir)
+        except OSError, error:
+            if error.errno != errno.EEXIST:
+                raise rpkgError('Failed to remove temporary directory'
+                                ' %s. Reason: %s.' % (tmp_dir, error))
+
     def mockbuild(self, mockargs=[], root=None, hashtype=None):
         """Build the package in mock, using mockargs
 
@@ -1902,14 +1976,40 @@ class Commands(object):
         cmd.extend(mockargs)
         if self.quiet:
             cmd.append('--quiet')
+
+        config_dir = None
         if not root:
-            root=self.mockconfig
+            root = self.mockconfig
+            chroot_cfg = '/etc/mock/%s.cfg' % root
+            if not os.path.exists(chroot_cfg):
+                self.log.debug('Mock config %s was not found. Going to'
+                               ' request koji to create new one.', chroot_cfg)
+                try:
+                    config_dir = self._config_dir_basic(root=root)
+                except rpkgError, error:
+                    raise rpkgError('Failed to create mock config directory:'
+                                    ' %s' % error)
+                self.log.debug('Temporary mock config directory: %s',
+                               config_dir)
+                try:
+                    self._config_dir_other(config_dir)
+                except rpkgError, error:
+                    self._cleanup_tmp_dir(config_dir)
+                    raise rpkgError('Failed to populate mock config directory:'
+                                    ' %s' % error)
+                cmd.extend(['--configdir', config_dir])
+
         cmd.extend(['-r', root, '--resultdir',
                     os.path.join(self.path, "results_%s" % self.module_name,
                                  self.ver, self.rel),
                     '--rebuild', self.srpmname])
         # Run the command
-        self._run_command(cmd)
+        try:
+            self._run_command(cmd)
+        finally:
+            self.log.debug('Cleaning up mock temporary config directory: %s',
+                           config_dir)
+            self._cleanup_tmp_dir(config_dir)
 
     def upload(self, files, replace=False):
         """Upload source file(s) in the lookaside cache

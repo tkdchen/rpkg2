@@ -575,10 +575,10 @@ defined, packages will be built sequentially.""" %
                                information.  This can be overridden \
                                using the global --dist option. Your \
                                user must be in the local "mock" group.',
-                               epilog='To generate a mock \
-                               config for the current branch \
-                               use mock-config target and save it \
-                               to /etc/mock/<branch>-candidate-<arch>.cfg')
+                               epilog='If config file for mock isn\'t found in \
+                               /etc/mock directory, temporary config directory \
+                               for mock is created and populated with config \
+                               file created with mock-config.')
         mockbuild_parser.add_argument('--root', help='Override mock root')
         # Allow the user to just pass "--md5" which will set md5 as the
         # hash, otherwise use the default of sha256

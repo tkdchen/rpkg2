@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+#- Generate mock-config for mockbuild if needed (rhbz#856928) (pbabinca)
+
 * Mon Apr 16 2012 Jesse Keating <jkeating@redhat.com> - 1.18-1
 - Use rpmdefines when querying for package name
 
