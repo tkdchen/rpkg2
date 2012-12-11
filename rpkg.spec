@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.18
+Version:        1.19
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -77,7 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-#- Generate mock-config for mockbuild if needed (rhbz#856928) (pbabinca)
+* Tue Dec 11 2012 Pavol Babincak <pbabinca@redhat.com> - 1.19-1
+- Generate mock-config for mockbuild if needed (rhbz#856928) (pbabinca)
 
 * Mon Apr 16 2012 Jesse Keating <jkeating@redhat.com> - 1.18-1
 - Use rpmdefines when querying for package name
