@@ -1926,7 +1926,8 @@ class Commands(object):
         if not root:
             root = self.mockconfig
         if not config_dir:
-            my_config_dir = tempfile.mkdtemp(suffix=root)
+            my_config_dir = tempfile.mkdtemp(prefix="%s." % root,
+                                             suffix='mockconfig')
             config_dir = my_config_dir
             self.log.debug('New mock config directory: %s', config_dir)
         else:
