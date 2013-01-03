@@ -2,7 +2,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           rpkg
-Version:        1.19
+Version:        1.20
 Release:        1%{?dist}
 Summary:        Utility for interacting with rpm+git packaging systems
 
@@ -77,6 +77,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Jan 03 2013 Pavol Babincak <pbabinca@redhat.com> - 1.20-1
+- Mock-config save in directory ending with .$(mktemp)mockconfig (pbabinca)
+
 * Tue Dec 11 2012 Pavol Babincak <pbabinca@redhat.com> - 1.19-1
 - Generate mock-config for mockbuild if needed (rhbz#856928) (pbabinca)
 
