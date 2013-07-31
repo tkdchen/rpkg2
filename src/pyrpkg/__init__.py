@@ -1667,7 +1667,7 @@ class Commands(object):
         first = True
         spec = open(os.path.join(self.path, self.spec), 'r').readlines()
         for line in spec:
-            if line.startswith('%changelog'):
+            if line.lower().startswith('%changelog'):
                 # Grab all the lines below changelog
                 for line2 in spec[spec.index(line):]:
                     if line2.startswith('\n'):
