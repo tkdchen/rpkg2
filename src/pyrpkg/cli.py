@@ -441,6 +441,9 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         compile_parser.add_argument(
             '--short-circuit', action='store_true',
             help='short-circuit compile')
+        compile_parser.add_argument(
+            '--nocheck', action = 'store_true',
+            help = 'nocheck compile')
         compile_parser.set_defaults(command=self.compile)
 
     def register_diff(self):
@@ -516,7 +519,11 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         install_parser.add_argument(
             '--short-circuit', action='store_true', default=False,
             help='short-circuit install')
+        install_parser.add_argument(
+            '--nocheck', action = 'store_true',
+            help = 'nocheck install')
         install_parser.set_defaults(command=self.install)
+                                    default = False)
 
     def register_lint(self):
         """Register the lint target"""
@@ -1015,12 +1022,15 @@ defined, packages will be built sequentially.""" % {'name': self.name})
     def compile(self):
         arch = None
         short = False
+        nocheck = False
         if self.args.arch:
             arch = self.args.arch
         if self.args.short_circuit:
             short = True
+        if self.args.nocheck:
+            nocheck = True
         self.cmd.compile(arch=arch, short=short,
-                         builddir=self.args.builddir)
+                         builddir=self.args.builddir, nocheck=nocheck)
 
     def container_build(self):
         if self.args.build_with == "koji":
@@ -1108,7 +1118,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
     def install(self):
         self.cmd.install(arch=self.args.arch,
                          short=self.args.short_circuit,
-                         builddir=self.args.builddir)
+                         builddir=self.args.builddir,
+                         nocheck=self.args.nocheck)
 
     def lint(self):
         self.cmd.lint(self.args.info, self.args.rpmlintconf)

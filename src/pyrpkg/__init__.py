@@ -1879,7 +1879,7 @@ class Commands(object):
         clogfile = open(os.path.join(self.path, 'clog'), 'w')
         clogfile.writelines(cloglines)
 
-    def compile(self, arch=None, short=False, builddir=None):
+    def compile(self, arch=None, short=False, builddir=None, nocheck=False):
         """Run rpm -bc on a module
 
         optionally for a specific arch, or short-circuit it, or
@@ -1901,6 +1901,8 @@ class Commands(object):
             cmd.extend(['--target', arch])
         if short:
             cmd.append('--short-circuit')
+        if nocheck:
+            cmd.append('--nocheck')
         if self.quiet:
             cmd.append('--quiet')
         cmd.extend(['-bc', os.path.join(self.path, self.spec)])
@@ -1935,7 +1937,7 @@ class Commands(object):
         # This should have a try and catch koji errors
         self.kojisession.uploadWrapper(file, path, callback=callback)
 
-    def install(self, arch=None, short=False, builddir=None):
+    def install(self, arch=None, short=False, builddir=None, nocheck=False):
         """Run rpm -bi on a module
 
         optionally for a specific arch, short-circuit it, or
@@ -1957,6 +1959,8 @@ class Commands(object):
             cmd.extend(['--target', arch])
         if short:
             cmd.append('--short-circuit')
+        if nocheck:
+            cmd.append('--nocheck')
         if self.quiet:
             cmd.append('--quiet')
         cmd.extend(['-bi', os.path.join(self.path, self.spec)])

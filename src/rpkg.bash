@@ -132,7 +132,7 @@ _rpkg()
             after_more=true
             ;;
         compile|install)
-            options="--short-circuit"
+            options="--short-circuit --nocheck"
             options_arch="--arch"
             options_dir="--builddir"
             ;;
