@@ -804,7 +804,7 @@ class Commands(object):
         # This shouldn't change... often
         UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff',
                       'bin', 'tbz', 'tbz2', 'tgz', 'tlz', 'txz', 'pdf', 'rpm',
-                      'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem']
+                      'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem', 'spkg']
 
         # get the name
         cmd = ['rpm', '-qp', '--nosignature', '--qf', '%{NAME}', srpm]
