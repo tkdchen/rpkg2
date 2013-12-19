@@ -1602,6 +1602,9 @@ class Commands(object):
         if arches:
             if not scratch:
                 raise rpkgError('Cannot override arches for non-scratch builds')
+            for arch in arches:
+                if not re.match(r'^[0-9a-zA-Z_.]+$', arch):
+                    raise rpkgError('Invalid architecture name: %s' % arch)
             cmd.append('--arch-override=%s' % ','.join(arches))
             opts['arch_override'] = ' '.join(arches)
 
