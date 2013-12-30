@@ -1677,8 +1677,11 @@ class Commands(object):
                     if line2.startswith('%'):
                         continue
                     if line2.startswith('*'):
-                        # skip the email n/v/r line.  Redundant
-                        continue
+                        if first:
+                            # skip the email n/v/r line.  Redundant
+                            continue
+                        # Otherwise what follows is the next entry
+                        break
                     if first:
                         if not raw:
                             cloglines.append(line2.lstrip('- ').replace('%%',
