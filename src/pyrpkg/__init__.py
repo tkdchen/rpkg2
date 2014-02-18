@@ -200,7 +200,7 @@ class Commands(object):
         except:
             raise rpkgError('Could not initiate %s session' %
                             os.path.basename(self.build_client))
-        # save the weburl and topurl for later use too
+        # save the weburl and topurl for later use as well
         self._kojiweburl = defaults['weburl']
         self._topurl = defaults['topurl']
         if not anon:
@@ -618,7 +618,7 @@ class Commands(object):
                                ' '.join(cmd))
             try:
                 if pipe:
-                    # We're piping the stderr over too, which is probably a
+                    # We're piping the stderr over as well, which is probably a
                     # bad thing, but rpmbuild likes to put useful data on
                     # stderr, so....
                     proc = subprocess.Popen(command, env=environ,
@@ -903,7 +903,7 @@ class Commands(object):
 
         branch is the name of a branch to checkout instead of <remote>/master
 
-        bare_dir is the name of a directory to make a bare clone too if this is a
+        bare_dir is the name of a directory to make a bare clone to, if this is a
         bare clone. None otherwise.
 
         anon is whether or not to clone anonymously
@@ -1392,7 +1392,7 @@ class Commands(object):
             #curl.close()
             #output.close()
             # These options came from Makefile.common.
-            # Probably need to support wget too
+            # Probably need to support wget as well
             command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S', '--fail']
             if self.quiet:
                 command.append('-s')
@@ -1418,7 +1418,7 @@ class Commands(object):
         # See if the repo is dirty first
         if self.repo.is_dirty():
             raise rpkgError('%s has uncommitted changes.  Use git status '
-                            'too see details' % self.path)
+                            'to see details' % self.path)
 
         # Get our list of branches
         (locals, remotes) = self._list_branches()
@@ -1544,7 +1544,7 @@ class Commands(object):
             # Check to see if the tree is dirty
             if self.repo.is_dirty():
                 raise rpkgError('%s has uncommitted changes.  Use git status '
-                                'too see details' % self.path)
+                                'to see details' % self.path)
             # Need to check here to see if the local commit you want to build is
             # pushed or not
             branch = self.repo.active_branch

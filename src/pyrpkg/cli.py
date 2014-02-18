@@ -1138,7 +1138,7 @@ defined, packages will be built sequentially.""" %
     # The next 6 functions come from the koji project, from /usr/bin/koji
     # They should be in a library somewhere, but I have to steal them.
     # The code is licensed LGPLv2.1 and thus my (slightly) derived code
-    # is too.
+    # is as well.
     def _display_tasklist_status(self, tasks):
         free = 0
         open = 0
