@@ -4,9 +4,9 @@ from setuptools import setup, command
 
 setup(
     name = "rpkg",
-    version = "1.19",
-    author = "Jesse Keating",
-    author_email = "jkeating@redhat.com",
+    version = "1.20",
+    author = "Dennis Gilmore"
+    author_email = "ausil@fedoraproject.org",
     description = ("A python library and runtime script for managing RPM"
                                    "package sources in a git repository"),
     license = "GPLv2+",
