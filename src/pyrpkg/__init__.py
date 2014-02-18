@@ -2136,11 +2136,16 @@ class Commands(object):
         unused = []
         # Get the content of spec into memory for fast searching
         spec = open(self.spec, 'r').read()
+        # Replace %{name} with the package name
+        spec = spec.replace("%{name}", self.module_name)
+        # Replace %{version} with the package version
+        spec = spec.replace("%{version}", self.ver)
+
         # Get a list of files tracked in source control
         files = self.repo.git.ls_files('--exclude-standard').split()
         for file in files:
             # throw out non patches
-            if not file.endswith('.patch'):
+            if not file.endswith(('.patch','.diff')):
                 continue
             if file not in spec:
                 unused.append(file)
