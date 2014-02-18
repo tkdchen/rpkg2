@@ -161,6 +161,7 @@ class Commands(object):
                     'cert': '~/.koji/client.crt',
                     'ca': '~/.koji/clientca.crt',
                     'serverca': '~/.koji/serverca.crt',
+                    'krbservice' : 'host',
                     'authtype': None,
                     'topurl': None
                     }
@@ -184,7 +185,7 @@ class Commands(object):
                         if defaults.has_key(name):
                             defaults[name] = value
         # Expand out the directory options
-        for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl'):
+        for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl', 'krbservice'):
             if defaults[name]:
                 defaults[name] = os.path.expanduser(defaults[name])
         self.log.debug('Initiating a %s session to %s' %
