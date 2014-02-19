@@ -779,9 +779,16 @@ class Commands(object):
         # Fall back to the default hash type
         return(self.hashtype)
 
-    def _list_branches(self):
+    def _fetch_remotes(self):
+        self.log.debug('Fetching remotes')
+        for remote in self.repo.remotes:
+            remote.fetch()
+
+    def _list_branches(self, fetch=True):
         """Returns a tuple of local and remote branch names"""
 
+        if fetch:
+            self._fetch_remotes()
         self.log.debug('Listing refs')
         refs = self.repo.refs
         # Sort into local and remote branches
@@ -1403,7 +1410,7 @@ class Commands(object):
                 raise rpkgError('%s failed checksum' % file)
         return
 
-    def switch_branch(self, branch):
+    def switch_branch(self, branch, fetch=True):
         """Switch the working branch
 
         Will create a local branch if one doesn't already exist,
@@ -1422,7 +1429,7 @@ class Commands(object):
                             'to see details' % self.path)
 
         # Get our list of branches
-        (locals, remotes) = self._list_branches()
+        (locals, remotes) = self._list_branches(fetch)
 
         if not branch in locals:
             # We need to create a branch

@@ -745,6 +745,12 @@ defined, packages will be built sequentially.""" %
                                           help = 'List both remote-tracking \
                                           branches and local branches',
                                           action = 'store_true')
+        switch_branch_parser.add_argument('--no-fetch',
+                                          help = 'Dont\'t fetch new data '
+                                                 'from remote before switch',
+                                          action = 'store_false',
+                                          default = True,
+                                          dest = 'fetch')
         switch_branch_parser.set_defaults(command = self.switch_branch)
 
     def register_tag(self):
@@ -1094,9 +1100,9 @@ defined, packages will be built sequentially.""" %
 
     def switch_branch(self):
         if self.args.branch:
-            self.cmd.switch_branch(self.args.branch)
+            self.cmd.switch_branch(self.args.branch, self.args.fetch)
         else:
-            (locals, remotes) = self.cmd._list_branches()
+            (locals, remotes) = self.cmd._list_branches(self.args.fetch)
             # This is some ugly stuff here, but trying to emulate
             # the way git branch looks
             locals = ['  %s  ' % branch for branch in locals]
