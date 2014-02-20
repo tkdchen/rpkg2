@@ -103,6 +103,8 @@ class Commands(object):
         self._distval = None
         # The distvar rpm value
         self._distvar = None
+        # The rpm epoch of the cloned module
+        self._epoch = None
         # An authenticated buildsys session
         self._kojisession = None
         # A web url of the buildsys server
@@ -305,6 +307,14 @@ class Commands(object):
         return self._distvar
 
     @property
+    def epoch(self):
+        """This property ensures the epoch attribute"""
+
+        if not self._epoch:
+            self.load_nameverrel()
+        return self._epoch
+
+    @property
     def kojisession(self):
         """This property ensures the kojisession attribute"""
 
@@ -388,7 +398,7 @@ class Commands(object):
         # We make sure there is a space at the end of our query so that
         # we can split it later.  When there are subpackages, we get a
         # listing for each subpackage.  We only care about the first.
-        cmd.extend(['-q', '--qf', '"%{NAME} %{VERSION} %{RELEASE}??"',
+        cmd.extend(['-q', '--qf', '"%{NAME} %{EPOCH} %{VERSION} %{RELEASE}??"',
                     '--specfile', os.path.join(self.path, self.spec)])
         try:
             output, err = subprocess.Popen(' '.join(cmd), shell=True,
@@ -404,8 +414,14 @@ class Commands(object):
         # Get just the output, then split it by ??, grab the first and split
         # again to get ver and rel
         (self._module_name,
+         self._epoch,
          self._ver,
          self._rel) = output.split('??')[0].split()
+
+        # Most packages don't include a "Epoch: 0" line, in which case RPM
+        # returns '(none)'
+        if self._epoch ==  "(none)":
+            self._epoch = "0"
 
     @property
     def repo(self):
