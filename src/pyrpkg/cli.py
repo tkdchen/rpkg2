@@ -1182,12 +1182,12 @@ defined, packages will be built sequentially.""" %
                 free += 1
         self.log.info("  %d free  %d open  %d done  %d failed" %
                       (free, open, done, failed))
-    
+
     def _display_task_results(self, tasks):
         for task in [task for task in tasks.values() if task.level == 0]:
             state = task.info['state']
             task_label = task.str()
-    
+
             if state == koji.TASK_STATES['CLOSED']:
                 self.log.info('%s completed successfully' % task_label)
             elif state == koji.TASK_STATES['FAILED']:
@@ -1197,7 +1197,7 @@ defined, packages will be built sequentially.""" %
             else:
                 # shouldn't happen
                 self.log.info('%s has not completed' % task_label)
-    
+
     def _watch_koji_tasks(self, session, tasklist):
         if not tasklist:
             return
@@ -1239,7 +1239,7 @@ defined, packages will be built sequentially.""" %
                         print
                         self._display_task_results(tasks)
                     break
-    
+
                 time.sleep(1)
         except (KeyboardInterrupt):
             if tasks:
@@ -1255,7 +1255,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
             # on to any && commands.
             rv = 1
         return rv
-    
+
     # Stole these three functions from /usr/bin/koji
     def _format_size(self, size):
         if (size / 1073741824 >= 1):
@@ -1265,20 +1265,20 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
         if (size / 1024 >=1):
             return "%0.2f KiB" % (size / 1024.0)
         return "%0.2f B" % (size)
-    
+
     def _format_secs(self, t):
         h = t / 3600
         t = t % 3600
         m = t / 60
         s = t % 60
         return "%02d:%02d:%02d" % (h, m, s)
-    
+
     def _progress_callback(self, uploaded, total, piece, time, total_time):
         percent_done = float(uploaded)/float(total)
         percent_done_str = "%02d%%" % (percent_done * 100)
         data_done = self._format_size(uploaded)
         elapsed = self._format_secs(total_time)
-    
+
         speed = "- B/sec"
         if (time):
             if (uploaded != total):
@@ -1286,7 +1286,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
             else:
                 speed = self._format_size(float(total)/float(total_time)) + \
                 "/sec"
-    
+
         # write formatted string and flush
         sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" %
                          ('='*(int(percent_done*36)),
@@ -1327,7 +1327,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
 
         if  manpage:
             # Generate the man page
-            man_page = __import__('%s' % 
+            man_page = __import__('%s' %
                                   os.path.basename(sys.argv[0]).strip('.py'))
             man_page.generate(self.parser, self.subparsers)
             sys.exit(0)
