@@ -444,8 +444,8 @@ class Commands(object):
             # should end in one.
             osver = re.search(r'rhel-\d.*$', self.branch_merge).group()
         except AttributeError:
-            raise rpkgError('Could not find the base OS ver from branch name \
-                             %s' % self.branch_merge)
+            raise rpkgError('Could not find the base OS ver from branch name'
+                            ' %s' % self.branch_merge)
         self._distvar, self._distval = osver.split('-')
         self._distval = self._distval.replace('.', '_')
         self._disttag = 'el%s' % self._distval
@@ -1569,8 +1569,8 @@ class Commands(object):
                 if self.repo.git.rev_list('%s...%s' % (branch, merge)):
                     raise rpkgError('There are unpushed changes in your repo')
             except git.GitCommandError:
-                raise rpkgError('You must provide a srpm or push your \
-                                   changes to the remote repo.')
+                raise rpkgError('You must provide a srpm or push your changes'
+                                'to the remote repo.')
             url = self.anongiturl % {'module': self.module_name} + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
@@ -1591,10 +1591,10 @@ class Commands(object):
                                                     build_target['build_tag'])
             if dest_tag['id'] not in [build_target['build_tag']] + \
             [ancestor['parent_id'] for ancestor in ancestors]:
-                raise rpkgError('Packages in destination tag ' \
-                                  '%(dest_tag_name)s are not inherited by' \
-                                  'build tag %(build_tag_name)s' %
-                                  build_target)
+                raise rpkgError('Packages in destination tag '
+                                '%(dest_tag_name)s are not inherited by'
+                                'build tag %(build_tag_name)s' %
+                                build_target)
         else:
             cmd.append('build')
         # define our dictionary for options
