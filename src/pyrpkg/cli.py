@@ -85,7 +85,9 @@ class cliClient(object):
                                        user=self.args.user,
                                        dist=self.args.dist,
                                        target=target,
-                                       quiet=self.args.q)
+                                       quiet=self.args.q,
+                                       module_name=self.args.module_name,
+                                       )
 
     # This function loads the extra stuff once we figure out what site
     # we are
@@ -120,6 +122,14 @@ class cliClient(object):
         # Allow forcing the dist value
         self.parser.add_argument('--dist', default=None,
                                  help='Override the discovered distribution')
+        # Allow forcing the package name
+        self.parser.add_argument('--module-name',
+                                 help=('Override the module name. Otherwise'
+                                       ' it is discovered from: Git push URL'
+                                       ' or Git URL (last part of path with'
+                                       ' .git extension removed) or from name'
+                                       ' macro in spec file. In that order.')
+                                 )
         # Override the  discovered user name
         self.parser.add_argument('--user', default=None,
                                  help='Override the discovered user name')
