@@ -1537,7 +1537,7 @@ class Commands(object):
         curl.close()
 
     def build(self, skip_tag=False, scratch=False, background=False,
-              url=None, chain=None, arches=None, sets=False):
+              url=None, chain=None, arches=None, sets=False, nvr_check=True):
         """Initiate a build of the module.  Available options are:
 
         skip_tag: Skip the tag action after the build
@@ -1553,6 +1553,9 @@ class Commands(object):
         arches: A set of arches to limit the scratch build for
 
         sets: A boolean to let us know whether or not the chain has sets
+
+        nvr_check: A boolean; locally construct NVR and submit a build only if
+                   NVR doesn't exist in a build system
 
         This function submits the task to koji and returns the taskID
 
@@ -1634,12 +1637,14 @@ class Commands(object):
         cmd.append(self.target)
         # see if this build has been done.  Does not check builds within
         # a chain
-        if not scratch and not url.endswith('.src.rpm'):
+        if nvr_check and not scratch and not url.endswith('.src.rpm'):
             build = self.kojisession.getBuild(self.nvr)
             if build:
                 if build['state'] == 1:
-                    raise rpkgError('%s has already been built' %
-                                      self.nvr)
+                    raise rpkgError('Package %s has already been built\n'
+                                    'Note: You can skip this check with'
+                                    ' --skip-nvr-check. See help for more info'
+                                    % self.nvr)
         # Now submit the task and get the task_id to return
         # Handle the chain build version
         if chain:

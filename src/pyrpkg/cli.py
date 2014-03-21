@@ -233,6 +233,14 @@ class cliClient(object):
                                          it discovers the target to build for \
                                          based on branch data, and uses the \
                                          latest commit as the build source.')
+        build_parser.add_argument('--skip-nvr-check', action='store_false',
+                                  default=True, dest='nvr_check',
+                                  help=('Submit build to buildsystem without'
+                                        ' check if NVR was already build.'
+                                        ' NVR is constructed locally and may'
+                                        ' be different from NVR constructed'
+                                        ' during build on builder.')
+                                  )
         build_parser.add_argument('--skip-tag', action = 'store_true',
                                   default = False,
                                   help = 'Do not attempt to tag package')
@@ -881,7 +889,7 @@ defined, packages will be built sequentially.""" %
             url = '%s/%s' % (uniquepath, os.path.basename(self.args.srpm))
         task_id = self.cmd.build(self.args.skip_tag, self.args.scratch,
                                  self.args.background, url, chain, arches,
-                                 sets)
+                                 sets, self.args.nvr_check)
         # Now that we have the task ID we need to deal with it.
         if self.args.nowait:
             # Log out of the koji session
