@@ -31,6 +31,8 @@ import StringIO
 import tempfile
 import fnmatch
 import cli
+import urlparse
+import posixpath
 # Try to import krb, it's OK if it fails
 try:
     import krbV
@@ -63,7 +65,7 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None, dist=None, target=None,
-                 quiet=False):
+                 quiet=False, module_name=None):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -90,6 +92,8 @@ class Commands(object):
         self.hashtype = 'sha256'
         # Set an attribute for quiet or not
         self.quiet = quiet
+        # The name of the cloned module
+        self._module_name = module_name
         # Set place holders for properties
         # Anonymous buildsys session
         self._anon_kojisession = None
@@ -113,8 +117,8 @@ class Commands(object):
         self._localarch = None
         # A property to load the mock config
         self._mockconfig = None
-        # The name of the cloned module
-        self._module_name = None
+        # The name of the module from spec file
+        self._module_name_spec = None
         # The rpm name-version-release of the cloned module
         self._nvr = None
         # The rpm release of the cloned module
@@ -264,6 +268,46 @@ class Commands(object):
             self._branch_merge = merge
 
     @property
+    def branch_remote(self):
+        """This property ensures the branch_remote attribute"""
+
+        if not self._branch_remote:
+            self.load_branch_remote()
+        return self._branch_remote
+
+    def load_branch_remote(self):
+        """Find the name of remote from branch we're on."""
+
+        try:
+            remote = self.repo.git.config('--get', 'branch.%s.remote'
+                                          % self.branch_merge)
+        except git.GitCommandError, e:
+            raise rpkgError('Unable to find remote name: %s' % e)
+        self._branch_remote = remote
+
+    @property
+    def push_url(self):
+        """This property ensures the push_url attribute"""
+
+        if not self._push_url:
+            self.load_push_url()
+        return self._push_url
+
+    def load_push_url(self):
+        """Find the pushurl or url of remote of branch we're on."""
+
+        try:
+            url = self.repo.git.config('--get', 'remote.%s.pushurl'
+                                       % self.branch_remote)
+        except git.GitCommandError, e:
+            try:
+                url = self.repo.git.config('--get', 'remote.%s.url'
+                                           % self.branch_remote)
+            except git.GitCommandError, e:
+                raise rpkgError('Unable to find remote push url: %s' % e)
+        self._push_url = url
+
+    @property
     def commithash(self):
         """This property ensures the commit attribute"""
 
@@ -367,8 +411,30 @@ class Commands(object):
         """This property ensures the module attribute"""
 
         if not self._module_name:
-            self.load_nameverrel()
-        return(self._module_name)
+            self.load_module_name()
+        return self._module_name
+
+    def load_module_name(self):
+        """Loads a package module."""
+
+        try:
+            if self.push_url:
+                parts = urlparse.urlparse(self.push_url)
+                module_name = posixpath.basename(parts.path)
+                if module_name.endswith('.git'):
+                    module_name = module_name[:-len('.git')]
+                self._module_name = module_name
+                return
+        except rpkgError, error:
+            self.log.info('Failed to get module name from Git url or pushurl')
+
+        self.load_nameverrel()
+        if self._module_name_spec:
+            self._module_name = self._module_name_spec
+            return
+
+        raise rpkgError('Could not find current module name.'
+                        ' Use --module-name.')
 
     @property
     def nvr(self):
@@ -413,7 +479,7 @@ class Commands(object):
             self.log.error(err)
         # Get just the output, then split it by ??, grab the first and split
         # again to get ver and rel
-        (self._module_name,
+        (self._module_name_spec,
          self._epoch,
          self._ver,
          self._rel) = output.split('??')[0].split()
