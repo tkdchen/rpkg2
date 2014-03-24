@@ -138,6 +138,10 @@ class Commands(object):
         # The rpm version of the cloned module
         self._ver = None
         self.log = log
+        # Pushurl or url of remote of branch
+        self._push_url = None
+        # Name of remote
+        self._branch_remote = None
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
