@@ -86,8 +86,9 @@ class cliClient(object):
                                        dist=self.args.dist,
                                        target=target,
                                        quiet=self.args.q,
-                                       module_name=self.args.module_name,
                                        )
+
+        self._cmd.module_name = self.args.module_name
 
     # This function loads the extra stuff once we figure out what site
     # we are

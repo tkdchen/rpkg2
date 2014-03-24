@@ -65,7 +65,7 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None, dist=None, target=None,
-                 quiet=False, module_name=None):
+                 quiet=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -92,8 +92,6 @@ class Commands(object):
         self.hashtype = 'sha256'
         # Set an attribute for quiet or not
         self.quiet = quiet
-        # The name of the cloned module
-        self._module_name = module_name
         # Set place holders for properties
         # Anonymous buildsys session
         self._anon_kojisession = None
@@ -117,6 +115,8 @@ class Commands(object):
         self._localarch = None
         # A property to load the mock config
         self._mockconfig = None
+        # The name of the cloned module
+        self._module_name = None
         # The name of the module from spec file
         self._module_name_spec = None
         # The rpm name-version-release of the cloned module
@@ -417,6 +417,10 @@ class Commands(object):
         if not self._module_name:
             self.load_module_name()
         return self._module_name
+
+    @module_name.setter
+    def module_name(self, module_name):
+        self._module_name = module_name
 
     def load_module_name(self):
         """Loads a package module."""
