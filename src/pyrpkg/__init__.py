@@ -494,10 +494,15 @@ class Commands(object):
             self.log.error(err)
         # Get just the output, then split it by ??, grab the first and split
         # again to get ver and rel
+        first_line_output = output.split('??')[0]
+        parts = first_line_output.split()
+        if len(parts) != 4:
+            raise rpkgError('Could not get n-v-r-e from %r'
+                            % first_line_output)
         (self._module_name_spec,
          self._epoch,
          self._ver,
-         self._rel) = output.split('??')[0].split()
+         self._rel) = parts
 
         # Most packages don't include a "Epoch: 0" line, in which case RPM
         # returns '(none)'
