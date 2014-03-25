@@ -898,9 +898,14 @@ defined, packages will be built sequentially.""" %
                 # print an extra blank line due to callback oddity
                 print('')
             url = '%s/%s' % (uniquepath, os.path.basename(self.args.srpm))
+        # nvr_check option isn't set by all commands which calls this
+        # function so handle it as an optional argument
+        nvr_check = True
+        if hasattr(self.args, 'nvr_check'):
+            nvr_check = self.args.nvr_check
         task_id = self.cmd.build(self.args.skip_tag, self.args.scratch,
                                  self.args.background, url, chain, arches,
-                                 sets, self.args.nvr_check)
+                                 sets, nvr_check)
         # Now that we have the task ID we need to deal with it.
         if self.args.nowait:
             # Log out of the koji session
