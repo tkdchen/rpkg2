@@ -1721,6 +1721,28 @@ class Commands(object):
             opts['arch_override'] = ' '.join(arches)
 
         cmd.append(self.target)
+
+        if url.endswith('.src.rpm'):
+            srpm = os.path.basename(url)
+            build_reference = srpm
+        else:
+            try:
+                build_reference = self.nvr
+            except rpkgError, error:
+                self.log.warning(error)
+                if nvr_check:
+                    self.log.info('Note: You can skip NVR construction & NVR'
+                                  ' check with --skip-nvr-check. See help for'
+                                  ' more info.')
+                    raise rpkgError('Cannot continue without properly'
+                                    ' constructed NVR.')
+                else:
+                    self.log.info('NVR checking will be skipped so I do not'
+                                  ' care that I am not able to construct NVR.'
+                                  '  I will refer this build by package name'
+                                  ' in following messages.')
+                    build_reference = self.module_name
+
         # see if this build has been done.  Does not check builds within
         # a chain
         if nvr_check and not scratch and not url.endswith('.src.rpm'):
@@ -1729,8 +1751,8 @@ class Commands(object):
                 if build['state'] == 1:
                     raise rpkgError('Package %s has already been built\n'
                                     'Note: You can skip this check with'
-                                    ' --skip-nvr-check. See help for more info'
-                                    % self.nvr)
+                                    ' --skip-nvr-check. See help for more'
+                                    ' info.' % self.nvr)
         # Now submit the task and get the task_id to return
         # Handle the chain build version
         if chain:
@@ -1746,7 +1768,7 @@ class Commands(object):
             # This next list comp is ugly, but it's how we properly get a :
             # put in between each build set
             cmd.extend(' : '.join([' '.join(sets) for sets in chain]).split())
-            self.log.info('Chain building %s + %s for %s' % (self.nvr,
+            self.log.info('Chain building %s + %s for %s' % (build_reference,
                                                              chain[:-1],
                                                              self.target))
             self.log.debug('Building chain %s for %s with options %s and a '
@@ -1758,11 +1780,8 @@ class Commands(object):
         # Now handle the normal build
         else:
             cmd.append(url)
-            if url.endswith('.src.rpm'):
-                srpm = os.path.basename(url)
-                self.log.info('Building %s for %s' % (srpm, self.target))
-            else:
-                self.log.info('Building %s for %s' % (self.nvr, self.target))
+            self.log.info('Building %s for %s' % (build_reference,
+                                                  self.target))
             self.log.debug('Building %s for %s with options %s and a priority '
                            'of %s' % (url, self.target, opts, priority))
             self.log.debug(' '.join(cmd))
