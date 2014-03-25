@@ -474,16 +474,23 @@ class Commands(object):
         # listing for each subpackage.  We only care about the first.
         cmd.extend(['-q', '--qf', '"%{NAME} %{EPOCH} %{VERSION} %{RELEASE}??"',
                     '--specfile', os.path.join(self.path, self.spec)])
+        joined_cmd = ' '.join(cmd)
         try:
-            output, err = subprocess.Popen(' '.join(cmd), shell=True,
+            output, err = subprocess.Popen(joined_cmd, shell=True,
                                       stderr=subprocess.PIPE,
                                       stdout=subprocess.PIPE).communicate()
         except Exception, e:
             if err:
+                self.log.debug('Errors occoured while running following'
+                               ' command to get N-V-R-E:')
+                self.log.debug(joined_cmd)
                 self.log.error(err)
             raise rpkgError('Could not query n-v-r of %s: %s' % (self.module_name,
                                                                  e))
         if err:
+            self.log.debug('Errors occoured while running following command to'
+                           ' get N-V-R-E:')
+            self.log.debug(joined_cmd)
             self.log.error(err)
         # Get just the output, then split it by ??, grab the first and split
         # again to get ver and rel
