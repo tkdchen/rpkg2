@@ -1659,7 +1659,7 @@ class Commands(object):
                     raise rpkgError('There are unpushed changes in your repo')
             except git.GitCommandError:
                 raise rpkgError('You must provide a srpm or push your changes'
-                                'to the remote repo.')
+                                ' to the remote repo.')
             url = self.anongiturl % {'module': self.module_name} + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
