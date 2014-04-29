@@ -942,7 +942,7 @@ class Commands(object):
         except OSError, e:
             raise rpkgError(e)
         if error:
-            raise rpkgError('Error querying srpm:' % error)
+            raise rpkgError('Error querying srpm: %s' % error)
         # Doing a strip and split here as splitting on \n gets me an extra entry
         contents = output.strip().split('\n')
         # Cycle through the stuff and sort correctly by its extension
