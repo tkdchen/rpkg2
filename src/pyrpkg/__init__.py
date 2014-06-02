@@ -935,13 +935,20 @@ class Commands(object):
         uploadfiles = []
         cmd = ['rpm', '-qpl', srpm]
         self.log.debug('Running: %s' % ' '.join(cmd))
+        env = dict(os.environ)
+        env["LANG"] = "C"
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
+                                    stderr=subprocess.PIPE,
+                                    env=env)
             output, error = proc.communicate()
         except OSError, e:
             raise rpkgError(e)
-        if error:
+        # work around signed SRPMs, for these rpm -qpl might print a warning
+        # like:
+        # warning: foo-0.0.src.rpm Header V3 RSA/SHA256 Signature, key ID
+        # fd431d51: NOKEY
+        if error and not error.startswith("warning:") and not "NOKEY" in error:
             raise rpkgError('Error querying srpm: %s' % error)
         # Doing a strip and split here as splitting on \n gets me an extra entry
         contents = output.strip().split('\n')
