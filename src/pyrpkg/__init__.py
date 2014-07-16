@@ -1675,17 +1675,10 @@ class Commands(object):
             # Need to check here to see if the local commit you want to build is
             # pushed or not
             branch = self.repo.active_branch
-            try:
-                remote = self.repo.git.config('--get',
-                    'branch.%s.remote' % branch)
+            branch_merge = self.branch_merge
+            if self.repo.git.rev_list('%s...%s' % (branch, branch_merge)):
+                raise rpkgError('There are unpushed changes in your repo')
 
-                merge = self.repo.git.config('--get',
-                    'branch.%s.merge' % branch).replace('refs/heads', remote)
-                if self.repo.git.rev_list('%s...%s' % (branch, merge)):
-                    raise rpkgError('There are unpushed changes in your repo')
-            except git.GitCommandError:
-                raise rpkgError('You must provide a srpm or push your changes'
-                                ' to the remote repo.')
             url = self.anongiturl % {'module': self.module_name} + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
