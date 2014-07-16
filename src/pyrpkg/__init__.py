@@ -285,8 +285,11 @@ class Commands(object):
         try:
             remote = self.repo.git.config('--get', 'branch.%s.remote'
                                           % self.branch_merge)
-        except git.GitCommandError, e:
-            raise rpkgError('Unable to find remote name: %s' % e)
+        except (git.GitCommandError, rpkgError) as e:
+            self.log.debug("Could not determine the remote name, falling back"
+                           " to 'origin'")
+            remote = "origin"
+
         self._branch_remote = remote
 
     @property
