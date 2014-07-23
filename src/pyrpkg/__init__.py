@@ -887,7 +887,7 @@ class Commands(object):
     def _fetch_remotes(self):
         self.log.debug('Fetching remotes')
         for remote in self.repo.remotes:
-            remote.fetch()
+            self.repo.git.fetch(remote)
 
     def _list_branches(self, fetch=True):
         """Returns a tuple of local and remote branch names"""
