@@ -1562,8 +1562,8 @@ class Commands(object):
             try:
                 self.log.info(self.repo.git.checkout('-b', branch, '--track',
                                                 totrack))
-            except: # this needs to be finer grained I think...
-                raise rpkgError('Could not create branch %s' % branch)
+            except Exception, err: # this needs to be finer grained I think...
+                raise rpkgError('Could not create branch %s: %s' % (branch, err))
         else:
             try:
                 output = self.repo.git.checkout(branch)
