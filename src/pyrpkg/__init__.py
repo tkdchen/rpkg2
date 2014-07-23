@@ -1552,12 +1552,13 @@ class Commands(object):
             # We need to create a branch
             self.log.debug('No local branch found, creating a new one')
             totrack = None
+            full_branch = '%s/%s' % (self.branch_remote, branch)
             for remote in remotes:
-                if remote.endswith(branch):
+                if remote == full_branch:
                     totrack = remote
                     break
             else:
-                raise rpkgError('Unknown remote branch %s' % branch)
+                raise rpkgError('Unknown remote branch %s' % full_branch)
             try:
                 self.log.info(self.repo.git.checkout('-b', branch, '--track',
                                                 totrack))
