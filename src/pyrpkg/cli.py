@@ -34,6 +34,8 @@ class cliClient(object):
 
         self.config = config
         self._name = name
+        #Define default name in child class
+        #self.DEFAULT_CLI_NAME = None
         # Property holders, set to none
         self._cmd = None
         self._module = None
@@ -58,6 +60,17 @@ class cliClient(object):
 
     def get_name(self):
         name = os.path.basename(sys.argv[0])
+        if not name or '__main__.py' in name:
+            try:
+                name = self.DEFAULT_CLI_NAME
+            except AttributeError:
+                #Ignore missing DEFAULT_CLI_NAME for backwards
+                #compatibility
+                pass
+        if not name:
+            #We don't have logger available yet
+            sys.stderr.write('Could not determine CLI name\n')
+            sys.exit(1)
         return name
 
     # Define some properties here, for lazy loading
