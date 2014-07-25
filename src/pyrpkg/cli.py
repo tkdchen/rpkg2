@@ -33,9 +33,7 @@ class cliClient(object):
         """
 
         self.config = config
-        self.name = name
-        if not name:
-            self.name = os.path.basename(sys.argv[0])
+        self._name = name
         # Property holders, set to none
         self._cmd = None
         self._module = None
@@ -49,6 +47,19 @@ class cliClient(object):
         # Register all the commands
         self.setup_subparsers()
 
+    @property
+    def name(self):
+        """Property used to identify prog name and key in config file"""
+
+        if not self._name:
+            self._name = self.get_name()
+            assert self._name
+        return(self._name)
+
+    def get_name(self):
+        name = os.path.basename(sys.argv[0])
+        return name
+
     # Define some properties here, for lazy loading
     @property
     def cmd(self):
@@ -61,16 +72,13 @@ class cliClient(object):
     def load_cmd(self):
         """This sets up the cmd object"""
 
-        # Load up the library based on exe name
-        site = os.path.basename(sys.argv[0])
-
         # Set target if we got it as an option
         target = None
         if hasattr(self.args, 'target') and self.args.target:
             target = self.args.target
 
         # load items from the config file
-        items = dict(self.config.items(site, raw=True))
+        items = dict(self.config.items(self.name, raw=True))
 
         # Create the cmd object
         self._cmd = self.site.Commands(self.args.path,
@@ -1253,7 +1261,7 @@ defined, packages will be built sequentially.""" %
     """
 Tasks still running. You can continue to watch with the '%s watch-task' command.
     Running Tasks:
-    %s""" % (self.config.get(os.path.basename(sys.argv[0]), 'build_client'),
+    %s""" % (self.config.get(self.name, 'build_client'),
                              '\n'.join(['%s: %s' % (t.str(),
                                                     t.display_state(t.info))
                        for t in tasks.values() if not t.is_done()])))
@@ -1334,7 +1342,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
         if  manpage:
             # Generate the man page
             man_page = __import__('%s' %
-                                  os.path.basename(sys.argv[0]).strip('.py'))
+                                  self.name.strip('.py'))
             man_page.generate(self.parser, self.subparsers)
             sys.exit(0)
             # no return possible
