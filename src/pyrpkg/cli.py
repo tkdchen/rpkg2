@@ -116,6 +116,8 @@ class cliClient(object):
     def do_imports(self, site=None):
         """Import extra stuff not needed during build
 
+        As a side effect method sets self.site with a loaded library.
+
         site option can be used to specify which library to load
         """
 
