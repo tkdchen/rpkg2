@@ -785,11 +785,10 @@ defined, packages will be built sequentially.""" %
                                           help = 'List both remote-tracking \
                                           branches and local branches',
                                           action = 'store_true')
-        switch_branch_parser.add_argument('--no-fetch',
-                                          help = 'Dont\'t fetch new data '
-                                                 'from remote before switch',
-                                          action = 'store_false',
-                                          default = True,
+        switch_branch_parser.add_argument('--fetch',
+                                          help = 'Fetch new data from remote'
+                                                 ' before switch',
+                                          action = 'store_true',
                                           dest = 'fetch')
         switch_branch_parser.set_defaults(command = self.switch_branch)
 
