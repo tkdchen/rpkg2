@@ -1125,7 +1125,7 @@ class Commands(object):
         # We don't need this now. Ignore errors since keeping it does no harm
         shutil.rmtree(repo_path, ignore_errors=True)
 
-    def commit(self, message=None, file=None, files=[]):
+    def commit(self, message=None, file=None, files=[], signoff=False):
         """Commit changes to a module (optionally found at path)
 
         Can take a message to use as the commit message
@@ -1148,6 +1148,8 @@ class Commands(object):
         # construct the git command
         # We do this via subprocess because the git module is terrible.
         cmd = ['git', 'commit']
+        if signoff:
+            cmd.append('-s')
         if self.quiet:
             cmd.append('-q')
         if message:

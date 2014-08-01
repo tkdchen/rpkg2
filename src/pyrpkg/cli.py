@@ -431,6 +431,10 @@ defined, packages will be built sequentially.""" %
                                    default = [],
                                    help = 'Optional list of specific files to \
                                    commit')
+        commit_parser.add_argument('-s', '--signoff',
+                                   default = False,
+                                   action = 'store_true',
+                                   help = 'Include a signed-off-by')
         commit_parser.set_defaults(command = self.commit)
 
         # Add a ci alias
@@ -1013,7 +1017,7 @@ defined, packages will be built sequentially.""" %
                                                           'clog'))
         try:
             self.cmd.commit(self.args.message, self.args.file,
-                            self.args.files)
+                            self.args.files, self.args.signoff)
         except Exception:
             if self.args.tag:
                 self.log.error('Could not commit, will not tag!')
