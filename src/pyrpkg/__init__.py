@@ -875,7 +875,7 @@ class Commands(object):
             # This works, except for the small range of Fedoras
             # between FC5 and FC12 or so.  Nobody builds for that old
             # anyway.
-            if int(re.search(r'\d', self.distval).group()) < 6:
+            if int(re.search(r'\d+', self.distval).group()) < 6:
                 return('md5')
         except:
             # An error here is OK, don't bother the user.
