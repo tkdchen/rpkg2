@@ -1296,7 +1296,7 @@ class Commands(object):
         # Get a list of files we're currently tracking
         ourfiles = self.repo.git.ls_files().split('\n')
         # Trim out sources and .gitignore
-        for file in ('.gitignore', 'sources'):
+        for file in ('.gitignore', 'sources', ''):
             try:
                 ourfiles.remove(file)
             except ValueError:
