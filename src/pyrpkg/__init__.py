@@ -1296,15 +1296,11 @@ class Commands(object):
         # Get a list of files we're currently tracking
         ourfiles = self.repo.git.ls_files().split('\n')
         # Trim out sources and .gitignore
-        try:
-            ourfiles.remove('.gitignore')
-            ourfiles.remove('sources')
-        except ValueError:
-            pass
-        try:
-            ourfiles.remove('sources')
-        except ValueError:
-            pass
+        for file in ('.gitignore', 'sources'):
+            try:
+                ourfiles.remove(file)
+            except ValueError:
+                pass
 
         # Things work better if we're in our module directory
         oldpath = os.getcwd()
