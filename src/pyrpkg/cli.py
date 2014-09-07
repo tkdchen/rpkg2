@@ -1359,8 +1359,10 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
 
         if  manpage:
             # Generate the man page
-            man_page = __import__('%s' %
-                                  self.name.strip('.py'))
+            man_name = self.name
+            if man_name.endswith('.py'):
+                man_name = man_name[:-3]
+            man_page = __import__('%s' % man_name)
             man_page.generate(self.parser, self.subparsers)
             sys.exit(0)
             # no return possible
