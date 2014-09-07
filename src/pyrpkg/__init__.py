@@ -62,6 +62,11 @@ class Commands(object):
     by clients
     """
 
+    # This shouldn't change... often
+    UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff',
+                  'bin', 'tbz', 'tbz2', 'tgz', 'tlz', 'txz', 'pdf', 'rpm',
+                  'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem', 'spkg']
+
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None, dist=None, target=None,
@@ -932,11 +937,6 @@ class Commands(object):
     def _srpmdetails(self, srpm):
         """Return a tuple of package name, package files, and upload files."""
 
-        # This shouldn't change... often
-        UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff',
-                      'bin', 'tbz', 'tbz2', 'tgz', 'tlz', 'txz', 'pdf', 'rpm',
-                      'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem', 'spkg']
-
         # get the name
         cmd = ['rpm', '-qp', '--nosignature', '--qf', '%{NAME}', srpm]
                 # Run the command
@@ -975,7 +975,7 @@ class Commands(object):
         contents = output.strip().split('\n')
         # Cycle through the stuff and sort correctly by its extension
         for file in contents:
-            if file.rsplit('.')[-1] in UPLOADEXTS:
+            if file.rsplit('.')[-1] in self.UPLOADEXTS:
                 uploadfiles.append(file)
             else:
                 files.append(file)
