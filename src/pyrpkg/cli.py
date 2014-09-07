@@ -539,6 +539,10 @@ defined, packages will be built sequentially.""" %
         #import_srpm_parser.add_argument('--create', '-c',
         #                                help = 'Create a new local repo',
         #                                action = 'store_true')
+        import_srpm_parser.add_argument('--skip-diffs',
+                                        help = "Don't show diffs when \
+                                        import srpms",
+                                        action = 'store_true')
         import_srpm_parser.add_argument('srpm',
                                         help = 'Source rpm to import')
         import_srpm_parser.set_defaults(command = self.import_srpm)
@@ -1064,7 +1068,8 @@ defined, packages will be built sequentially.""" %
         uploadfiles = self.cmd.import_srpm(self.args.srpm)
         if uploadfiles:
             self.cmd.upload(uploadfiles, replace=True)
-        self.cmd.diff(cached=True)
+        if not self.args.skip_diffs:
+            self.cmd.diff(cached=True)
         self.log.info('--------------------------------------------')
         self.log.info("New content staged and new sources uploaded.")
         self.log.info("Commit if happy or revert with: git reset --hard HEAD")
