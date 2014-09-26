@@ -156,5 +156,5 @@ def generate(parser, subparsers):
 
 if __name__ == '__main__':
     import pyrpkg.cli
-    client = pyrpkg.cli.cliClient(name=None, config=None)
-    client.parse_cmdline(manpage = True)
+    client = pyrpkg.cli.cliClient(name='rpkg', config=None)
+    generate(client.parser, client.subparsers)
