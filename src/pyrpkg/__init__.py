@@ -69,6 +69,7 @@ class Commands(object):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
+        self._path = None
         self.path = os.path.abspath(path)
         # The url of the lookaside for source archives
         self.lookaside = lookaside
@@ -147,6 +148,21 @@ class Commands(object):
     # Properties allow us to "lazy load" various attributes, which also means
     # that we can do clone actions without knowing things like the spec
     # file or rpm data.
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        if self._path != value:
+            #Ensure all properties which depend on self.path will be
+            #freshly loaded next time
+            self._push_url = None
+            self._branch_remote = None
+            self._repo = None
+        self._path = value
+
     @property
     def anon_kojisession(self):
         """This property ensures the anon kojisession attribute"""
@@ -1034,6 +1050,8 @@ class Commands(object):
 
         if not path:
             path = self.path
+            self._push_url = None
+            self._branch_remote = None
         # construct the git url
         if anon:
             giturl = self.anongiturl % {'module': module}
@@ -1075,6 +1093,8 @@ class Commands(object):
 
         """
 
+        self._push_url = None
+        self._branch_remote = None
         # Get the full path of, and git object for, our directory of branches
         top_path = os.path.join(self.path, module)
         top_git = git.Git(top_path)
