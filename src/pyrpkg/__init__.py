@@ -660,6 +660,11 @@ class Commands(object):
             self.load_nameverrel()
         return(self._ver)
 
+    @property
+    def mock_results_dir(self):
+        return os.path.join(self.path, "results_%s" % self.module_name,
+                            self.ver, self.rel)
+
     # Define some helper functions, they start with _
     def _create_curl(self):
         """
@@ -2174,9 +2179,7 @@ class Commands(object):
                                     ' %s' % error)
                 cmd.extend(['--configdir', config_dir])
 
-        cmd.extend(['-r', root, '--resultdir',
-                    os.path.join(self.path, "results_%s" % self.module_name,
-                                 self.ver, self.rel),
+        cmd.extend(['-r', root, '--resultdir', self.mock_results_dir,
                     '--rebuild', self.srpmname])
         # Run the command
         try:
