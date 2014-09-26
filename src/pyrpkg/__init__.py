@@ -141,8 +141,10 @@ class Commands(object):
         self.log = log
         # Pushurl or url of remote of branch
         self._push_url = None
-        # Name of remote
+        # Name of remote determined from current clone
         self._branch_remote = None
+        # Name of default remote to be used for new clone
+        self.default_branch_remote = 'origin'
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
@@ -302,9 +304,9 @@ class Commands(object):
             remote = self.repo.git.config('--get', 'branch.%s.remote'
                                           % self.branch_merge)
         except (git.GitCommandError, rpkgError) as e:
-            self.log.debug("Could not determine the remote name, falling back"
-                           " to 'origin'")
-            remote = "origin"
+            remote = self.default_branch_remote
+            self.log.debug("Could not determine the remote name: %s", str(e))
+            self.log.debug("Falling back to default remote name '%s'", remote)
 
         self._branch_remote = remote
 
@@ -1078,7 +1080,7 @@ class Commands(object):
 
         if not bare_dir:
             # --bare and --origin are incompatible
-            cmd.extend(['--origin', self.branch_remote])
+            cmd.extend(['--origin', self.default_branch_remote])
 
         self._run_command(cmd, cwd=path)
 
@@ -1130,14 +1132,16 @@ class Commands(object):
         for branch in branches:
             try:
                 # Make a local clone for our branch
-                top_git.clone("--branch", branch, "--origin", self.branch_remote,
-                        repo_path, branch)
+                top_git.clone("--branch", branch,
+                              "--origin", self.default_branch_remote,
+                              repo_path, branch)
 
                 # Set the origin correctly
                 branch_path = os.path.join(top_path, branch)
                 branch_git = git.Git(branch_path)
                 branch_git.config("--replace-all",
-                        "remote.%s.url" % self.branch_remote, giturl)
+                                  "remote.%s.url" % self.default_branch_remote,
+                                  giturl)
             except (git.GitCommandError, OSError), e:
                 raise rpkgError('Could not locally clone %s from %s: %s' %
                         (branch, repo_path, e))
