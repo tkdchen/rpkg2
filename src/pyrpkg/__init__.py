@@ -1707,8 +1707,8 @@ class Commands(object):
             # Need to check here to see if the local commit you want to build is
             # pushed or not
             branch = self.repo.active_branch
-            branch_merge = self.branch_merge
-            if self.repo.git.rev_list('%s...%s' % (branch, branch_merge)):
+            full_branch = '%s/%s' % (self.branch_remote, self.branch_merge)
+            if self.repo.git.rev_list('%s...%s' % (full_branch, branch)):
                 raise rpkgError('There are unpushed changes in your repo')
 
             url = self.anongiturl % {'module': self.module_name} + \
