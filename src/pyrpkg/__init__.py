@@ -1503,6 +1503,11 @@ class Commands(object):
     def sources(self, outdir=None):
         """Download source files"""
 
+        if not os.path.exists(self.sources_filename):
+            self.log.info("sources file doesn't exist. Source files download"
+                          " skipped.")
+            return
+
         try:
             archives = open(os.path.join(self.path, 'sources'),
                             'r').readlines()
