@@ -39,6 +39,7 @@ try:
 except ImportError:
     pass
 
+import pyrpkg.sources
 
 # Define our own error class
 class rpkgError(Exception):
@@ -664,6 +665,10 @@ class Commands(object):
     def mock_results_dir(self):
         return os.path.join(self.path, "results_%s" % self.module_name,
                             self.ver, self.rel)
+
+    @property
+    def sources_filename(self):
+        return os.path.join(self.path, 'sources')
 
     # Define some helper functions, they start with _
     def _create_curl(self):
@@ -1508,22 +1513,10 @@ class Commands(object):
                           " skipped.")
             return
 
-        try:
-            archives = open(os.path.join(self.path, 'sources'),
-                            'r').readlines()
-        except IOError, e:
-            raise rpkgError('%s is not a valid repo: %s' % (self.path, e))
         # Default to putting the files where the module is
         if not outdir:
             outdir = self.path
-        for archive in archives:
-            try:
-                # This strip / split is kind a ugly, but checksums shouldn't have
-                # two spaces in them.  sources file might need more structure in the
-                # future
-                csum, file = archive.strip().split('  ', 1)
-            except ValueError:
-                raise rpkgError('Malformed sources file.')
+        for (csum, file) in self._read_sources():
             # See if we already have a valid copy downloaded
             outfile = os.path.join(outdir, file)
             if os.path.exists(outfile):
@@ -2194,6 +2187,18 @@ class Commands(object):
                            config_dir)
             self._cleanup_tmp_dir(config_dir)
 
+    def _read_sources(self):
+        """Parses 'sources' file"""
+        with open(self.sources_filename, 'rb') as sources_fp:
+            reader = pyrpkg.sources.reader(sources_fp)
+            return [a for a in reader]
+
+    def _write_sources(self, rows):
+        """Writes 'sources' file"""
+        with open(self.sources_filename, 'wb') as sources_fp:
+            writer = pyrpkg.sources.writer(sources_fp)
+            writer.writerows(rows)
+
     def upload(self, files, replace=False):
         """Upload source file(s) in the lookaside cache
 
@@ -2204,12 +2209,10 @@ class Commands(object):
         os.chdir(self.path)
 
         # Decide to overwrite or append to sources:
-        if replace:
+        if replace or not os.path.exists(self.sources_filename):
             sources = []
-            sources_file = open('sources', 'w')
         else:
-            sources = open('sources', 'r').readlines()
-            sources_file = open('sources', 'a')
+            sources = self._read_sources()
 
         # Will add new sources to .gitignore if they are not already there.
         gitignore = GitIgnore(os.path.join(self.path, '.gitignore'))
@@ -2220,8 +2223,8 @@ class Commands(object):
             file_hash = self._hash_file(f, self.lookasidehash)
             self.log.info("Uploading: %s  %s" % (file_hash, f))
             file_basename = os.path.basename(f)
-            if not "%s  %s\n" % (file_hash, file_basename) in sources:
-                sources_file.write("%s  %s\n" % (file_hash, file_basename))
+            if (file_hash, file_basename) not in sources:
+                sources.append((file_hash, file_basename))
 
             # Add this file to .gitignore if it's not already there:
             if not gitignore.match(file_basename):
@@ -2240,7 +2243,7 @@ class Commands(object):
                 self._do_curl(file_hash, f)
                 uploaded.append(file_basename)
 
-        sources_file.close()
+        self._write_sources(sources)
 
         # Write .gitignore with the new sources if anything changed:
         gitignore.write()
