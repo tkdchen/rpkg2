@@ -93,7 +93,7 @@ class Commands(object):
         # The regex of branches we care about
         self.branchre = branchre
         # The location of the buildsys config file
-        self.kojiconfig = kojiconfig
+        self.kojiconfig = os.path.expanduser(kojiconfig)
         # The buildsys client to use
         self.build_client = build_client
         # A way to override the discovered "distribution"
