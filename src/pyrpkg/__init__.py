@@ -1206,8 +1206,12 @@ class Commands(object):
     def delete_tag(self, tagname):
         """Delete a git tag from the repository found at optional path"""
 
-        cmd = ['git', 'tag', '-d', tagname]
-        self._run_command(cmd, cwd=self.path)
+        try:
+            self.repo.delete_tag(tagname)
+
+        except git.GitCommandError as e:
+            raise rpkgError(e)
+
         self.log.info ('Tag %s was deleted' % tagname)
 
     def diff(self, cached=False, files=[]):
