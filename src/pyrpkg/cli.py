@@ -936,13 +936,14 @@ defined, packages will be built sequentially.""" %
         task_id = self.cmd.build(self.args.skip_tag, self.args.scratch,
                                  self.args.background, url, chain, arches,
                                  sets, nvr_check)
-        # Now that we have the task ID we need to deal with it.
-        if self.args.nowait:
-            # Log out of the koji session
-            self.cmd.kojisession.logout()
-            return
-        # pass info off to our koji task watcher
+
+        # Log out of the koji session
         self.cmd.kojisession.logout()
+
+        if self.args.nowait:
+            return
+
+        # Pass info off to our koji task watcher
         return self._watch_koji_tasks(self.cmd.kojisession,
                                       [task_id])
 
