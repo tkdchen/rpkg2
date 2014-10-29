@@ -1384,7 +1384,7 @@ class Commands(object):
     def list_tag(self, tagname=None):
         """Create a list of all tags in the repository which match a given tagname.
 
-        if tagname == '*' all tags will been shown.
+        The optional `tagname` argument may contain a '*' glob.
 
         """
 
