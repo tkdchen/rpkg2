@@ -10,7 +10,6 @@
 # the full text of the license.
 
 
-
 import sys
 import datetime
 
@@ -51,15 +50,14 @@ man_footer = """\
 .BR "https://fedorahosted.org/rpkg/"
 """
 
+
 class ManFormatter(object):
 
     def __init__(self, man):
         self.man = man
 
     def write(self, data):
-        #print "MF:", repr(data)
         for line in data.split('\n'):
-            #print 'MFL:', line
             self.man.write('  %s\n' % line)
 
 
@@ -102,8 +100,8 @@ def generate(parser, subparsers):
     helptext = parser.format_help()
     helptext = strip_usage(helptext)
     helptextsplit = helptext.split('\n')
-    helptextsplit = [ line for line in helptextsplit
-                      if not line.startswith('  -h, --help') ]
+    helptextsplit = [line for line in helptextsplit
+                     if not line.startswith('  -h, --help')]
 
     man_file.write('.SS "%s"\n' % ("Global Options",))
 
@@ -145,7 +143,8 @@ def generate(parser, subparsers):
 
         help = help_texts[command]
         if help and not cmdparser.description:
-            if not help.endswith('.'): help = "%s." % help
+            if not help.endswith('.'):
+                help = "%s." % help
             cmdparser.description = help
 
         h = cmdparser.format_help()
