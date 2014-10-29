@@ -23,6 +23,7 @@ import xmlrpclib
 import pwd
 import koji
 
+
 class cliClient(object):
     """This is a client class for rpkg clients."""
 
@@ -34,18 +35,18 @@ class cliClient(object):
 
         self.config = config
         self._name = name
-        #Define default name in child class
-        #self.DEFAULT_CLI_NAME = None
+        # Define default name in child class
+        # self.DEFAULT_CLI_NAME = None
         # Property holders, set to none
         self._cmd = None
         self._module = None
         # Setup the base argparser
         self.setup_argparser()
         # Add a subparser
-        self.subparsers = self.parser.add_subparsers(title = 'Targets',
-                                                 description = 'These are '
-                                                 'valid commands you can '
-                                                 'ask %s to do' % self.name)
+        self.subparsers = self.parser.add_subparsers(
+            title='Targets',
+            description='These are valid commands you can ask %s to do'
+                        % self.name)
         # Register all the commands
         self.setup_subparsers()
 
@@ -64,11 +65,11 @@ class cliClient(object):
             try:
                 name = self.DEFAULT_CLI_NAME
             except AttributeError:
-                #Ignore missing DEFAULT_CLI_NAME for backwards
-                #compatibility
+                # Ignore missing DEFAULT_CLI_NAME for backwards
+                # compatibility
                 pass
         if not name:
-            #We don't have logger available yet
+            # We don't have logger available yet
             sys.stderr.write('Could not determine CLI name\n')
             sys.exit(1)
         return name
@@ -135,9 +136,9 @@ class cliClient(object):
     def setup_argparser(self):
         """Setup the argument parser and register some basic commands."""
 
-        self.parser = argparse.ArgumentParser(prog = self.name,
-                                              epilog = 'For detailed help '
-                                              'pass --help to a target')
+        self.parser = argparse.ArgumentParser(
+            prog=self.name,
+            epilog='For detailed help pass --help to a target')
         # Add some basic arguments that should be used by all.
         # Add a config file
         self.parser.add_argument('--config', '-C',
@@ -162,10 +163,10 @@ class cliClient(object):
                                  help='Define the directory to work in '
                                  '(defaults to cwd)')
         # Verbosity
-        self.parser.add_argument('-v', action = 'store_true',
-                                 help = 'Run with verbose debug output')
-        self.parser.add_argument('-q', action = 'store_true',
-                                 help = 'Run quietly only displaying errors')
+        self.parser.add_argument('-v', action='store_true',
+                                 help='Run with verbose debug output')
+        self.parser.add_argument('-q', action='store_true',
+                                 help='Run quietly only displaying errors')
 
     def setup_subparsers(self):
         """Setup basic subparsers that all clients should use"""
@@ -217,84 +218,75 @@ class cliClient(object):
     def register_help(self):
         """Register the help command."""
 
-        help_parser = self.subparsers.add_parser('help', help = 'Show usage')
-        help_parser.set_defaults(command = self.parser.print_help)
+        help_parser = self.subparsers.add_parser('help', help='Show usage')
+        help_parser.set_defaults(command=self.parser.print_help)
 
     # Setup a couple common parsers to save code duplication
     def register_build_common(self):
         """Create a common build parser to use in other commands"""
 
-        self.build_parser_common = argparse.ArgumentParser('build_common',
-                                                         add_help = False)
-        self.build_parser_common.add_argument('--arches', nargs = '*',
-                                         help = 'Build for specific arches')
-        self.build_parser_common.add_argument('--md5', action='store_const',
-                              const='md5', default=None, dest='hash',
-                              help='Use md5 checksums (for older rpm hosts)')
-        self.build_parser_common.add_argument('--nowait',
-                                         action = 'store_true',
-                                         default = False,
-                                         help = "Don't wait on build")
-        self.build_parser_common.add_argument('--target',
-                                         default = None,
-                                         help = 'Define build target to build '
-                                         'into')
-        self.build_parser_common.add_argument('--background',
-                                         action = 'store_true',
-                                         default = False,
-                                         help = 'Run the build at a low '
-                                         'priority')
+        self.build_parser_common = argparse.ArgumentParser(
+            'build_common', add_help=False)
+        self.build_parser_common.add_argument(
+            '--arches', nargs='*', help='Build for specific arches')
+        self.build_parser_common.add_argument(
+            '--md5', action='store_const', const='md5', default=None,
+            dest='hash', help='Use md5 checksums (for older rpm hosts)')
+        self.build_parser_common.add_argument(
+            '--nowait', action='store_true', default=False,
+            help="Don't wait on build")
+        self.build_parser_common.add_argument(
+            '--target', default=None,
+            help='Define build target to build into')
+        self.build_parser_common.add_argument(
+            '--background', action='store_true', default=False,
+            help='Run the build at a low priority')
 
     def register_rpm_common(self):
         """Create a common parser for rpm commands"""
 
-        self.rpm_parser_common = argparse.ArgumentParser('rpm_common',
-                                                         add_help=False)
-        self.rpm_parser_common.add_argument('--builddir', default=None,
-                                        help='Define an alternate builddir')
-        self.rpm_parser_common.add_argument('--arch',
-                                            help='Prep for a specific arch')
+        self.rpm_parser_common = argparse.ArgumentParser(
+            'rpm_common', add_help=False)
+        self.rpm_parser_common.add_argument(
+            '--builddir', default=None, help='Define an alternate builddir')
+        self.rpm_parser_common.add_argument(
+            '--arch', help='Prep for a specific arch')
 
     def register_build(self):
         """Register the build target"""
 
-        build_parser = self.subparsers.add_parser('build',
-                                         help = 'Request build',
-                                         parents = [self.build_parser_common],
-                                         description = 'This command \
-                                         requests a build of the package \
-                                         in the build system.  By default \
-                                         it discovers the target to build for \
-                                         based on branch data, and uses the \
-                                         latest commit as the build source.')
-        build_parser.add_argument('--skip-nvr-check', action='store_false',
-                                  default=True, dest='nvr_check',
-                                  help=('Submit build to buildsystem without'
-                                        ' check if NVR was already build.'
-                                        ' NVR is constructed locally and may'
-                                        ' be different from NVR constructed'
-                                        ' during build on builder.')
-                                  )
-        build_parser.add_argument('--skip-tag', action = 'store_true',
-                                  default = False,
-                                  help = 'Do not attempt to tag package')
-        build_parser.add_argument('--scratch', action = 'store_true',
-                                  default = False,
-                                  help = 'Perform a scratch build')
-        build_parser.add_argument('--srpm', nargs = '?', const = 'CONSTRUCT',
-                                  help = 'Build from an srpm.  If no srpm \
-                                  is provided with this option an srpm will \
-                                  be generated from current module content.')
-        build_parser.set_defaults(command = self.build)
+        build_parser = self.subparsers.add_parser(
+            'build', help='Request build', parents=[self.build_parser_common],
+            description='This command requests a build of the package in the '
+                        'build system. By default it discovers the target '
+                        'to build for based on branch data, and uses the '
+                        'latest commit as the build source.')
+        build_parser.add_argument(
+            '--skip-nvr-check', action='store_false', default=True,
+            dest='nvr_check',
+            help='Submit build to buildsystem without check if NVR was '
+                 'already build. NVR is constructed locally and may be '
+                 'different from NVR constructed during build on builder.')
+        build_parser.add_argument(
+            '--skip-tag', action='store_true', default=False,
+            help='Do not attempt to tag package')
+        build_parser.add_argument(
+            '--scratch', action='store_true', default=False,
+            help='Perform a scratch build')
+        build_parser.add_argument(
+            '--srpm', nargs='?', const='CONSTRUCT',
+            help='Build from an srpm. If no srpm is provided with this option'
+                 ' an srpm will be generated from current module content.')
+        build_parser.set_defaults(command=self.build)
 
     def register_chainbuild(self):
         """Register the chain build target"""
 
-        chainbuild_parser = self.subparsers.add_parser('chain-build',
-                    help = 'Build current package in order with other packages',
-                    parents = [self.build_parser_common],
-                    formatter_class=argparse.RawDescriptionHelpFormatter,
-                    description = """
+        chainbuild_parser = self.subparsers.add_parser(
+            'chain-build', parents=[self.build_parser_common],
+            help='Build current package in order with other packages',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description="""
 Build current package in order with other packages.
 
 example: %(name)s chain-build libwidget libgizmo
@@ -311,583 +303,475 @@ For example:
 
 will cause libwidget and libaselib to be built in parallel, followed
 by libgizmo and then the current directory package. If no groups are
-defined, packages will be built sequentially.""" %
-                    {'name': self.name})
-        chainbuild_parser.add_argument('package', nargs = '+',
-                                       help = 'List the packages and order you '
-                                       'want to build in')
-        chainbuild_parser.set_defaults(command = self.chainbuild)
+defined, packages will be built sequentially.""" % {'name': self.name})
+        chainbuild_parser.add_argument(
+            'package', nargs='+',
+            help='List the packages and order you want to build in')
+        chainbuild_parser.set_defaults(command=self.chainbuild)
 
     def register_clean(self):
         """Register the clean target"""
-        clean_parser = self.subparsers.add_parser('clean',
-                                         help = 'Remove untracked files',
-                                         description = "This command can be \
-                                         used to clean up your working \
-                                         directory.  By default it will \
-                                         follow .gitignore rules.")
-        clean_parser.add_argument('--dry-run', '-n', action = 'store_true',
-                                  help = 'Perform a dry-run')
-        clean_parser.add_argument('-x', action = 'store_true',
-                                  help = 'Do not follow .gitignore rules')
-        clean_parser.set_defaults(command = self.clean)
+        clean_parser = self.subparsers.add_parser(
+            'clean', help='Remove untracked files',
+            description="This command can be used to clean up your working "
+                        "directory. By default it will follow .gitignore "
+                        "rules.")
+        clean_parser.add_argument(
+            '--dry-run', '-n', action='store_true', help='Perform a dry-run')
+        clean_parser.add_argument(
+            '-x', action='store_true', help='Do not follow .gitignore rules')
+        clean_parser.set_defaults(command=self.clean)
 
     def register_clog(self):
         """Register the clog target"""
 
-        clog_parser = self.subparsers.add_parser('clog',
-                                        help = 'Make a clog file containing '
-                                        'top changelog entry',
-                                        description = 'This will create a \
-                                        file named "clog" that contains the \
-                                        latest rpm changelog entry. The \
-                                        leading "- " text will be stripped.')
-        clog_parser.add_argument('--raw', action='store_true',
-                                 default=False,
-                                 help='Generate a more "raw" clog without \
-                                 twiddling the contents')
-        clog_parser.set_defaults(command = self.clog)
+        clog_parser = self.subparsers.add_parser(
+            'clog', help='Make a clog file containing top changelog entry',
+            description='This will create a file named "clog" that contains '
+                        'the latest rpm changelog entry. The leading "- " '
+                        'text will be stripped.')
+        clog_parser.add_argument(
+            '--raw', action='store_true', default=False,
+            help='Generate a more "raw" clog without twiddling the contents')
+        clog_parser.set_defaults(command=self.clog)
 
     def register_clone(self):
         """Register the clone target and co alias"""
 
-        clone_parser = self.subparsers.add_parser('clone',
-                                         help = 'Clone and checkout a module',
-                                         description = 'This command will \
-                                         clone the named module from the \
-                                         configured repository base URL.  \
-                                         By default it will also checkout \
-                                         the master branch for your working \
-                                         copy.')
+        clone_parser = self.subparsers.add_parser(
+            'clone', help='Clone and checkout a module',
+            description='This command will clone the named module from the '
+                        'configured repository base URL. By default it will '
+                        'also checkout the master branch for your working '
+                        'copy.')
         # Allow an old style clone with subdirs for branches
-        clone_parser.add_argument('--branches', '-B',
-                                  action = 'store_true',
-                                  help = 'Do an old style checkout with \
-                                  subdirs for branches')
+        clone_parser.add_argument(
+            '--branches', '-B', action='store_true',
+            help='Do an old style checkout with subdirs for branches')
         # provide a convenient way to get to a specific branch
-        clone_parser.add_argument('--branch', '-b',
-                                  help = 'Check out a specific branch')
+        clone_parser.add_argument(
+            '--branch', '-b', help='Check out a specific branch')
         # allow to clone without needing a account on the scm server
-        clone_parser.add_argument('--anonymous', '-a',
-                                  action = 'store_true',
-                                  help = 'Check out a module anonymously')
+        clone_parser.add_argument(
+            '--anonymous', '-a', action='store_true',
+            help='Check out a module anonymously')
         # store the module to be cloned
-        clone_parser.add_argument('module', nargs = 1,
-                                  help = 'Name of the module to clone')
-        clone_parser.set_defaults(command = self.clone)
+        clone_parser.add_argument(
+            'module', nargs=1, help='Name of the module to clone')
+        clone_parser.set_defaults(command=self.clone)
 
         # Add an alias for historical reasons
-        co_parser = self.subparsers.add_parser('co', parents = [clone_parser],
-                                          conflict_handler = 'resolve',
-                                          help = 'Alias for clone',
-                                          description = 'This command will \
-                                          clone the named module from the \
-                                          configured repository base URL.  \
-                                          By default it will also checkout \
-                                          the master branch for your working \
-                                          copy.')
-        co_parser.set_defaults(command = self.clone)
+        co_parser = self.subparsers.add_parser(
+            'co', parents=[clone_parser], conflict_handler='resolve',
+            help='Alias for clone')
+        co_parser.set_defaults(command=self.clone)
 
     def register_commit(self):
         """Register the commit target and ci alias"""
 
-        commit_parser = self.subparsers.add_parser('commit',
-                                          help = 'Commit changes',
-                                          description = 'This invokes a git \
-                                          commit.  All tracked files with \
-                                          changes will be committed unless \
-                                          a specific file list is provided.  \
-                                          $EDITOR will be used to generate a \
-                                          changelog message unless one is \
-                                          given to the command.  A push \
-                                          can be done at the same time.')
-        commit_parser.add_argument('-c', '--clog',
-                                   default = False,
-                                   action = 'store_true',
-                                   help = 'Generate the commit message from \
-                                   the Changelog section')
-        commit_parser.add_argument('--raw', action='store_true',
-                                   default=False,
-                                   help='Make the clog raw')
-        commit_parser.add_argument('-t', '--tag',
-                                   default = False,
-                                   action = 'store_true',
-                                   help = 'Create a tag for this commit')
-        commit_parser.add_argument('-m', '--message',
-                                   default = None,
-                                   help = 'Use the given <msg> as the commit \
-                                   message')
-        commit_parser.add_argument('-F', '--file',
-                                   default = None,
-                                   help = 'Take the commit message from the \
-                                   given file')
+        commit_parser = self.subparsers.add_parser(
+            'commit', help='Commit changes',
+            description='This invokes a git commit. All tracked files with '
+                        'changes will be committed unless a specific file '
+                        'list is provided. $EDITOR will be used to generate a'
+                        ' changelog message unless one is given to the '
+                        'command. A push can be done at the same time.')
+        commit_parser.add_argument(
+            '-c', '--clog', default=False, action='store_true',
+            help='Generate the commit message from the Changelog section')
+        commit_parser.add_argument(
+            '--raw', action='store_true', default=False,
+            help='Make the clog raw')
+        commit_parser.add_argument(
+            '-t', '--tag', default=False, action='store_true',
+            help='Create a tag for this commit')
+        commit_parser.add_argument(
+            '-m', '--message', default=None,
+            help='Use the given <msg> as the commit message')
+        commit_parser.add_argument(
+            '-F', '--file', default=None,
+            help='Take the commit message from the given file')
         # allow one to commit /and/ push at the same time.
-        commit_parser.add_argument('-p', '--push',
-                                   default = False,
-                                   action = 'store_true',
-                                   help = 'Commit and push as one action')
+        commit_parser.add_argument(
+            '-p', '--push', default=False, action='store_true',
+            help='Commit and push as one action')
         # Allow a list of files to be committed instead of everything
-        commit_parser.add_argument('files', nargs = '*',
-                                   default = [],
-                                   help = 'Optional list of specific files to \
-                                   commit')
-        commit_parser.add_argument('-s', '--signoff',
-                                   default = False,
-                                   action = 'store_true',
-                                   help = 'Include a signed-off-by')
-        commit_parser.set_defaults(command = self.commit)
+        commit_parser.add_argument(
+            'files', nargs='*', default=[],
+            help='Optional list of specific files to commit')
+        commit_parser.add_argument(
+            '-s', '--signoff', default=False, action='store_true',
+            help='Include a signed-off-by')
+        commit_parser.set_defaults(command=self.commit)
 
         # Add a ci alias
-        ci_parser = self.subparsers.add_parser('ci', parents = [commit_parser],
-                                          conflict_handler = 'resolve',
-                                          help = 'Alias for commit',
-                                          description = 'This invokes a git \
-                                          commit.  All tracked files with \
-                                          changes will be committed unless \
-                                          a specific file list is provided.  \
-                                          $EDITOR will be used to generate a \
-                                          changelog message unless one is \
-                                          given to the command.  A push \
-                                          can be done at the same time.')
-        ci_parser.set_defaults(command = self.commit)
+        ci_parser = self.subparsers.add_parser(
+            'ci', parents=[commit_parser], conflict_handler='resolve',
+            help='Alias for commit')
+        ci_parser.set_defaults(command=self.commit)
 
     def register_compile(self):
         """Register the compile target"""
 
-        compile_parser = self.subparsers.add_parser('compile',
-                                       parents=[self.rpm_parser_common],
-                                       help = 'Local test rpmbuild compile',
-                                       description = 'This command calls \
-                                       rpmbuild to compile the source.  \
-                                       By default the prep and configure \
-                                       stages will be done as well, \
-                                       unless the short-circuit option \
-                                       is used.')
-        compile_parser.add_argument('--short-circuit', action = 'store_true',
-                                    help = 'short-circuit compile')
-        compile_parser.set_defaults(command = self.compile)
+        compile_parser = self.subparsers.add_parser(
+            'compile', parents=[self.rpm_parser_common],
+            help='Local test rpmbuild compile',
+            description='This command calls rpmbuild to compile the source. '
+                        'By default the prep and configure stages will be '
+                        'done as well, unless the short-circuit option is '
+                        'used.')
+        compile_parser.add_argument(
+            '--short-circuit', action='store_true',
+            help='short-circuit compile')
+        compile_parser.set_defaults(command=self.compile)
 
     def register_diff(self):
         """Register the diff target"""
 
-        diff_parser = self.subparsers.add_parser('diff',
-                                        help = 'Show changes between commits, '
-                                        'commit and working tree, etc',
-                                        description = 'Use git diff to show \
-                                        changes that have been made to \
-                                        tracked files.  By default cached \
-                                        changes (changes that have been git \
-                                        added) will not be shown.')
-        diff_parser.add_argument('--cached', default = False,
-                                 action = 'store_true',
-                                 help = 'View staged changes')
-        diff_parser.add_argument('files', nargs = '*',
-                                 default = [],
-                                 help = 'Optionally diff specific files')
-        diff_parser.set_defaults(command = self.diff)
+        diff_parser = self.subparsers.add_parser(
+            'diff', help='Show changes between commits, commit and working '
+                         'tree, etc',
+            description='Use git diff to show changes that have been made to '
+                        'tracked files. By default cached changes (changes '
+                        'that have been git added) will not be shown.')
+        diff_parser.add_argument(
+            '--cached', default=False, action='store_true',
+            help='View staged changes')
+        diff_parser.add_argument(
+            'files', nargs='*', default=[],
+            help='Optionally diff specific files')
+        diff_parser.set_defaults(command=self.diff)
 
     def register_gimmespec(self):
         """Register the gimmespec target"""
 
-        gimmespec_parser = self.subparsers.add_parser('gimmespec',
-                                         help = 'Print the spec file name')
-        gimmespec_parser.set_defaults(command = self.gimmespec)
+        gimmespec_parser = self.subparsers.add_parser(
+            'gimmespec', help='Print the spec file name')
+        gimmespec_parser.set_defaults(command=self.gimmespec)
 
     def register_gitbuildhash(self):
         """Register the gitbuildhash target"""
 
-        gitbuildhash_parser = self.subparsers.add_parser('gitbuildhash',
-                                          help = 'Print the git hash used '
-                                          'to build the provided n-v-r',
-                                          description = 'This will show you \
-                                          the commit hash string used to \
-                                          build the provided build n-v-r')
-        gitbuildhash_parser.add_argument('build',
-                                         help='name-version-release of the \
-                                         build to query.')
-        gitbuildhash_parser.set_defaults(command = self.gitbuildhash)
+        gitbuildhash_parser = self.subparsers.add_parser(
+            'gitbuildhash',
+            help='Print the git hash used to build the provided n-v-r',
+            description='This will show you the commit hash string used to '
+                        'build the provided build n-v-r')
+        gitbuildhash_parser.add_argument(
+            'build', help='name-version-release of the build to query.')
+        gitbuildhash_parser.set_defaults(command=self.gitbuildhash)
 
     def register_giturl(self):
         """Register the giturl target"""
 
-        giturl_parser = self.subparsers.add_parser('giturl',
-                                          help = 'Print the git url for '
-                                          'building',
-                                          description = 'This will show you \
-                                          which git URL would be used in a \
-                                          build command.  It uses the git \
-                                          hashsum of the HEAD of the current \
-                                          branch (which may not be pushed).')
-        giturl_parser.set_defaults(command = self.giturl)
+        giturl_parser = self.subparsers.add_parser(
+            'giturl', help='Print the git url for building',
+            description='This will show you which git URL would be used in a '
+                        'build command. It uses the git hashsum of the HEAD '
+                        'of the current branch (which may not be pushed).')
+        giturl_parser.set_defaults(command=self.giturl)
 
     def register_import_srpm(self):
         """Register the import-srpm target"""
 
-        import_srpm_parser = self.subparsers.add_parser('import',
-                                               help = 'Import srpm content '
-                                               'into a module',
-                                               description = 'This will \
-                                               extract sources, patches, and \
-                                               the spec file from an srpm and \
-                                               update the current module \
-                                               accordingly.  It will import \
-                                               to the current branch by \
-                                               default.')
-        #import_srpm_parser.add_argument('--branch', '-b',
-        #                                help = 'Branch to import onto',
-        #                                default = 'devel')
-        #import_srpm_parser.add_argument('--create', '-c',
-        #                                help = 'Create a new local repo',
-        #                                action = 'store_true')
-        import_srpm_parser.add_argument('--skip-diffs',
-                                        help = "Don't show diffs when \
-                                        import srpms",
-                                        action = 'store_true')
-        import_srpm_parser.add_argument('srpm',
-                                        help = 'Source rpm to import')
-        import_srpm_parser.set_defaults(command = self.import_srpm)
+        import_srpm_parser = self.subparsers.add_parser(
+            'import', help='Import srpm content into a module',
+            description='This will extract sources, patches, and the spec '
+                        'file from an srpm and update the current module '
+                        'accordingly. It will import to the current branch by'
+                        'default.')
+        import_srpm_parser.add_argument(
+            '--skip-diffs', help="Don't show diffs when import srpms",
+            action='store_true')
+        import_srpm_parser.add_argument('srpm', help='Source rpm to import')
+        import_srpm_parser.set_defaults(command=self.import_srpm)
 
     def register_install(self):
         """Register the install target"""
 
-        install_parser = self.subparsers.add_parser('install',
-                                       parents=[self.rpm_parser_common],
-                                       help = 'Local test rpmbuild install',
-                                       description = 'This will call \
-                                       rpmbuild to run the install \
-                                       section.  All leading sections \
-                                       will be processed as well, unless \
-                                       the short-circuit option is used.')
-        install_parser.add_argument('--short-circuit', action = 'store_true',
-                                    help = 'short-circuit install',
-                                    default = False)
-        install_parser.set_defaults(command = self.install)
+        install_parser = self.subparsers.add_parser(
+            'install', parents=[self.rpm_parser_common],
+            help='Local test rpmbuild install',
+            description='This will call rpmbuild to run the install section. '
+                        'All leading sections will be processed as well, '
+                        'unless the short-circuit option is used.')
+        install_parser.add_argument(
+            '--short-circuit', action='store_true', default=False,
+            help='short-circuit install')
+        install_parser.set_defaults(command=self.install)
 
     def register_lint(self):
         """Register the lint target"""
 
-        lint_parser = self.subparsers.add_parser('lint',
-                                            help = 'Run rpmlint against local '
-                                            'spec and build output if present.',
-                                            description = 'Rpmlint can be \
-                                            configured using the \
-                                            --rpmlintconf/-r option or by setting \
-                                            a .rpmlint file in the working \
-                                            directory')
-        lint_parser.add_argument('--info', '-i',
-                                 default = False,
-                                 action = 'store_true',
-                                 help = 'Display explanations for reported \
-                                 messages')
-        lint_parser.add_argument('--rpmlintconf', '-r',
-                                 default = None,
-                                 help = 'Use a specific configuration file \
-                                 for rpmlint')
-        lint_parser.set_defaults(command = self.lint)
+        lint_parser = self.subparsers.add_parser(
+            'lint', help='Run rpmlint against local spec and build output if '
+                         'present.',
+            description='Rpmlint can be configured using the --rpmlintconf/-r'
+                         ' option or by setting a .rpmlint file in the '
+                         'working directory')
+        lint_parser.add_argument(
+            '--info', '-i', default=False, action='store_true',
+            help='Display explanations for reported messages')
+        lint_parser.add_argument(
+            '--rpmlintconf', '-r', default=None,
+            help='Use a specific configuration file for rpmlint')
+        lint_parser.set_defaults(command=self.lint)
 
     def register_local(self):
         """Register the local target"""
 
-        local_parser = self.subparsers.add_parser('local',
-                                     parents=[self.rpm_parser_common],
-                                     help = 'Local test rpmbuild binary',
-                                     description = 'Locally test run of \
-                                     rpmbuild producing binary RPMs. The \
-                                     rpmbuild output will be logged into a \
-                                     file named \
-                                     .build-%{version}-%{release}.log')
+        local_parser = self.subparsers.add_parser(
+            'local', parents=[self.rpm_parser_common],
+            help='Local test rpmbuild binary',
+            description='Locally test run of rpmbuild producing binary RPMs. '
+                        'The rpmbuild output will be logged into a file named'
+                        ' .build-%{version}-%{release}.log')
         # Allow the user to just pass "--md5" which will set md5 as the
         # hash, otherwise use the default of sha256
-        local_parser.add_argument('--md5', action='store_const',
-                              const='md5', default=None, dest='hash',
-                              help='Use md5 checksums (for older rpm hosts)')
-        local_parser.set_defaults(command = self.local)
+        local_parser.add_argument(
+            '--md5', action='store_const', const='md5', default=None,
+            dest='hash', help='Use md5 checksums (for older rpm hosts)')
+        local_parser.set_defaults(command=self.local)
 
     def register_new(self):
         """Register the new target"""
 
-        new_parser = self.subparsers.add_parser('new',
-                                       help = 'Diff against last tag',
-                                       description = 'This will use git to \
-                                       show a diff of all the changes \
-                                       (even uncommitted changes) since the \
-                                       last git tag was applied.')
-        new_parser.set_defaults(command = self.new)
+        new_parser = self.subparsers.add_parser(
+            'new', help='Diff against last tag',
+            description='This will use git to show a diff of all the changes '
+                        '(even uncommitted changes) since the last git tag '
+                        'was applied.')
+        new_parser.set_defaults(command=self.new)
 
     def register_mockbuild(self):
         """Register the mockbuild target"""
 
-        mockbuild_parser = self.subparsers.add_parser('mockbuild',
-                               help='Local test build using mock',
-                               description='This will use the mock \
-                               utility to build the package for the \
-                               distribution detected from branch \
-                               information.  This can be overridden \
-                               using the global --dist option. Your \
-                               user must be in the local "mock" group.',
-                               epilog='If config file for mock isn\'t found in \
-                               /etc/mock directory, temporary config directory \
-                               for mock is created and populated with config \
-                               file created with mock-config.')
+        mockbuild_parser = self.subparsers.add_parser(
+            'mockbuild', help='Local test build using mock',
+            description='This will use the mock utility to build the package '
+                        'for the distribution detected from branch '
+                        'information. This can be overridden using the global'
+                        ' --dist option. Your user must be in the local '
+                        '"mock" group.',
+                        epilog="If config file for mock isn't found in the "
+                               "/etc/mock directory, a temporary config "
+                               "directory for mock is created and populated "
+                               "with a config file created with mock-config.")
         mockbuild_parser.add_argument('--root', help='Override mock root')
         # Allow the user to just pass "--md5" which will set md5 as the
         # hash, otherwise use the default of sha256
-        mockbuild_parser.add_argument('--md5', action='store_const',
-                              const='md5', default=None, dest='hash',
-                              help='Use md5 checksums (for older rpm hosts)')
+        mockbuild_parser.add_argument(
+            '--md5', action='store_const', const='md5', default=None,
+            dest='hash', help='Use md5 checksums (for older rpm hosts)')
         mockbuild_parser.set_defaults(command=self.mockbuild)
 
     def register_mock_config(self):
         """Register the mock-config target"""
 
-        mock_config_parser = self.subparsers.add_parser('mock-config',
-                                        help='Generate a mock config',
-                                        description='This will generate a \
-                                        mock config based on the buildsystem \
-                                        target')
-        mock_config_parser.add_argument('--target',
-                                        help='Override target used for config',
-                                        default=None)
-        mock_config_parser.add_argument('--arch',
-                                        help='Override local arch')
+        mock_config_parser = self.subparsers.add_parser(
+            'mock-config', help='Generate a mock config',
+            description='This will generate a mock config based on the '
+                        'buildsystem target')
+        mock_config_parser.add_argument(
+            '--target', help='Override target used for config', default=None)
+        mock_config_parser.add_argument('--arch', help='Override local arch')
         mock_config_parser.set_defaults(command=self.mock_config)
 
     def register_new_sources(self):
         """Register the new-sources target"""
 
         # Make it part of self to be used later
-        self.new_sources_parser = self.subparsers.add_parser('new-sources',
-                                              help = 'Upload new source files',
-                                              description = 'This will upload \
-                                              new source files to the \
-                                              lookaside cache and remove \
-                                              any existing files.  The \
-                                              "sources" and .gitignore file \
-                                              will be updated for the new \
-                                              file(s).')
-        self.new_sources_parser.add_argument('files', nargs = '+')
-        self.new_sources_parser.set_defaults(command = self.new_sources,
-                                             replace = True)
+        self.new_sources_parser = self.subparsers.add_parser(
+            'new-sources', help='Upload new source files',
+            description='This will upload new source files to the lookaside '
+                        'cache and remove any existing ones. The "sources" '
+                        'and .gitignore files will be updated with the new '
+                        'uploaded file(s).')
+        self.new_sources_parser.add_argument('files', nargs='+')
+        self.new_sources_parser.set_defaults(
+            command=self.new_sources, replace=True)
 
     def register_patch(self):
         """Register the patch target"""
 
-        patch_parser = self.subparsers.add_parser('patch',
-                                         help = 'Create and add a gendiff '
-                                         'patch file',
-                                         epilog = 'Patch file will be '
-                                         'named: package-version-suffix.patch '
-                                         'and the file will be added to the '
-                                         'repo index')
-        patch_parser.add_argument('--rediff',
-                          help = 'Recreate gendiff file retaining comments \
-                          Saves old patch file with a suffix of ~',
-                          action = 'store_true',
-                          default = False)
-        patch_parser.add_argument('suffix',
-                                  help = 'Look for files with this suffix \
-                                  to diff')
-        patch_parser.set_defaults(command = self.patch)
+        patch_parser = self.subparsers.add_parser(
+            'patch', help='Create and add a gendiff patch file',
+            epilog='Patch file will be named: package-version-suffix.patch '
+                   'and the file will be added to the repo index')
+        patch_parser.add_argument(
+            '--rediff', action='store_true', default=False,
+            help='Recreate gendiff file retaining comments Saves old patch '
+                 'file with a suffix of ~')
+        patch_parser.add_argument(
+            'suffix', help='Look for files with this suffix to diff')
+        patch_parser.set_defaults(command=self.patch)
 
     def register_prep(self):
         """Register the prep target"""
 
-        prep_parser = self.subparsers.add_parser('prep',
-                                        parents=[self.rpm_parser_common],
-                                        help = 'Local test rpmbuild prep',
-                                        description = 'Use rpmbuild to "prep" \
-                                        the sources (unpack the source \
-                                        archive(s) and apply any patches.)')
-        prep_parser.set_defaults(command = self.prep)
+        prep_parser = self.subparsers.add_parser(
+            'prep', parents=[self.rpm_parser_common],
+            help='Local test rpmbuild prep',
+            description='Use rpmbuild to "prep" the sources (unpack the '
+                        'source archive(s) and apply any patches.)')
+        prep_parser.set_defaults(command=self.prep)
 
     def register_pull(self):
         """Register the pull target"""
 
-        pull_parser = self.subparsers.add_parser('pull',
-                                        help = 'Pull changes from remote '
-                                        'repository and update working copy.',
-                                        description = 'This command uses git \
-                                        to fetch remote changes and apply \
-                                        them to the current working copy.  A \
-                                        rebase option is available which can \
-                                        be used to avoid merges.',
-                                        epilog = 'See git pull --help for \
-                                        more details')
-        pull_parser.add_argument('--rebase', action = 'store_true',
-                             help = 'Rebase the locally committed changes on \
-                             top of the remote changes after fetching.  This \
-                             can avoid a merge commit, but does rewrite local \
-                             history.')
-        pull_parser.add_argument('--no-rebase', action = 'store_true',
-                             help = 'Do not rebase, override .git settings to \
-                             automatically rebase')
-        pull_parser.set_defaults(command = self.pull)
+        pull_parser = self.subparsers.add_parser(
+            'pull', help='Pull changes from the remote repository and update '
+                         'the working copy.',
+            description='This command uses git to fetch remote changes and '
+                        'apply them to the current working copy. A rebase '
+                        'option is available which can be used to avoid '
+                        'merges.',
+            epilog='See git pull --help for more details')
+        pull_parser.add_argument(
+            '--rebase', action='store_true',
+            help='Rebase the locally committed changes on top of the remote '
+                 'changes after fetching. This can avoid a merge commit, but '
+                 'does rewrite local history.')
+        pull_parser.add_argument(
+            '--no-rebase', action='store_true',
+            help='Do not rebase, overriding .git settings to the contrary')
+        pull_parser.set_defaults(command=self.pull)
 
     def register_push(self):
         """Register the push target"""
 
-        push_parser = self.subparsers.add_parser('push',
-                                            help = 'Push changes to remote '
-                                            'repository')
-        push_parser.set_defaults(command = self.push)
+        push_parser = self.subparsers.add_parser(
+            'push', help='Push changes to remote repository')
+        push_parser.set_defaults(command=self.push)
 
     def register_scratch_build(self):
         """Register the scratch-build target"""
 
-        scratch_build_parser = self.subparsers.add_parser('scratch-build',
-                                        help = 'Request scratch build',
-                                        parents = [self.build_parser_common],
-                                        description = 'This command \
-                                        will request a scratch build \
-                                        of the package.  Without \
-                                        providing an srpm, it will \
-                                        attempt to build the latest \
-                                        commit, which must have been \
-                                        pushed.  By default all \
-                                        appropriate arches will be \
-                                        built.')
-        scratch_build_parser.add_argument('--srpm', nargs = '?',
-                                  const = 'CONSTRUCT',
-                                  help = 'Build from an srpm.  If no srpm \
-                                  is provided with this option an srpm will \
-                                  be generated from current module content.')
-        scratch_build_parser.set_defaults(command = self.scratch_build)
+        scratch_build_parser = self.subparsers.add_parser(
+            'scratch-build', help='Request scratch build',
+            parents=[self.build_parser_common],
+            description='This command will request a scratch build of the '
+                        'package. Without providing an srpm, it will attempt '
+                        'to build the latest commit, which must have been '
+                        'pushed. By default all appropriate arches will be '
+                        'built.')
+        scratch_build_parser.add_argument(
+            '--srpm', nargs='?', const='CONSTRUCT',
+            help='Build from an srpm. If no srpm is provided with this '
+                 'option an srpm will be generated from the current module '
+                 'content.')
+        scratch_build_parser.set_defaults(command=self.scratch_build)
 
     def register_sources(self):
         """Register the sources target"""
 
-        sources_parser = self.subparsers.add_parser('sources',
-                                               help = 'Download source files')
-        sources_parser.add_argument('--outdir',
-                                    default = os.curdir,
-                                    help = 'Directory to download files into \
-                                    (defaults to pwd)')
-        sources_parser.set_defaults(command = self.sources)
+        sources_parser = self.subparsers.add_parser(
+            'sources', help='Download source files')
+        sources_parser.add_argument(
+            '--outdir', default=os.curdir,
+            help='Directory to download files into (defaults to pwd)')
+        sources_parser.set_defaults(command=self.sources)
 
     def register_srpm(self):
         """Register the srpm target"""
 
-        srpm_parser = self.subparsers.add_parser('srpm',
-                                                 help = 'Create a source rpm')
+        srpm_parser = self.subparsers.add_parser(
+            'srpm', help='Create a source rpm')
         # optionally define old style hashsums
-        srpm_parser.add_argument('--md5', action='store_const',
-                              const='md5', default=None, dest='hash',
-                              help='Use md5 checksums (for older rpm hosts)')
-        srpm_parser.set_defaults(command = self.srpm)
+        srpm_parser.add_argument(
+            '--md5', action='store_const', const='md5', default=None,
+            dest='hash', help='Use md5 checksums (for older rpm hosts)')
+        srpm_parser.set_defaults(command=self.srpm)
 
     def register_switch_branch(self):
         """Register the switch-branch target"""
 
-        switch_branch_parser = self.subparsers.add_parser('switch-branch',
-                                                help = 'Work with branches',
-                                                description = 'This command \
-                                                can switch to a local git \
-                                                branch.  If provided with a \
-                                                remote branch name that does \
-                                                not have a local match it \
-                                                will create one.  It can \
-                                                also be used to list the \
-                                                existing local and remote \
-                                                branches.')
-        switch_branch_parser.add_argument('branch',  nargs = '?',
-                                          help = 'Branch name to switch to')
-        switch_branch_parser.add_argument('-l', '--list',
-                                          help = 'List both remote-tracking \
-                                          branches and local branches',
-                                          action = 'store_true')
-        switch_branch_parser.add_argument('--fetch',
-                                          help = 'Fetch new data from remote'
-                                                 ' before switch',
-                                          action = 'store_true',
-                                          dest = 'fetch')
-        switch_branch_parser.set_defaults(command = self.switch_branch)
+        switch_branch_parser = self.subparsers.add_parser(
+            'switch-branch', help='Work with branches',
+            description='This command can switch to a local git branch. If '
+                        'provided with a remote branch name that does not '
+                        'have a local match it will create one.  It can also '
+                        'be used to list the existing local and remote '
+                        'branches.')
+        switch_branch_parser.add_argument(
+            'branch', nargs='?', help='Branch name to switch to')
+        switch_branch_parser.add_argument(
+            '-l', '--list', action='store_true',
+            help='List both remote-tracking branches and local branches')
+        switch_branch_parser.add_argument(
+            '--fetch', help='Fetch new data from remote before switch',
+            action='store_true', dest='fetch')
+        switch_branch_parser.set_defaults(command=self.switch_branch)
 
     def register_tag(self):
         """Register the tag target"""
 
-        tag_parser = self.subparsers.add_parser('tag',
-                                       help = 'Management of git tags',
-                                       description = 'This command uses git \
-                                       to create, list, or delete tags.')
-        tag_parser.add_argument('-f', '--force',
-                                default = False,
-                                action = 'store_true',
-                                help = 'Force the creation of the tag')
-        tag_parser.add_argument('-m', '--message',
-                                default = None,
-                                help = 'Use the given <msg> as the tag \
-                                message')
-        tag_parser.add_argument('-c', '--clog',
-                                default = False,
-                                action = 'store_true',
-                                help = 'Generate the tag message from the \
-                                spec changelog section')
-        tag_parser.add_argument('--raw', action='store_true',
-                                default=False,
-                                help='Make the clog raw')
-        tag_parser.add_argument('-F', '--file',
-                                default = None,
-                                help = 'Take the tag message from the given \
-                                file')
-        tag_parser.add_argument('-l', '--list',
-                                default = False,
-                                action = 'store_true',
-                                help = 'List all tags with a given pattern, \
-                                or all if not pattern is given')
-        tag_parser.add_argument('-d', '--delete',
-                                default = False,
-                                action = 'store_true',
-                                help = 'Delete a tag')
-        tag_parser.add_argument('tag',
-                                nargs = '?',
-                                default = None,
-                                help = 'Name of the tag')
-        tag_parser.set_defaults(command = self.tag)
+        tag_parser = self.subparsers.add_parser(
+            'tag', help='Management of git tags',
+            description='This command uses git to create, list, or delete '
+                        'tags.')
+        tag_parser.add_argument(
+            '-f', '--force', default=False,
+            action='store_true', help='Force the creation of the tag')
+        tag_parser.add_argument(
+            '-m', '--message', default=None,
+            help='Use the given <msg> as the tag message')
+        tag_parser.add_argument(
+            '-c', '--clog', default=False, action='store_true',
+            help='Generate the tag message from the spec changelog section')
+        tag_parser.add_argument(
+            '--raw', action='store_true', default=False,
+            help='Make the clog raw')
+        tag_parser.add_argument(
+            '-F', '--file', default=None,
+            help='Take the tag message from the given file')
+        tag_parser.add_argument(
+            '-l', '--list', default=False, action='store_true',
+            help='List all tags with a given pattern, or all if not pattern '
+                 'is given')
+        tag_parser.add_argument(
+            '-d', '--delete', default=False, action='store_true',
+            help='Delete a tag')
+        tag_parser.add_argument(
+            'tag', nargs='?', default=None, help='Name of the tag')
+        tag_parser.set_defaults(command=self.tag)
 
     def register_unused_patches(self):
         """Register the unused-patches target"""
 
-        unused_patches_parser = self.subparsers.add_parser('unused-patches',
-                                             help = 'Print list of patches '
-                                             'not referenced by name in '
-                                             'the specfile')
-        unused_patches_parser.set_defaults(command = self.unused_patches)
+        unused_patches_parser = self.subparsers.add_parser(
+            'unused-patches',
+            help='Print list of patches not referenced by name in the '
+                 'specfile')
+        unused_patches_parser.set_defaults(command=self.unused_patches)
 
     def register_upload(self):
         """Register the upload target"""
 
-        upload_parser = self.subparsers.add_parser('upload',
-                                          parents = [self.new_sources_parser],
-                                          conflict_handler = 'resolve',
-                                          help = 'Upload source files',
-                                          description = 'This command will \
-                                          add a new source archive to the \
-                                          lookaside cache.  The sources and \
-                                          .gitignore file will be updated \
-                                          with the new file(s).')
-        upload_parser.set_defaults(command = self.new_sources,
-                                   replace = False)
+        upload_parser = self.subparsers.add_parser(
+            'upload', parents=[self.new_sources_parser],
+            conflict_handler='resolve', help='Upload source files',
+            description='This command will add a new source archive to the '
+                        'lookaside cache. The sources and .gitignore file '
+                        'will be updated with the new file(s).')
+        upload_parser.set_defaults(command=self.new_sources, replace=False)
 
     def register_verify_files(self):
         """Register the verify-files target"""
 
-        verify_files_parser = self.subparsers.add_parser('verify-files',
-                                            parents=[self.rpm_parser_common],
-                                            help='Locally verify %%files '
-                                            'section',
-                                            description="Locally run \
-                                            'rpmbuild -bl' to verify the \
-                                            spec file's %files sections. \
-                                            This requires a successful run \
-                                            of the 'compile' target.")
-        verify_files_parser.set_defaults(command = self.verify_files)
+        verify_files_parser = self.subparsers.add_parser(
+            'verify-files', parents=[self.rpm_parser_common],
+            help='Locally verify %%files section',
+            description="Locally run 'rpmbuild -bl' to verify the spec file's"
+                        " %files sections. This requires a successful run of "
+                        "the 'compile' target.")
+        verify_files_parser.set_defaults(command=self.verify_files)
 
     def register_verrel(self):
 
-        verrel_parser = self.subparsers.add_parser('verrel',
-                                                   help = 'Print the '
-                                                   'name-version-release')
-        verrel_parser.set_defaults(command = self.verrel)
+        verrel_parser = self.subparsers.add_parser(
+            'verrel', help='Print the name-version-release')
+        verrel_parser.set_defaults(command=self.verrel)
 
     # All the command functions go here
     def usage(self):
@@ -919,9 +803,10 @@ defined, packages will be built sequentially.""" %
             if not self.args.q:
                 callback = self._progress_callback
             # define a unique path for this upload.  Stolen from /usr/bin/koji
-            uniquepath = 'cli-build/%r.%s' % (time.time(),
-                                 ''.join([random.choice(string.ascii_letters)
-                                          for i in range(8)]))
+            uniquepath = ('cli-build/%r.%s'
+                          % (time.time(),
+                             ''.join([random.choice(string.ascii_letters)
+                                      for i in range(8)])))
             # Should have a try here, not sure what errors we'll get yet though
             self.cmd.koji_upload(self.args.srpm, uniquepath, callback=callback)
             if not self.args.q:
@@ -974,8 +859,8 @@ defined, packages will be built sequentially.""" %
                                                   self.cmd.branch_merge)
                 url = self.cmd.anongiturl % {'module':
                                              component} + '#%s' % hash
-                # If there are no ':' in the chain list, treat each object as an
-                # individual chain
+                # If there are no ':' in the chain list, treat each object as
+                # an individual chain
                 if ':' in self.args.package:
                     build_set.append(url)
                 else:
@@ -1210,11 +1095,11 @@ defined, packages will be built sequentially.""" %
             status = tasks[task_id].info['state']
             if status == koji.TASK_STATES['FAILED']:
                 failed += 1
-            elif status == koji.TASK_STATES['CLOSED'] or \
-            status == koji.TASK_STATES['CANCELED']:
+            elif status in (koji.TASK_STATES['CLOSED'],
+                            koji.TASK_STATES['CANCELED']):
                 done += 1
-            elif status == koji.TASK_STATES['OPEN'] or \
-            status == koji.TASK_STATES['ASSIGNED']:
+            elif status in (koji.TASK_STATES['OPEN'],
+                            koji.TASK_STATES['ASSIGNED']):
                 open += 1
             elif status == koji.TASK_STATES['FREE']:
                 free += 1
@@ -1249,7 +1134,7 @@ defined, packages will be built sequentially.""" %
                                              quiet=self.args.q)
             while True:
                 all_done = True
-                for task_id,task in tasks.items():
+                for task_id, task in tasks.items():
                     changed = task.update()
                     if not task.is_done():
                         all_done = False
@@ -1262,7 +1147,7 @@ defined, packages will be built sequentially.""" %
                             rv = 1
                     for child in session.getTaskChildren(task_id):
                         child_id = child['id']
-                        if not child_id in tasks.keys():
+                        if child_id not in tasks.keys():
                             tasks[child_id] = TaskWatcher(child_id,
                                                           session,
                                                           self.log,
@@ -1281,14 +1166,15 @@ defined, packages will be built sequentially.""" %
                 time.sleep(1)
         except (KeyboardInterrupt):
             if tasks:
-                self.log.info(
-    """
+                self.log.info("""
 Tasks still running. You can continue to watch with the '%s watch-task' command.
     Running Tasks:
-    %s""" % (self.config.get(self.name, 'build_client'),
-                             '\n'.join(['%s: %s' % (t.str(),
-                                                    t.display_state(t.info))
-                       for t in tasks.values() if not t.is_done()])))
+    %s"""
+                              % (self.config.get(self.name, 'build_client'),
+                                 '\n'.join(['%s: %s' % (t.str(),
+                                                        t.display_state(t.info))
+                                            for t in tasks.values()
+                                            if not t.is_done()])))
             # A ^c should return non-zero so that it doesn't continue
             # on to any && commands.
             rv = 1
@@ -1300,7 +1186,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
             return "%0.2f GiB" % (size / 1073741824.0)
         if (size / 1048576 >= 1):
             return "%0.2f MiB" % (size / 1048576.0)
-        if (size / 1024 >=1):
+        if (size / 1024 >= 1):
             return "%0.2f KiB" % (size / 1024.0)
         return "%0.2f B" % (size)
 
@@ -1323,7 +1209,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
                 speed = self._format_size(float(piece)/float(time)) + "/sec"
             else:
                 speed = self._format_size(float(total)/float(total_time)) + \
-                "/sec"
+                    "/sec"
 
         # write formatted string and flush
         sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" %
@@ -1363,7 +1249,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
         This also sets up self.user
         """
 
-        if  manpage:
+        if manpage:
             # Generate the man page
             man_name = self.name
             if man_name.endswith('.py'):
@@ -1475,6 +1361,7 @@ class TaskWatcher(object):
         else:
             return koji.TASK_STATES[info['state']].lower()
 
+
 if __name__ == '__main__':
     client = cliClient()
     client.do_imports()
@@ -1482,7 +1369,7 @@ if __name__ == '__main__':
 
     if not client.args.path:
         try:
-            client.args.path=os.getcwd()
+            client.args.path = os.getcwd()
         except:
             print('Could not get current path, have you deleted it?')
             sys.exit(1)
