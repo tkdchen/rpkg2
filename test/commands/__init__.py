@@ -74,3 +74,17 @@ class CommandTestCase(unittest.TestCase):
 
         # Drop the clone
         shutil.rmtree(cloneroot)
+
+    def get_tags(self, gitdir):
+        result = []
+
+        tags = subprocess.check_output(['git', 'tag', '-n1'], cwd=gitdir)
+
+        for line in tags.split('\n'):
+            if not line:
+                continue
+
+            tokens = [x for x in line.split() if x]
+            result.append([tokens[0], ' '.join(tokens[1:])])
+
+        return result
