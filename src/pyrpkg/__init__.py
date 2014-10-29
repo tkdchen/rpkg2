@@ -2372,21 +2372,27 @@ class GitIgnore(object):
         self.__lines = []
         if os.path.exists(self.path):
             gitignore_file = open(self.path, 'r')
-            self.__lines = gitignore_file.readlines()
+            for line in gitignore_file:
+                self.__lines.append(self.__ensure_newline(line))
+
             gitignore_file.close()
 
         # Set to True if we end up making any modifications, used to
         # prevent unnecessary writes.
         self.modified = False
 
+    def __ensure_newline(self, line):
+        """Append a newline character if the given line didn't have one"""
+        if line.endswith('\n'):
+            return line
+
+        return '%s\n' % line
+
     def add(self, line):
         """
         Add a line to .gitignore, but check if it's a duplicate first.
         """
-
-        # Append a newline character if the given line didn't have one:
-        if line[-1] != '\n':
-            line = "%s\n" % line
+        line = self.__ensure_newline(line)
 
         # Add this line if it doesn't already exist:
         if not line in self.__lines:
