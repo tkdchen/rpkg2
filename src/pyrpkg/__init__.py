@@ -1381,19 +1381,21 @@ class Commands(object):
         os.chdir(oldpath)
         return(uploadfiles)
 
-    def list_tag(self, tagname=None):
+    def list_tag(self, tagname='*'):
         """Create a list of all tags in the repository which match a given tagname.
 
-        The optional `tagname` argument may contain a '*' glob.
+        The optional `tagname` argument may be a shell glob (it is matched
+        with fnmatch).
 
         """
 
-        cmd = ['git', 'tag']
-        cmd.extend(['-l'])
-        if tagname and tagname != '*':
-            cmd.extend([tagname])
-        # make it so
-        self._run_command(cmd)
+        tags = map(lambda t: t.name, self.repo.tags)
+
+        if tagname is not '*':
+            tags = filter(lambda t: fnmatch.fnmatch(t, tagname), tags)
+
+        for tag in tags:
+            print(tag)
 
     def new(self):
         """Return changes in a repo since the last tag"""
