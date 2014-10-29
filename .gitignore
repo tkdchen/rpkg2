@@ -9,3 +9,4 @@ py-compile
 dist/
 src/rpkg.egg-info/
 /sources
+.coverage
