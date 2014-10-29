@@ -1016,7 +1016,7 @@ class Commands(object):
             cmd.extend(['-F', os.path.abspath(file)])
         cmd.append(tagname)
         # make it so
-        self._run_command(cmd)
+        self._run_command(cmd, cwd=self.path)
         self.log.info('Tag \'%s\' was created' % tagname)
 
     def clean(self, dry=False, useignore=True):
