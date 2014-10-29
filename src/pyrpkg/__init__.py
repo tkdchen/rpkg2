@@ -2408,3 +2408,4 @@ class GitIgnore(object):
             for line in self.__lines:
                 gitignore_file.write(line)
             gitignore_file.close()
+            self.modified = False
