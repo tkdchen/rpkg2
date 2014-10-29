@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -88,3 +89,22 @@ class CommandTestCase(unittest.TestCase):
             result.append([tokens[0], ' '.join(tokens[1:])])
 
         return result
+
+    def hijack_stdout(self):
+        class cm(object):
+            def __enter__(self):
+                from cStringIO import StringIO
+
+                self.old_stdout = sys.stdout
+                self.out = StringIO()
+                sys.stdout = self.out
+
+                return self.out
+
+            def __exit__(self, *args):
+                sys.stdout.flush()
+                sys.stdout = self.old_stdout
+
+                self.out.seek(0)
+
+        return cm()
