@@ -30,7 +30,6 @@ import stat
 import StringIO
 import tempfile
 import fnmatch
-import cli
 import urlparse
 import posixpath
 # Try to import krb, it's OK if it fails
@@ -41,9 +40,11 @@ except ImportError:
 
 import pyrpkg.sources
 
+
 # Define our own error class
 class rpkgError(Exception):
     pass
+
 
 # Setup our logger
 # Null logger to avoid spurious messages, add a handler in app code
@@ -51,12 +52,14 @@ class NullHandler(logging.Handler):
     def emit(self, record):
         pass
 
+
 h = NullHandler()
 # This is our log object, clients of this library can use this object to
 # define their own logging needs
 log = logging.getLogger("rpkg")
 # Add the null handler
 log.addHandler(h)
+
 
 class Commands(object):
     """This is a class to hold all the commands that will be called
@@ -164,8 +167,8 @@ class Commands(object):
     @path.setter
     def path(self, value):
         if self._path != value:
-            #Ensure all properties which depend on self.path will be
-            #freshly loaded next time
+            # Ensure all properties which depend on self.path will be
+            # freshly loaded next time
             self._push_url = None
             self._branch_remote = None
             self._repo = None
@@ -187,15 +190,14 @@ class Commands(object):
 
         # Stealing a bunch of code from /usr/bin/koji here, too bad it isn't
         # in a more usable library form
-        defaults = {
-                    'server' : 'http://localhost/kojihub',
-                    'weburl' : 'http://localhost/koji',
-                    'pkgurl' : 'http://localhost/packages',
-                    'topdir' : '/mnt/koji',
+        defaults = {'server': 'http://localhost/kojihub',
+                    'weburl': 'http://localhost/koji',
+                    'pkgurl': 'http://localhost/packages',
+                    'topdir': '/mnt/koji',
                     'cert': '~/.koji/client.crt',
                     'ca': '~/.koji/clientca.crt',
                     'serverca': '~/.koji/serverca.crt',
-                    'krbservice' : 'host',
+                    'krbservice': 'host',
                     'authtype': None,
                     'topurl': None
                     }
@@ -216,10 +218,11 @@ class Commands(object):
                 if config.has_section(os.path.basename(self.build_client)):
                     for name, value in config.items(os.path.basename(
                                                     self.build_client)):
-                        if defaults.has_key(name):
+                        if name in defaults:
                             defaults[name] = value
         # Expand out the directory options
-        for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl', 'krbservice'):
+        for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl',
+                     'krbservice'):
             if defaults[name]:
                 defaults[name] = os.path.expanduser(defaults[name])
         self.log.debug('Initiating a %s session to %s' %
@@ -239,26 +242,23 @@ class Commands(object):
         self._kojiweburl = defaults['weburl']
         self._topurl = defaults['topurl']
         if not anon:
-                # Default to ssl if not otherwise specified and we have
-                # the cert
-                if defaults['authtype'] == 'ssl' or \
-                os.path.isfile(defaults['cert']) and \
-                defaults['authtype'] is None:
-                    self._kojisession.ssl_login(defaults['cert'],
-                                                defaults['ca'],
-                                                defaults['serverca'])
-                # Or try password auth
-                elif defaults['authtype'] == 'password' or \
-                'user' in defaults and defaults['authtype'] is None:
-                    self._kojisession.login()
-                # Or try kerberos
-                elif defaults['authtype'] == 'kerberos' or \
-                self._has_krb_creds() and \
-                defaults['authtype'] is None:
-                    self._kojisession.krb_login()
-                if not self._kojisession.logged_in:
-                    raise rpkgError('Could not auth with koji as %s' %
-                                    self.user)
+            # Default to ssl if not otherwise specified and we have the cert
+            if defaults['authtype'] == 'ssl' or \
+                    os.path.isfile(defaults['cert']) and \
+                    defaults['authtype'] is None:
+                self._kojisession.ssl_login(defaults['cert'],
+                                            defaults['ca'],
+                                            defaults['serverca'])
+            # Or try password auth
+            elif defaults['authtype'] == 'password' or 'user' in defaults \
+                    and defaults['authtype'] is None:
+                self._kojisession.login()
+            # Or try kerberos
+            elif defaults['authtype'] == 'kerberos' or self._has_krb_creds() \
+                    and defaults['authtype'] is None:
+                self._kojisession.krb_login()
+            if not self._kojisession.logged_in:
+                raise rpkgError('Could not auth with koji as %s' % self.user)
 
     @property
     def branch_merge(self):
@@ -416,9 +416,9 @@ class Commands(object):
     def load_localarch(self):
         """Get the local arch as defined by rpm"""
 
-        self._localarch = subprocess.Popen(['rpm --eval %{_arch}'],
-                       shell=True,
-                       stdout=subprocess.PIPE).communicate()[0].strip('\n')
+        proc = subprocess.Popen(['rpm --eval %{_arch}'], shell=True,
+                                stdout=subprocess.PIPE)
+        self._localarch = proc.communicate()[0].strip('\n')
 
     @property
     def mockconfig(self):
@@ -460,7 +460,7 @@ class Commands(object):
                     module_name = module_name[:-len('.git')]
                 self._module_name = module_name
                 return
-        except rpkgError, error:
+        except rpkgError:
             self.log.info('Failed to get module name from Git url or pushurl')
 
         self.load_nameverrel()
@@ -503,17 +503,18 @@ class Commands(object):
                     '--specfile', os.path.join(self.path, self.spec)])
         joined_cmd = ' '.join(cmd)
         try:
-            output, err = subprocess.Popen(joined_cmd, shell=True,
-                                      stderr=subprocess.PIPE,
-                                      stdout=subprocess.PIPE).communicate()
+            proc = subprocess.Popen(joined_cmd, shell=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            output, err = proc.communicate()
         except Exception, e:
             if err:
                 self.log.debug('Errors occoured while running following'
                                ' command to get N-V-R-E:')
                 self.log.debug(joined_cmd)
                 self.log.error(err)
-            raise rpkgError('Could not query n-v-r of %s: %s' % (self.module_name,
-                                                                 e))
+            raise rpkgError('Could not query n-v-r of %s: %s'
+                            % (self.module_name, e))
         if err:
             self.log.debug('Errors occoured while running following command to'
                            ' get N-V-R-E:')
@@ -533,7 +534,7 @@ class Commands(object):
 
         # Most packages don't include a "Epoch: 0" line, in which case RPM
         # returns '(none)'
-        if self._epoch ==  "(none)":
+        if self._epoch == "(none)":
             self._epoch = "0"
 
     @property
@@ -683,7 +684,7 @@ class Commands(object):
 
     def _has_krb_creds(self):
         # This function is lifted from /usr/bin/koji
-        if not sys.modules.has_key('krbV'):
+        if 'krbV' not in sys.modules:
             return False
         try:
             ctx = krbV.default_context()
@@ -705,9 +706,10 @@ class Commands(object):
         # Loop through the file reading chunks at a time as to not
         # put the entire file in memory.  That would suck for DVDs
         while True:
-            chunk = input.read(8192) # magic number!  Taking suggestions
+            chunk = input.read(8192)  # magic number!  Taking suggestions
             if not chunk:
-                break # we're done with the file
+                # we're done with the file
+                break
             sum.update(chunk)
         input.close()
         return sum.hexdigest()
@@ -760,23 +762,20 @@ class Commands(object):
                     # We're piping the stderr over as well, which is probably a
                     # bad thing, but rpmbuild likes to put useful data on
                     # stderr, so....
-                    proc = subprocess.Popen(command, env=environ,
+                    proc = subprocess.Popen(command, env=environ, shell=shell,
                                             stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT, shell=shell,
-                                            cwd=cwd)
-                    subprocess.check_call(pipecmd, env=environ,
-                                          stdout=sys.stdout,
-                                          stderr=sys.stderr,
+                                            stderr=subprocess.STDOUT, cwd=cwd)
+                    subprocess.check_call(pipecmd, env=environ, shell=shell,
                                           stdin=proc.stdout,
-                                          shell=shell,
-                                          cwd=cwd)
+                                          stdout=sys.stdout,
+                                          stderr=sys.stderr, cwd=cwd)
                     (output, err) = proc.communicate()
                     if proc.returncode:
                         raise rpkgError('Non zero exit')
                 else:
-                    subprocess.check_call(command, env=environ, stdout=sys.stdout,
-                                          stderr=sys.stderr, shell=shell,
-                                          cwd=cwd)
+                    subprocess.check_call(command, env=environ, shell=shell,
+                                          stdout=sys.stdout,
+                                          stderr=sys.stderr, cwd=cwd)
             except (subprocess.CalledProcessError,
                     OSError), e:
                 raise rpkgError(e)
@@ -797,26 +796,23 @@ class Commands(object):
                                              stderr=subprocess.STDOUT,
                                              shell=shell,
                                              cwd=cwd)
-                    proc = subprocess.Popen(pipecmd, env=environ,
-                                             stdin=proc1.stdout,
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE, shell=shell,
-                                             cwd=cwd)
+                    proc = subprocess.Popen(pipecmd, env=environ, shell=shell,
+                                            stdin=proc1.stdout,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            cwd=cwd)
                     output, error = proc.communicate()
                 else:
-                    proc = subprocess.Popen(command, env=environ,
+                    proc = subprocess.Popen(command, env=environ, shell=shell,
                                             stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE, shell=shell,
-                                            cwd=cwd)
+                                            stderr=subprocess.PIPE, cwd=cwd)
                     output, error = proc.communicate()
             except OSError, e:
                 raise rpkgError(e)
             self.log.info(output)
             if proc.returncode:
-                raise rpkgError('Command %s returned code %s with error: %s' %
-                                  (' '.join(cmd),
-                                   proc.returncode,
-                                   error))
+                raise rpkgError('Command %s returned code %s with error: %s'
+                                % (' '.join(cmd), proc.returncode, error))
         return
 
     def _verify_file(self, file, hash, hashtype):
@@ -846,8 +842,8 @@ class Commands(object):
         """Use curl manually to upload a file"""
 
         cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
-        '--progress-bar', '-F', 'name=%s' % self.module_name, '-F',
-        'md5sum=%s' % file_hash, '-F', 'file=@%s' % file]
+               '--progress-bar', '-F', 'name=%s' % self.module_name,
+               '-F', 'md5sum=%s' % file_hash, '-F', 'file=@%s' % file]
         if self.quiet:
             cmd.append('-s')
         cmd.append(self.lookaside_cgi)
@@ -861,9 +857,9 @@ class Commands(object):
         spec = os.path.join(self.path, self.spec)
         try:
             hdr = rpm.spec(spec)
-        except Exception, er:
+        except Exception:
             raise rpkgError('%s is not a spec file' % spec)
-        archlist = [ pkg.header['arch'] for pkg in hdr.packages]
+        archlist = [pkg.header['arch'] for pkg in hdr.packages]
         if not archlist:
             raise rpkgError('No compatible build arches found in %s' % spec)
         return archlist
@@ -892,7 +888,7 @@ class Commands(object):
         if excludearch:
             archlist = [a for a in archlist if a not in excludearch]
         # do the noarch thing
-        if 'noarch' not in excludearch and ('noarch' in buildarchs or \
+        if 'noarch' not in excludearch and ('noarch' in buildarchs or
                                             'noarch' in exclusivearch):
             archlist.append('noarch')
         # See if we have anything compatible.  Should we raise here?
@@ -939,7 +935,7 @@ class Commands(object):
             elif type(ref) == git.RemoteReference:
                 if ref.remote_head == 'HEAD':
                     self.log.debug('Skipping remote branch alias HEAD')
-                    continue # Not useful in this context
+                    continue  # Not useful in this context
                 self.log.debug('Found remote branch %s' % ref.name)
                 remotes.append(ref.name)
         return (locals, remotes)
@@ -949,7 +945,7 @@ class Commands(object):
 
         # get the name
         cmd = ['rpm', '-qp', '--nosignature', '--qf', '%{NAME}', srpm]
-                # Run the command
+        # Run the command
         self.log.debug('Running: %s' % ' '.join(cmd))
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -979,9 +975,8 @@ class Commands(object):
         # like:
         # warning: foo-0.0.src.rpm Header V3 RSA/SHA256 Signature, key ID
         # fd431d51: NOKEY
-        if error and not error.startswith("warning:") and not "NOKEY" in error:
+        if error and not error.startswith("warning:") and "NOKEY" not in error:
             raise rpkgError('Error querying srpm: %s' % error)
-        # Doing a strip and split here as splitting on \n gets me an extra entry
         contents = output.strip().split('\n')
         # Cycle through the stuff and sort correctly by its extension
         for file in contents:
@@ -1051,8 +1046,8 @@ class Commands(object):
 
         branch is the name of a branch to checkout instead of <remote>/master
 
-        bare_dir is the name of a directory to make a bare clone to, if this is a
-        bare clone. None otherwise.
+        bare_dir is the name of a directory to make a bare clone to, if this
+        is a bare clone. None otherwise.
 
         anon is whether or not to clone anonymously
 
@@ -1122,8 +1117,8 @@ class Commands(object):
         try:
             os.mkdir(top_path)
         except (OSError), e:
-            raise rpkgError('Could not create directory for module %s: %s' %
-                    (module, e))
+            raise rpkgError('Could not create directory for module %s: %s'
+                            % (module, e))
 
         # Create a bare clone first. This gives us a good list of branches
         try:
@@ -1136,8 +1131,8 @@ class Commands(object):
         repo_git = git.Git(repo_path)
 
         # Get a branch listing
-        branches = [x for x in repo_git.branch().split() if x != "*" and
-                re.search(self.branchre, x)]
+        branches = [x for x in repo_git.branch().split()
+                    if x != "*" and re.search(self.branchre, x)]
 
         for branch in branches:
             try:
@@ -1153,8 +1148,8 @@ class Commands(object):
                                   "remote.%s.url" % self.default_branch_remote,
                                   giturl)
             except (git.GitCommandError, OSError), e:
-                raise rpkgError('Could not locally clone %s from %s: %s' %
-                        (branch, repo_path, e))
+                raise rpkgError('Could not locally clone %s from %s: %s'
+                                % (branch, repo_path, e))
 
         # We don't need this now. Ignore errors since keeping it does no harm
         shutil.rmtree(repo_path, ignore_errors=True)
@@ -1177,7 +1172,8 @@ class Commands(object):
         # First lets see if we got a message or we're on a real tty:
         if not sys.stdin.isatty():
             if not message and not file:
-                raise rpkgError('Must have a commit message or be on a real tty.')
+                raise rpkgError('Must have a commit message or be on a real '
+                                'tty.')
 
         # construct the git command
         # We do this via subprocess because the git module is terrible.
@@ -1212,7 +1208,7 @@ class Commands(object):
         except git.GitCommandError as e:
             raise rpkgError(e)
 
-        self.log.info ('Tag %s was deleted' % tagname)
+        self.log.info('Tag %s was deleted' % tagname)
 
     def diff(self, cached=False, files=[]):
         """Execute a git diff
@@ -1250,19 +1246,19 @@ class Commands(object):
         # This cmd below only works to scratch build rawhide
         # We need something better for epel
         cmd = ['git', 'ls-remote', url, 'refs/heads/%s' % branch]
-        try :
+        try:
             proc = subprocess.Popen(cmd, stderr=subprocess.PIPE,
                                     stdout=subprocess.PIPE)
             output, error = proc.communicate()
-        except OSError, e:
+        except OSError as e:
             raise rpkgError(e)
         if error:
-            raise rpkgError('Got an error finding %s head for %s: %s' %
-                              (branch, module, error))
+            raise rpkgError('Got an error finding %s head for %s: %s'
+                            % (branch, module, error))
         # Return the hash sum
         if not output:
-            raise rpkgError('Could not find remote branch %s for %s' %
-                            (branch, module))
+            raise rpkgError('Could not find remote branch %s for %s'
+                            % (branch, module))
         return output.split()[0]
 
     def gitbuildhash(self, build):
@@ -1352,7 +1348,7 @@ class Commands(object):
         for file in ourfiles:
             if file not in files:
                 self.log.info("Removing no longer used file: %s" % file)
-                rv = self.repo.index.remove([file])
+                self.repo.index.remove([file])
                 os.remove(file)
 
         # Extract new files
@@ -1376,13 +1372,13 @@ class Commands(object):
                 # Create the file
                 open(file, 'w').close()
             files.append(file)
-        rv = self.repo.index.add(files)
+        self.repo.index.add(files)
         # Return to the caller and let them take it from there.
         os.chdir(oldpath)
         return(uploadfiles)
 
     def list_tag(self, tagname='*'):
-        """Create a list of all tags in the repository which match a given tagname.
+        """List all tags in the repository which match a given tagname.
 
         The optional `tagname` argument may be a shell glob (it is matched
         with fnmatch).
@@ -1475,7 +1471,7 @@ class Commands(object):
 
         # Add it to the index
         # Again this returns a blank line we want to keep quiet
-        rv = self.repo.index.add([outfile])
+        self.repo.index.add([outfile])
         log.info('Created %s and added it to the index' % outfile)
 
     def pull(self, rebase=False, norebase=False):
@@ -1532,28 +1528,10 @@ class Commands(object):
             url = '%s/%s/%s/%s/%s' % (self.lookaside, self.module_name,
                                       file.replace(' ', '%20'),
                                       csum, file.replace(' ', '%20'))
-            # There is some code here for using pycurl, but for now,
-            # just use subprocess
-            #output = open(file, 'wb')
-            #curl = pycurl.Curl()
-            #curl.setopt(pycurl.URL, url)
-            #curl.setopt(pycurl.FOLLOWLOCATION, 1)
-            #curl.setopt(pycurl.MAXREDIRS, 5)
-            #curl.setopt(pycurl.CONNECTTIMEOUT, 30)
-            #curl.setopt(pycurl.TIMEOUT, 300)
-            #curl.setopt(pycurl.WRITEDATA, output)
-            #try:
-            #    curl.perform()
-            #except:
-            #    print "Problems downloading %s" % url
-            #    curl.close()
-            #    output.close()
-            #    return 1
-            #curl.close()
-            #output.close()
             # These options came from Makefile.common.
             # Probably need to support wget as well
-            command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S', '--fail']
+            command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S',
+                       '--fail']
             if self.quiet:
                 command.append('-s')
             command.append(url)
@@ -1583,7 +1561,7 @@ class Commands(object):
         # Get our list of branches
         (locals, remotes) = self._list_branches(fetch)
 
-        if not branch in locals:
+        if branch not in locals:
             # We need to create a branch
             self.log.debug('No local branch found, creating a new one')
             totrack = None
@@ -1596,15 +1574,18 @@ class Commands(object):
                 raise rpkgError('Unknown remote branch %s' % full_branch)
             try:
                 self.log.info(self.repo.git.checkout('-b', branch, '--track',
-                                                totrack))
-            except Exception, err: # this needs to be finer grained I think...
-                raise rpkgError('Could not create branch %s: %s' % (branch, err))
+                                                     totrack))
+            except Exception, err:
+                # This needs to be finer grained I think...
+                raise rpkgError('Could not create branch %s: %s'
+                                % (branch, err))
         else:
             try:
-                output = self.repo.git.checkout(branch)
+                self.repo.git.checkout(branch)
                 # The above should have no output, but stash it anyway
                 self.log.info("Switched to branch '%s'" % branch)
-            except: # This needs to be finer grained I think...
+            except:
+                # This needs to be finer grained I think...
                 raise rpkgError('Could not check out %s' % branch)
         return
 
@@ -1624,10 +1605,9 @@ class Commands(object):
         # Setup the POST data for lookaside CGI request. The use of
         # 'filename' here appears to be what differentiates this
         # request from an actual file upload.
-        post_data = [
-                ('name', pkg_name),
-                ('md5sum', md5sum),
-                ('filename', filename)]
+        post_data = [('name', pkg_name),
+                     ('md5sum', md5sum),
+                     ('filename', filename)]
 
         curl = self._create_curl()
         curl.setopt(pycurl.WRITEFUNCTION, buf.write)
@@ -1650,18 +1630,17 @@ class Commands(object):
         # Something unexpected happened, will trigger if the lookaside URL
         # cannot be reached, the package named does not exist, and probably
         # some other scenarios as well.
-        raise rpkgError("Error checking for %s at: %s" %
-                (filename, self.lookaside_cgi))
+        raise rpkgError("Error checking for %s at: %s"
+                        % (filename, self.lookaside_cgi))
 
     def upload_file(self, pkg_name, filepath, md5sum):
         """ Upload a file to the lookaside cache. """
 
         # Setup the POST data for lookaside CGI request. The use of
         # 'file' here appears to trigger the actual upload:
-        post_data = [
-                ('name', pkg_name),
-                ('md5sum', md5sum),
-                ('file', (pycurl.FORM_FILE, filepath))]
+        post_data = [('name', pkg_name),
+                     ('md5sum', md5sum),
+                     ('file', (pycurl.FORM_FILE, filepath))]
 
         curl = self._create_curl()
         curl.setopt(pycurl.HTTPPOST, post_data)
@@ -1708,8 +1687,8 @@ class Commands(object):
             if self.repo.is_dirty():
                 raise rpkgError('%s has uncommitted changes.  Use git status '
                                 'to see details' % self.path)
-            # Need to check here to see if the local commit you want to build is
-            # pushed or not
+            # Need to check here to see if the local commit you want to build
+            # is pushed or not
             branch = self.repo.active_branch
             full_branch = '%s/%s' % (self.branch_remote, self.branch_merge)
             if self.repo.git.rev_list('%s...%s' % (full_branch, branch)):
@@ -1724,17 +1703,17 @@ class Commands(object):
         # see if the dest tag is locked
         dest_tag = self.kojisession.getTag(build_target['dest_tag_name'])
         if not dest_tag:
-            raise rpkgError('Unknown destination tag %s' %
-                              build_target['dest_tag_name'])
+            raise rpkgError('Unknown destination tag %s'
+                            % build_target['dest_tag_name'])
         if dest_tag['locked'] and not scratch:
             raise rpkgError('Destination tag %s is locked' % dest_tag['name'])
         # If we're chain building, make sure inheritance works
         if chain:
             cmd.append('chain-build')
             ancestors = self.kojisession.getFullInheritance(
-                                                    build_target['build_tag'])
-            if dest_tag['id'] not in [build_target['build_tag']] + \
-            [ancestor['parent_id'] for ancestor in ancestors]:
+                build_target['build_tag'])
+            ancestors = [ancestor['parent_id'] for ancestor in ancestors]
+            if dest_tag['id'] not in [build_target['build_tag']] + ancestors:
                 raise rpkgError('Packages in destination tag '
                                 '%(dest_tag_name)s are not inherited by'
                                 'build tag %(build_tag_name)s' %
@@ -1753,10 +1732,11 @@ class Commands(object):
             cmd.append('--scratch')
         if background:
             cmd.append('--background')
-            priority = 5 # magic koji number :/
+            priority = 5  # magic koji number :/
         if arches:
             if not scratch:
-                raise rpkgError('Cannot override arches for non-scratch builds')
+                raise rpkgError('Cannot override arches for non-scratch '
+                                'builds')
             for arch in arches:
                 if not re.match(r'^[0-9a-zA-Z_.]+$', arch):
                     raise rpkgError('Invalid architecture name: %s' % arch)
@@ -1982,9 +1962,10 @@ class Commands(object):
             if os.path.exists(os.path.join(self.path, arch)):
                 # For each available arch folder, lists file and keep
                 # those ending with .rpm
-                rpms.extend([os.path.join(self.path, arch, file) for file in
-                         os.listdir(os.path.join(self.path, arch))
-                         if file.endswith('.rpm')])
+                rpms.extend([os.path.join(self.path, arch, file)
+                             for file in os.listdir(os.path.join(self.path,
+                                                    arch))
+                             if file.endswith('.rpm')])
         if not rpms:
             log.warn('No rpm found')
         cmd = ['rpmlint']
@@ -2027,8 +2008,10 @@ class Commands(object):
             hashtype = self._guess_hashtype()
         # This may need to get updated if we ever change our checksum default
         if not hashtype == 'sha256':
-            cmd.extend(["--define '_source_filedigest_algorithm %s'" % hashtype,
-                    "--define '_binary_filedigest_algorithm %s'" % hashtype])
+            cmd.extend(["--define '_source_filedigest_algorithm %s'"
+                        % hashtype,
+                        "--define '_binary_filedigest_algorithm %s'"
+                        % hashtype])
         if arch:
             cmd.extend(['--target', arch])
         if self.quiet:
@@ -2059,16 +2042,16 @@ class Commands(object):
 
         try:
             repoid = self.anon_kojisession.getRepo(
-                                build_target['build_tag_name'])['id']
-        except Exception, e:
+                build_target['build_tag_name'])['id']
+        except Exception:
             raise rpkgError('Could not find a valid build repo')
 
         # Generate the config
         config = koji.genMockConfig('%s-%s' % (target, arch), arch,
-                                   distribution=self.disttag,
-                                   tag_name=build_target['build_tag_name'],
-                                   repoid=repoid,
-                                   topurl=self.topurl)
+                                    distribution=self.disttag,
+                                    tag_name=build_target['build_tag_name'],
+                                    repoid=repoid,
+                                    topurl=self.topurl)
 
         # Return the mess
         return(config)
@@ -2242,10 +2225,6 @@ class Commands(object):
             else:
                 # Ensure the new file is readable:
                 os.chmod(f, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-                #lookaside.upload_file(self.module, f, file_hash)
-                # For now don't use the pycurl upload function as it does
-                # not produce any progress output.  Cheat and use curl
-                # directly.
                 self._do_curl(file_hash, f)
                 uploaded.append(file_basename)
 
@@ -2254,7 +2233,7 @@ class Commands(object):
         # Write .gitignore with the new sources if anything changed:
         gitignore.write()
 
-        rv = self.repo.index.add(['sources', '.gitignore'])
+        self.repo.index.add(['sources', '.gitignore'])
 
         # Change back to original working dir:
         os.chdir(oldpath)
@@ -2296,8 +2275,8 @@ class Commands(object):
         """
 
         self.srpmname = os.path.join(self.path,
-                            "%s-%s-%s.src.rpm" % (self.module_name,
-                                                  self.ver, self.rel))
+                                     "%s-%s-%s.src.rpm"
+                                     % (self.module_name, self.ver, self.rel))
         # See if we need to build the srpm
         if os.path.exists(self.srpmname):
             self.log.debug('Srpm found, rewriting it.')
@@ -2312,8 +2291,10 @@ class Commands(object):
             hashtype = self._guess_hashtype()
         # This may need to get updated if we ever change our checksum default
         if not hashtype == 'sha256':
-            cmd.extend(["--define '_source_filedigest_algorithm %s'" % hashtype,
-                    "--define '_binary_filedigest_algorithm %s'" % hashtype])
+            cmd.extend(["--define '_source_filedigest_algorithm %s'"
+                        % hashtype,
+                        "--define '_binary_filedigest_algorithm %s'"
+                        % hashtype])
         cmd.extend(['--nodeps', '-bs', os.path.join(self.path, self.spec)])
         self._run_command(cmd, shell=True)
 
@@ -2336,7 +2317,7 @@ class Commands(object):
         files = self.repo.git.ls_files('--exclude-standard').split()
         for file in files:
             # throw out non patches
-            if not file.endswith(('.patch','.diff')):
+            if not file.endswith(('.patch', '.diff')):
                 continue
             if file not in spec:
                 unused.append(file)
@@ -2361,6 +2342,7 @@ class Commands(object):
         # Run the command
         self._run_command(cmd, shell=True)
 
+
 class GitIgnore(object):
     """ Smaller wrapper for managing a .gitignore file and it's entries. """
 
@@ -2373,8 +2355,8 @@ class GitIgnore(object):
         """
         self.path = path
 
-        # Lines of the .gitignore file, used to check if entries need to be added
-        # or already exist.
+        # Lines of the .gitignore file, used to check if entries need to be
+        # added or already exist.
         self.__lines = []
         if os.path.exists(self.path):
             gitignore_file = open(self.path, 'r')
@@ -2401,7 +2383,7 @@ class GitIgnore(object):
         line = self.__ensure_newline(line)
 
         # Add this line if it doesn't already exist:
-        if not line in self.__lines:
+        if line not in self.__lines:
             self.__lines.append(line)
             self.modified = True
 
