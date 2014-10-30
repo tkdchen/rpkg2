@@ -105,6 +105,7 @@ class cliClient(object):
                                        items['kojiconfig'],
                                        items['build_client'],
                                        user=self.args.user,
+                                       password=self.args.password,
                                        runas=self.args.runas,
                                        dist=self.args.dist,
                                        target=target,
@@ -159,6 +160,9 @@ class cliClient(object):
         # Override the  discovered user name
         self.parser.add_argument('--user', default=None,
                                  help='Override the discovered user name')
+        # If using password auth
+        self.parser.add_argument('--password', default=None,
+                                 help='Password for Koji login')
         # Run Koji commands as a user other then the one you have
         # credentials for (requires configuration on the Koji hub)
         self.parser.add_argument('--runas', default=None,

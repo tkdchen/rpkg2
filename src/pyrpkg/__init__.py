@@ -73,8 +73,8 @@ class Commands(object):
 
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
-                 build_client, user=None, runas=None, dist=None, target=None,
-                 quiet=False):
+                 build_client, user=None, password=None, runas=None,
+                 dist=None, target=None, quiet=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -145,6 +145,8 @@ class Commands(object):
         self._topurl = None
         # The user to use or discover
         self._user = user
+        # The password to use
+        self._password = password
         # The alternate Koji user to run commands as
         self._runas = runas
         # The rpm version of the cloned module
@@ -192,51 +194,72 @@ class Commands(object):
 
         # Stealing a bunch of code from /usr/bin/koji here, too bad it isn't
         # in a more usable library form
-        defaults = {'server': 'http://localhost/kojihub',
-                    'weburl': 'http://localhost/koji',
-                    'pkgurl': 'http://localhost/packages',
-                    'topdir': '/mnt/koji',
-                    'cert': '~/.koji/client.crt',
-                    'ca': '~/.koji/clientca.crt',
-                    'serverca': '~/.koji/serverca.crt',
-                    'krbservice': 'host',
-                    'authtype': None,
-                    'topurl': None
-                    }
+        defaults = {
+            'server': None,
+            'topurl': 'http://localhost/kojiroot',
+            'weburl' : 'http://localhost/koji',
+            'cert': '~/.koji/client.crt',
+            'ca': '~/.koji/clientca.crt',
+            'serverca': '~/.koji/serverca.crt',
+            'authtype': None,
+            'krbservice': None,
+            'timeout' : None,
+            'keepalive' : True,
+            'max_retries': None,
+            'retry_interval': None,
+            'anon_retry' : True,
+            'offline_retry' : None,
+            'offline_retry_interval' : None,
+            'use_fast_upload': None,
+            'debug': None,
+            'debug_xmlrpc': None
+            }
+
         # Process the configs in order, global, user, then any option passed
-        for configfile in (self.kojiconfig,
-                           os.path.expanduser('~/.koji/config')):
-            try:
-                f = open(configfile)
-            except IOError:
-                self.log.debug("Could not read %s for config values" %
-                               configfile)
+        config = ConfigParser.ConfigParser()
+        confs = [self.kojiconfig,
+                 os.path.expanduser('~/.koji/config')]
+        config.read(confs)
 
-            else:
-                with f:
-                    config = ConfigParser.ConfigParser()
-                    config.readfp(f)
-
-                if config.has_section(os.path.basename(self.build_client)):
-                    for name, value in config.items(os.path.basename(
-                                                    self.build_client)):
-                        if name in defaults:
-                            defaults[name] = value
+        if config.has_section(os.path.basename(self.build_client)):
+            for name, value in config.items(os.path.basename(
+                    self.build_client)):
+                if name in defaults:
+                    if name in ('keepalive', 'anon_retry', 'offline_retry',
+                                'use_fast_upload',
+                                'debug', 'debug_xmlrpc'):
+                        defaults[name] = config.getboolean(os.path.basename(
+                                self.build_client), name)
+                    elif name in ('timeout', 'max_retries', 'retry_interval',
+                                  'offline_retry_interval'):
+                        defaults[name] = config.getint(os.path.basename(
+                                self.build_client), name)
+                    else:
+                        defaults[name] = value
+        if not defaults['server']:
+            raise rpkgError('No server defined in: %s' % ', '.join(confs))
         # Expand out the directory options
-        for name in ('topdir', 'cert', 'ca', 'serverca', 'topurl',
-                     'krbservice'):
+        for name in ('cert', 'ca', 'serverca'):
             if defaults[name]:
                 defaults[name] = os.path.expanduser(defaults[name])
         self.log.debug('Initiating a %s session to %s' %
                        (os.path.basename(self.build_client),
                         defaults['server']))
+        session_opts = {}
+        for name in ('krbservice', 'timeout', 'keepalive',
+                     'max_retries', 'retry_interval', 'anon_retry',
+                     'offline_retry', 'offline_retry_interval',
+                     'debug', 'debug_xmlrpc',
+                     'use_fast_upload'):
+            if defaults[name] is not None:
+                session_opts[name] = defaults[name]
         try:
-            if not anon:
-                session_opts = {'user': self.user}
+            if anon:
+                self._anon_kojisession = koji.ClientSession(defaults['server'],
+                                                            session_opts)
+            else:
                 self._kojisession = koji.ClientSession(defaults['server'],
                                                        session_opts)
-            else:
-                self._anon_kojisession = koji.ClientSession(defaults['server'])
         except:
             raise rpkgError('Could not initiate %s session' %
                             os.path.basename(self.build_client))
@@ -253,15 +276,19 @@ class Commands(object):
                                             defaults['serverca'],
                                             proxyuser=self.runas)
             # Or try password auth
-            elif defaults['authtype'] == 'password' or 'user' in defaults \
+            elif defaults['authtype'] == 'password' or self.password \
                     and defaults['authtype'] is None:
+                if self.runas:
+                    raise rpkgError('--runas cannot be used with password auth')
+                self._kojisession.opts['user'] = self.user
+                self._kojisession.opts['password'] = self.password
                 self._kojisession.login()
             # Or try kerberos
             elif defaults['authtype'] == 'kerberos' or self._has_krb_creds() \
                     and defaults['authtype'] is None:
                 self._kojisession.krb_login(proxyuser=self.runas)
             if not self._kojisession.logged_in:
-                raise rpkgError('Could not auth with koji as %s' % self.user)
+                raise rpkgError('Could not login to %s' % defaults['server'])
 
     @property
     def branch_merge(self):
@@ -657,6 +684,12 @@ class Commands(object):
         # If a site figures out the user differently (like from ssl cert)
         # this is where you'd override and make that happen
         self._user = os.getlogin()
+
+    @property
+    def password(self):
+        """This property ensures the password attribute"""
+
+        return self._password
 
     @property
     def runas(self):
