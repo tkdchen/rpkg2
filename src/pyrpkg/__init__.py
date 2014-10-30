@@ -73,7 +73,7 @@ class Commands(object):
 
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
-                 build_client, user=None, dist=None, target=None,
+                 build_client, user=None, runas=None, dist=None, target=None,
                  quiet=False):
         """Init the object and some configuration details."""
 
@@ -145,6 +145,8 @@ class Commands(object):
         self._topurl = None
         # The user to use or discover
         self._user = user
+        # The alternate Koji user to run commands as
+        self._runas = runas
         # The rpm version of the cloned module
         self._ver = None
         self.log = log
@@ -248,7 +250,8 @@ class Commands(object):
                     defaults['authtype'] is None:
                 self._kojisession.ssl_login(defaults['cert'],
                                             defaults['ca'],
-                                            defaults['serverca'])
+                                            defaults['serverca'],
+                                            proxyuser=self.runas)
             # Or try password auth
             elif defaults['authtype'] == 'password' or 'user' in defaults \
                     and defaults['authtype'] is None:
@@ -256,7 +259,7 @@ class Commands(object):
             # Or try kerberos
             elif defaults['authtype'] == 'kerberos' or self._has_krb_creds() \
                     and defaults['authtype'] is None:
-                self._kojisession.krb_login()
+                self._kojisession.krb_login(proxyuser=self.runas)
             if not self._kojisession.logged_in:
                 raise rpkgError('Could not auth with koji as %s' % self.user)
 
@@ -654,6 +657,12 @@ class Commands(object):
         # If a site figures out the user differently (like from ssl cert)
         # this is where you'd override and make that happen
         self._user = os.getlogin()
+
+    @property
+    def runas(self):
+        """This property ensures the runas attribute"""
+
+        return self._runas
 
     @property
     def ver(self):
