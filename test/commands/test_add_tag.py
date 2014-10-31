@@ -6,10 +6,14 @@ from . import CommandTestCase
 class CommandAddTagTestCase(CommandTestCase):
     def setUp(self):
         super(CommandAddTagTestCase, self).setUp()
-        self.old_editor = os.environ['EDITOR']
+        if 'GIT_EDITOR' in os.environ:
+            self.old_git_editor = os.environ['GIT_EDITOR']
+        else:
+            self.old_git_editor = None
 
     def tearDown(self):
-        os.environ['EDITOR'] = self.old_editor
+        if self.old_git_editor is not None:
+            os.environ['GIT_EDITOR'] = self.old_git_editor
         super(CommandAddTagTestCase, self).tearDown()
 
     def test_add_tag(self):
@@ -30,7 +34,7 @@ class CommandAddTagTestCase(CommandTestCase):
         cmd.path = moduledir
 
         # `git tag` will call $EDITOR to ask the user to write a message
-        os.environ['EDITOR'] = ('/usr/bin/python -c "import sys; '
+        os.environ['GIT_EDITOR'] = ('/usr/bin/python -c "import sys; '
                                 'open(sys.argv[1], \'w\').write(\'%s\')"'
                                 % message)
 
