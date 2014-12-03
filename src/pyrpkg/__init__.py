@@ -73,7 +73,7 @@ class Commands(object):
 
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
-                 build_client, user=None, password=None, runas=None,
+                 build_client, user=None,
                  dist=None, target=None, quiet=False):
         """Init the object and some configuration details."""
 
@@ -146,9 +146,9 @@ class Commands(object):
         # The user to use or discover
         self._user = user
         # The password to use
-        self._password = password
+        self._password = None
         # The alternate Koji user to run commands as
-        self._runas = runas
+        self._runas = None
         # The rpm version of the cloned module
         self._ver = None
         self.log = log
@@ -691,11 +691,19 @@ class Commands(object):
 
         return self._password
 
+    @password.setter
+    def password(self, password):
+        self._password = password
+
     @property
     def runas(self):
         """This property ensures the runas attribute"""
 
         return self._runas
+
+    @runas.setter
+    def runas(self, runas):
+        self._runas = runas
 
     @property
     def ver(self):

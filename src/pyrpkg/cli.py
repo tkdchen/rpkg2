@@ -105,14 +105,14 @@ class cliClient(object):
                                        items['kojiconfig'],
                                        items['build_client'],
                                        user=self.args.user,
-                                       password=self.args.password,
-                                       runas=self.args.runas,
                                        dist=self.args.dist,
                                        target=target,
                                        quiet=self.args.q,
                                        )
 
         self._cmd.module_name = self.args.module_name
+        self._cmd.password = self.args.password
+        self._cmd.runas = self.args.runas
 
     # This function loads the extra stuff once we figure out what site
     # we are
