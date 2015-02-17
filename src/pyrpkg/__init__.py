@@ -1578,10 +1578,9 @@ class Commands(object):
                 if self._verify_file(outfile, entry.hash, entry.hashtype):
                     continue
             self.log.info("Downloading %s" % (entry.file))
+            urled_file = entry.file.replace(' ', '%20')
             url = '%s/%s/%s/%s/%s' % (self.lookaside, self.module_name,
-                                      entry.file.replace(' ', '%20'),
-                                      entry.hash,
-                                      entry.file.replace(' ', '%20'))
+                                      urled_file, entry.hash, urled_file)
             # These options came from Makefile.common.
             # Probably need to support wget as well
             command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S',
