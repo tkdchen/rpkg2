@@ -1,6 +1,9 @@
 import os
+import random
+import shutil
+import string
 import sys
-import StringIO
+import tempfile
 import unittest
 
 old_path = list(sys.path)
@@ -10,98 +13,164 @@ from pyrpkg import sources
 sys.path = old_path
 
 
-class formatLineTestCase(unittest.TestCase):
-    def test_wrong_number_of_fields(self):
-        WRONG_ENTRIES = [
-            ('foo'),
-            ('foo', 'bar', 'foo'),
-        ]
-        for entry in WRONG_ENTRIES:
-            self.assertRaises(ValueError, sources._format_line, entry)
-
-    def test_empty_entry(self):
-        self.assertEqual('', sources._format_line(()))
-
-    def test_correct_entry(self):
-        CORRECT_ENTRIES = [
-            (['foo', 'bar'], ('foo  bar')),
-        ]
-        for entry, line in CORRECT_ENTRIES:
-            self.assertEqual(line,
-                             sources._format_line(entry))
+class SourceFileEntryTestCase(unittest.TestCase):
+    def test_entry(self):
+        e = sources.SourceFileEntry('md5', 'afile', 'ahash')
+        expected = 'ahash  afile\n'
+        self.assertEqual(str(e), expected)
 
 
-class parseLineTestCase(unittest.TestCase):
-    def test_wrong_number_of_parts(self):
-        WRONG_LINES = [
-            'foo\n',
-            'foo  \n',
-            'foo bar\n',
-        ]
-        for line in WRONG_LINES:
-            self.assertRaises(ValueError, sources._parse_line, line)
+class SourcesFileTestCase(unittest.TestCase):
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(prefix='rpkg-tests.')
+        self.sourcesfile = os.path.join(self.workdir, self._testMethodName)
 
-    def test_empty_line(self):
-        EMPTY_LINES = [
-            '',
-            '\n',
-            '  \n',
-        ]
-        for line in EMPTY_LINES:
-            self.assertEqual([], sources._parse_line(line))
+    def tearDown(self):
+        shutil.rmtree(self.workdir)
 
-    def test_correct_line(self):
-        CORRECT_LINES = [
-            ('foo  bar\n', ['foo', 'bar']),
-            ('foo   bar\n', ['foo', ' bar'])
-        ]
-        for line, entry in CORRECT_LINES:
-            self.assertEqual(entry, sources._parse_line(line))
+    def test_parse_empty_line(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        entry = s.parse_line('')
+        self.assertIsNone(entry)
 
+    def test_parse_eol_line(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        entry = s.parse_line('\n')
+        self.assertIsNone(entry)
 
-class ReaderTestCase(unittest.TestCase):
-    def test_empty_sources(self):
-        EMPTY_SOURCES = [
-            ('', []),
-            ('\n', [[]]),
-            (' \n', [[]]),
-            ('\n\n', [[], []]),
-            (' \n ', [[], []]),
-        ]
-        for buffer, entries in EMPTY_SOURCES:
-            fp = StringIO.StringIO(buffer)
-            reader = sources.Reader(fp)
-            self.assertEqual(entries, [a for a in reader])
-            fp.close()
+    def test_parse_whitespace_line(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        entry = s.parse_line('    \n')
+        self.assertIsNone(entry)
 
-    def test_correct_sources(self):
-        CORRECT_SOURCES = [
-            ('foo  bar\n', [['foo', 'bar']]),
-            ('foo  bar\nfooo  baaar\n', [['foo', 'bar'],
-                                         ['fooo', 'baaar'],
-                                         ]),
-        ]
-        for buffer, entries in CORRECT_SOURCES:
-            fp = StringIO.StringIO(buffer)
-            reader = sources.Reader(fp)
-            self.assertEqual(entries, [a for a in reader])
-            fp.close()
+    def test_parse_entry_line(self):
+        s = sources.SourcesFile(self.sourcesfile)
 
+        line = 'ahash  afile\n'
+        entry = s.parse_line(line)
 
-class WriterTestCase(unittest.TestCase):
-    def test_writerows(self):
-        CORRECT_SOURCES = [
-            ([['foo', 'bar']], 'foo  bar\n'),
-            ([['foo', 'bar'],
-              ['fooo', 'baaar'],
-              ], 'foo  bar\nfooo  baaar\n'),
-        ]
-        for entries, buffer in CORRECT_SOURCES:
-            fp = StringIO.StringIO()
-            writer = sources.Writer(fp)
-            writer.writerows(entries)
-            self.assertEqual(fp.getvalue(), buffer)
-            fp.close()
+        self.assertTrue(isinstance(entry, sources.SourceFileEntry))
+        self.assertEqual(entry.hashtype, 'md5')
+        self.assertEqual(entry.hash, 'ahash')
+        self.assertEqual(entry.file, 'afile')
+        self.assertEqual(str(entry), line)
+
+    def test_parse_wrong_lines(self):
+        s = sources.SourcesFile(self.sourcesfile)
+
+        lines = ['ahash',
+                 'ahash  ',
+                 'ahash afile',
+                 ]
+
+        for line in lines:
+            with self.assertRaises(sources.MalformedLineError):
+                s.parse_line(line)
+
+    def test_open_new_file(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        self.assertEqual(len(s.entries), 0)
+
+    def test_open_empty_file(self):
+        open(self.sourcesfile, 'w').write('')
+        s = sources.SourcesFile(self.sourcesfile)
+        self.assertEqual(len(s.entries), 0)
+
+    def test_open_existing_file(self):
+        lines = ['ahash  afile\n', 'anotherhash  anotherfile\n']
+
+        with open(self.sourcesfile, 'w') as f:
+            for line in lines:
+                f.write(line)
+
+        s = sources.SourcesFile(self.sourcesfile)
+
+        for i, entry in enumerate(s.entries):
+            self.assertTrue(isinstance(entry, sources.SourceFileEntry))
+            self.assertEqual(str(entry), lines[i])
+
+    def test_open_existing_file_with_wrong_line(self):
+        line = 'some garbage here\n'
+
+        with open(self.sourcesfile, 'w') as f:
+            f.write(line)
+
+        with self.assertRaises(sources.MalformedLineError):
+            return sources.SourcesFile(self.sourcesfile)
+
+    def test_add_entry(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        self.assertEqual(len(s.entries), 0)
+
+        s.add_entry('md5', 'afile', 'ahash')
+        self.assertEqual(len(s.entries), 1)
+        self.assertEqual(str(s.entries[-1]), 'ahash  afile\n')
+
+        s.add_entry('md5', 'anotherfile', 'anotherhash')
+        self.assertEqual(len(s.entries), 2)
+        self.assertEqual(str(s.entries[-1]), 'anotherhash  anotherfile\n')
+
+    def test_add_entry_twice(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        self.assertEqual(len(s.entries), 0)
+
+        s.add_entry('md5', 'afile', 'ahash')
+        self.assertEqual(len(s.entries), 1)
+        self.assertEqual(str(s.entries[-1]), 'ahash  afile\n')
+
+        s.add_entry('md5', 'afile', 'ahash')
+        self.assertEqual(len(s.entries), 1)
+
+    def test_write_new_file(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        self.assertEqual(len(s.entries), 0)
+
+        s.add_entry('md5', 'afile', 'ahash')
+        s.add_entry('md5', 'anotherfile', 'anotherhash')
+        s.write()
+
+        with open(self.sourcesfile) as f:
+             lines = f.readlines()
+
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], 'ahash  afile\n')
+        self.assertEqual(lines[1], 'anotherhash  anotherfile\n')
+
+    def test_write_adding_a_line(self):
+        lines = ['ahash  afile\n', 'anotherhash  anotherfile\n']
+
+        with open(self.sourcesfile, 'w') as f:
+            for line in lines:
+                f.write(line)
+
+        s = sources.SourcesFile(self.sourcesfile)
+        s.add_entry('md5', 'thirdfile', 'thirdhash')
+        s.write()
+
+        with open(self.sourcesfile) as f:
+             lines = f.readlines()
+
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(lines[0], 'ahash  afile\n')
+        self.assertEqual(lines[1], 'anotherhash  anotherfile\n')
+        self.assertEqual(lines[2], 'thirdhash  thirdfile\n')
+
+    def test_write_over(self):
+        lines = ['ahash  afile\n', 'anotherhash  anotherfile\n']
+
+        with open(self.sourcesfile, 'w') as f:
+            for line in lines:
+                f.write(line)
+
+        s = sources.SourcesFile(self.sourcesfile, replace=True)
+        s.add_entry('md5', 'thirdfile', 'thirdhash')
+        s.write()
+
+        with open(self.sourcesfile) as f:
+             lines = f.readlines()
+
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0], 'thirdhash  thirdfile\n')
 
 
 if __name__ == '__main__':

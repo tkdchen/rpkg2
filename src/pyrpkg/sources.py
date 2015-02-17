@@ -1,55 +1,75 @@
 """
-Our so-called sources file is simple text-based line-oriented file format. Each
-line represents one file and has two fields: file hash and base name of the
-file. Field separator is two spaces and Unix end-of-lines.
+Our so-called sources file is simple text-based line-oriented file format.
 
-This sources module implements API similar to csv module from standard library
-to read and write data in sources file format.
+Each line represents one source file and is in the same format as the output
+of commands like `md5sum filename`:
+
+    hash  filename
+
+This module implements a simple API to read these files, parse lines into
+entries, and write these entries to the file in the proper format.
 """
 
 
-class Reader(object):
-    def __init__(self, sourcesfile):
+import os
+import re
+
+
+class MalformedLineError(Exception):
+    pass
+
+
+class SourcesFile(object):
+    def __init__(self, sourcesfile, replace=False):
         self.sourcesfile = sourcesfile
-        self._sourcesiter = None
+        self.entries = []
 
-    def __iter__(self):
-        for entry in self.sourcesfile:
-            yield _parse_line(entry)
+        if not replace:
+            if not os.path.exists(sourcesfile):
+                return
+
+            with open(sourcesfile) as f:
+                for line in f:
+                    entry = self.parse_line(line)
+
+                    if entry and entry not in self.entries:
+                        self.entries.append(entry)
+
+    def parse_line(self, line):
+        stripped = line.strip()
+
+        if not stripped:
+            return
+
+        try:
+            hash, file = stripped.split('  ', 1)
+
+        except ValueError:
+            raise MalformedLineError(line)
+
+        return SourceFileEntry('md5', file, hash)
+
+    def add_entry(self, hashtype, file, hash):
+        entry = SourceFileEntry(hashtype, file, hash)
+
+        if entry not in self.entries:
+            self.entries.append(entry)
+
+    def write(self):
+        with open(self.sourcesfile, 'w') as f:
+            for entry in self.entries:
+                f.write(str(entry))
 
 
-class Writer(object):
-    def __init__(self, sourcesfile):
-        self.sourcesfile = sourcesfile
+class SourceFileEntry(object):
+    def __init__(self, hashtype, file, hash):
+            self.hashtype = hashtype.lower()
+            self.hash = hash
+            self.file = file
 
-    def writerow(self, row):
-        self.sourcesfile.write("%s\n" % _format_line(row))
+    def __str__(self):
+        return '%s  %s\n' % (self.hash, self.file)
 
-    def writerows(self, rows):
-        for row in rows:
-            self.writerow(row)
-
-
-def reader(sourcesfile):
-    return Reader(sourcesfile)
-
-
-def writer(sourcesfile):
-    return Writer(sourcesfile)
-
-
-def _parse_line(line):
-    stripped_line = line.strip()
-    if not stripped_line:
-        return []
-    entries = stripped_line.split('  ', 1)
-    if len(entries) != 2:
-        raise ValueError("Malformed line: %r." % line)
-    return entries
-
-
-def _format_line(entry):
-    if len(entry) != 0 and len(entry) != 2:
-        raise ValueError("Incorrect number of fields for entry: %r."
-                         % (entry,))
-    return "  ".join(entry)
+    def __eq__(self, other):
+        return ((self.hashtype, self.hash, self.file) ==
+                (other.hashtype, other.hash, other.file))

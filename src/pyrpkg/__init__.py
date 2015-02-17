@@ -38,7 +38,7 @@ try:
 except ImportError:
     pass
 
-import pyrpkg.sources
+from pyrpkg.sources import SourcesFile
 
 
 # Define our own error class
@@ -1568,16 +1568,20 @@ class Commands(object):
         # Default to putting the files where the module is
         if not outdir:
             outdir = self.path
-        for (csum, file) in self._read_sources():
+
+        sourcesf = SourcesFile(self.sources_filename)
+
+        for entry in sourcesf.entries:
             # See if we already have a valid copy downloaded
-            outfile = os.path.join(outdir, file)
+            outfile = os.path.join(outdir, entry.file)
             if os.path.exists(outfile):
-                if self._verify_file(outfile, csum, self.lookasidehash):
+                if self._verify_file(outfile, entry.hash, entry.hashtype):
                     continue
-            self.log.info("Downloading %s" % (file))
+            self.log.info("Downloading %s" % (entry.file))
             url = '%s/%s/%s/%s/%s' % (self.lookaside, self.module_name,
-                                      file.replace(' ', '%20'),
-                                      csum, file.replace(' ', '%20'))
+                                      entry.file.replace(' ', '%20'),
+                                      entry.hash,
+                                      entry.file.replace(' ', '%20'))
             # These options came from Makefile.common.
             # Probably need to support wget as well
             command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S',
@@ -1586,8 +1590,8 @@ class Commands(object):
                 command.append('-s')
             command.append(url)
             self._run_command(command)
-            if not self._verify_file(outfile, csum, self.lookasidehash):
-                raise rpkgError('%s failed checksum' % file)
+            if not self._verify_file(outfile, entry.hash, entry.hashtype):
+                raise rpkgError('%s failed checksum' % entry.file)
         return
 
     def switch_branch(self, branch, fetch=True):
@@ -2226,18 +2230,6 @@ class Commands(object):
                            config_dir)
             self._cleanup_tmp_dir(config_dir)
 
-    def _read_sources(self):
-        """Parses 'sources' file"""
-        with open(self.sources_filename, 'rb') as sources_fp:
-            reader = pyrpkg.sources.reader(sources_fp)
-            return [a for a in reader]
-
-    def _write_sources(self, rows):
-        """Writes 'sources' file"""
-        with open(self.sources_filename, 'wb') as sources_fp:
-            writer = pyrpkg.sources.writer(sources_fp)
-            writer.writerows(rows)
-
     def upload(self, files, replace=False):
         """Upload source file(s) in the lookaside cache
 
@@ -2247,11 +2239,7 @@ class Commands(object):
         oldpath = os.getcwd()
         os.chdir(self.path)
 
-        # Decide to overwrite or append to sources:
-        if replace or not os.path.exists(self.sources_filename):
-            sources = []
-        else:
-            sources = self._read_sources()
+        sourcesf = SourcesFile(self.sources_filename, replace=replace)
 
         # Will add new sources to .gitignore if they are not already there.
         gitignore = GitIgnore(os.path.join(self.path, '.gitignore'))
@@ -2262,8 +2250,7 @@ class Commands(object):
             file_hash = self._hash_file(f, self.lookasidehash)
             self.log.info("Uploading: %s  %s" % (file_hash, f))
             file_basename = os.path.basename(f)
-            if (file_hash, file_basename) not in sources:
-                sources.append((file_hash, file_basename))
+            sourcesf.add_entry(self.lookasidehash, file_basename, file_hash)
 
             # Add this file to .gitignore if it's not already there:
             if not gitignore.match(file_basename):
@@ -2278,7 +2265,7 @@ class Commands(object):
                 self._do_curl(file_hash, f)
                 uploaded.append(file_basename)
 
-        self._write_sources(sources)
+        sourcesf.write()
 
         # Write .gitignore with the new sources if anything changed:
         gitignore.write()
