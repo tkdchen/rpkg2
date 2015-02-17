@@ -2,7 +2,12 @@
 Our so-called sources file is simple text-based line-oriented file format.
 
 Each line represents one source file and is in the same format as the output
-of commands like `md5sum filename`:
+of commands like `md5sum --tag filename`:
+
+    hashtype (filename) = hash
+
+To preserve backwards compatibility, lines can also be in the older format,
+which corresponds to the output of commands like `md5sum filename`:
 
     hash  filename
 
@@ -13,6 +18,10 @@ entries, and write these entries to the file in the proper format.
 
 import os
 import re
+
+
+LINE_PATTERN = re.compile(
+    r'^(?P<hashtype>[^ ]+?) \((?P<file>[^ )]+?)\) = (?P<hash>[^ ]+?)$')
 
 
 class MalformedLineError(Exception):
@@ -41,6 +50,12 @@ class SourcesFile(object):
         if not stripped:
             return
 
+        m = LINE_PATTERN.match(stripped)
+        if m is not None:
+            return SourceFileEntry(m.group('hashtype'), m.group('file'),
+                                   m.group('hash'))
+
+        # Try falling back on the old format
         try:
             hash, file = stripped.split('  ', 1)
 
@@ -68,7 +83,9 @@ class SourceFileEntry(object):
             self.file = file
 
     def __str__(self):
-        return '%s  %s\n' % (self.hash, self.file)
+        return '%s (%s) = %s\n' % (self.hashtype.upper(), self.file,
+                                   self.hash)
+
 
     def __eq__(self, other):
         return ((self.hashtype, self.hash, self.file) ==
