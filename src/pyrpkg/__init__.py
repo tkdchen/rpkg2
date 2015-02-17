@@ -38,7 +38,7 @@ try:
 except ImportError:
     pass
 
-from pyrpkg.sources import SourcesFile
+from pyrpkg.sources import HashtypeMixingError, SourcesFile
 
 
 # Define our own error class
@@ -2250,7 +2250,23 @@ class Commands(object):
             file_hash = self._hash_file(f, self.lookasidehash)
             self.log.info("Uploading: %s  %s" % (file_hash, f))
             file_basename = os.path.basename(f)
-            sourcesf.add_entry(self.lookasidehash, file_basename, file_hash)
+
+            try:
+                sourcesf.add_entry(self.lookasidehash, file_basename,
+                                   file_hash)
+            except HashtypeMixingError as e:
+                msg = '\n'.join([
+                    'Can not upload a new source file with a %(newhash)s '
+                    'hash, as the "%(sources)s" file contains at least one '
+                    'line with a %(existinghash)s hash.', '',
+                    'Please redo the whole "%(sources)s" file using:',
+                    '    `%(arg0)s new-sources file1 file2 ...`']) % {
+                        'newhash': e.new_hashtype,
+                        'existinghash': e.existing_hashtype,
+                        'sources': self.sources_filename,
+                        'arg0': sys.argv[0],
+                    }
+                raise rpkgError(msg)
 
             # Add this file to .gitignore if it's not already there:
             if not gitignore.match(file_basename):

@@ -24,6 +24,14 @@ LINE_PATTERN = re.compile(
     r'^(?P<hashtype>[^ ]+?) \((?P<file>[^ )]+?)\) = (?P<hash>[^ ]+?)$')
 
 
+class HashtypeMixingError(Exception):
+    def __init__(self, existing_hashtype, new_hashtype):
+        super(HashtypeMixingError, self).__init__()
+
+        self.existing_hashtype = existing_hashtype
+        self.new_hashtype = new_hashtype
+
+
 class MalformedLineError(Exception):
     pass
 
@@ -67,8 +75,14 @@ class SourcesFile(object):
     def add_entry(self, hashtype, file, hash):
         entry = SourceFileEntry(hashtype, file, hash)
 
-        if entry not in self.entries:
-            self.entries.append(entry)
+        for e in self.entries:
+            if entry.hashtype != e.hashtype:
+                raise HashtypeMixingError(e.hashtype, entry.hashtype)
+
+            if entry == e:
+                return
+
+        self.entries.append(entry)
 
     def write(self):
         with open(self.sourcesfile, 'w') as f:

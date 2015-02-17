@@ -189,6 +189,17 @@ class SourcesFileTestCase(unittest.TestCase):
         s.add_entry('md5', 'afile', 'ahash')
         self.assertEqual(len(s.entries), 1)
 
+    def test_add_entry_mixing_hashtypes(self):
+        s = sources.SourcesFile(self.sourcesfile)
+        self.assertEqual(len(s.entries), 0)
+
+        s.add_entry('md5', 'afile', 'ahash')
+        self.assertEqual(len(s.entries), 1)
+        self.assertEqual(str(s.entries[-1]), 'MD5 (afile) = ahash\n')
+
+        with self.assertRaises(sources.HashtypeMixingError):
+            s.add_entry('sha512', 'anotherfile', 'anotherhash')
+
     def test_write_new_file(self):
         s = sources.SourcesFile(self.sourcesfile)
         self.assertEqual(len(s.entries), 0)
