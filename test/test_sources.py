@@ -102,7 +102,9 @@ class SourcesFileTestCase(unittest.TestCase):
         self.assertEqual(len(s.entries), 0)
 
     def test_open_empty_file(self):
-        open(self.sourcesfile, 'w').write('')
+        with open(self.sourcesfile, 'w') as f:
+            f.write('')
+
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
