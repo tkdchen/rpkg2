@@ -92,9 +92,9 @@ class SourcesFile(object):
 
 class SourceFileEntry(object):
     def __init__(self, hashtype, file, hash):
-            self.hashtype = hashtype.lower()
-            self.hash = hash
-            self.file = file
+        self.hashtype = hashtype.lower()
+        self.hash = hash
+        self.file = file
 
     def __str__(self):
         return '%s (%s) = %s\n' % (self.hashtype.upper(), self.file,
