@@ -14,6 +14,11 @@ sys.path = old_path
 class SourceFileEntryTestCase(unittest.TestCase):
     def test_entry(self):
         e = sources.SourceFileEntry('md5', 'afile', 'ahash')
+        expected = 'ahash  afile\n'
+        self.assertEqual(str(e), expected)
+
+    def test_bsd_style_entry(self):
+        e = sources.BSDSourceFileEntry('md5', 'afile', 'ahash')
         expected = 'MD5 (afile) = ahash\n'
         self.assertEqual(str(e), expected)
 
@@ -27,22 +32,34 @@ class SourcesFileTestCase(unittest.TestCase):
         shutil.rmtree(self.workdir)
 
     def test_parse_empty_line(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         entry = s.parse_line('')
         self.assertIsNone(entry)
 
     def test_parse_eol_line(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         entry = s.parse_line('\n')
         self.assertIsNone(entry)
 
     def test_parse_whitespace_line(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         entry = s.parse_line('    \n')
         self.assertIsNone(entry)
 
     def test_parse_old_style_line(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'old')
+
+        line = 'ahash  afile\n'
+        entry = s.parse_line(line)
+
+        self.assertTrue(isinstance(entry, sources.SourceFileEntry))
+        self.assertEqual(entry.hashtype, 'md5')
+        self.assertEqual(entry.hash, 'ahash')
+        self.assertEqual(entry.file, 'afile')
+        self.assertEqual(str(entry), line)
+
+    def test_migrate_old_style_line(self):
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         line = 'ahash  afile\n'
         newline = 'MD5 (afile) = ahash\n'
@@ -55,7 +72,7 @@ class SourcesFileTestCase(unittest.TestCase):
         self.assertEqual(str(entry), newline)
 
     def test_parse_entry_line(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         line = 'MD5 (afile) = ahash\n'
         entry = s.parse_line(line)
@@ -67,7 +84,7 @@ class SourcesFileTestCase(unittest.TestCase):
         self.assertEqual(str(entry), line)
 
     def test_parse_wrong_lines(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         lines = ['ahash',
                  'ahash  ',
@@ -81,12 +98,12 @@ class SourcesFileTestCase(unittest.TestCase):
                 s.parse_line(line)
 
     def test_open_new_file(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
     def test_open_empty_file(self):
         open(self.sourcesfile, 'w').write('')
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
     def test_open_existing_file_with_old_style_lines(self):
@@ -98,7 +115,7 @@ class SourcesFileTestCase(unittest.TestCase):
             for line in lines:
                 f.write(line)
 
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         for i, entry in enumerate(s.entries):
             self.assertTrue(isinstance(entry, sources.SourceFileEntry))
@@ -111,7 +128,7 @@ class SourcesFileTestCase(unittest.TestCase):
             for line in lines:
                 f.write(line)
 
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         for i, entry in enumerate(s.entries):
             self.assertTrue(isinstance(entry, sources.SourceFileEntry))
@@ -132,7 +149,7 @@ class SourcesFileTestCase(unittest.TestCase):
             for line in lines:
                 f.write(line)
 
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         for i, entry in enumerate(s.entries):
             self.assertTrue(isinstance(entry, sources.SourceFileEntry))
@@ -147,7 +164,7 @@ class SourcesFileTestCase(unittest.TestCase):
             for line in lines:
                 f.write(line)
 
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
 
         self.assertEqual(len(s.entries), 1)
         self.assertEqual(s.entries[0].hashtype, 'md5')
@@ -162,10 +179,10 @@ class SourcesFileTestCase(unittest.TestCase):
             f.write(line)
 
         with self.assertRaises(sources.MalformedLineError):
-            return sources.SourcesFile(self.sourcesfile)
+            return sources.SourcesFile(self.sourcesfile, 'bsd')
 
     def test_add_entry(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
         s.add_entry('md5', 'afile', 'ahash')
@@ -177,7 +194,7 @@ class SourcesFileTestCase(unittest.TestCase):
         self.assertEqual(str(s.entries[-1]), 'MD5 (anotherfile) = anotherhash\n')
 
     def test_add_entry_twice(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
         s.add_entry('md5', 'afile', 'ahash')
@@ -188,7 +205,7 @@ class SourcesFileTestCase(unittest.TestCase):
         self.assertEqual(len(s.entries), 1)
 
     def test_add_entry_mixing_hashtypes(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
         s.add_entry('md5', 'afile', 'ahash')
@@ -199,7 +216,7 @@ class SourcesFileTestCase(unittest.TestCase):
             s.add_entry('sha512', 'anotherfile', 'anotherhash')
 
     def test_write_new_file(self):
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         self.assertEqual(len(s.entries), 0)
 
         s.add_entry('md5', 'afile', 'ahash')
@@ -220,7 +237,7 @@ class SourcesFileTestCase(unittest.TestCase):
             for line in lines:
                 f.write(line)
 
-        s = sources.SourcesFile(self.sourcesfile)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd')
         s.add_entry('md5', 'thirdfile', 'thirdhash')
         s.write()
 
@@ -239,7 +256,7 @@ class SourcesFileTestCase(unittest.TestCase):
             for line in lines:
                 f.write(line)
 
-        s = sources.SourcesFile(self.sourcesfile, replace=True)
+        s = sources.SourcesFile(self.sourcesfile, 'bsd', replace=True)
         s.add_entry('md5', 'thirdfile', 'thirdhash')
         s.write()
 

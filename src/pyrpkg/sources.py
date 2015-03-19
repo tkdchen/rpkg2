@@ -37,8 +37,10 @@ class MalformedLineError(Exception):
 
 
 class SourcesFile(object):
-    def __init__(self, sourcesfile, replace=False):
+    def __init__(self, sourcesfile, entry_type, replace=False):
         self.sourcesfile = sourcesfile
+        self.entry_type = {'old': SourceFileEntry,
+                           'bsd': BSDSourceFileEntry}[entry_type]
         self.entries = []
 
         if not replace:
@@ -60,7 +62,7 @@ class SourcesFile(object):
 
         m = LINE_PATTERN.match(stripped)
         if m is not None:
-            return SourceFileEntry(m.group('hashtype'), m.group('file'),
+            return self.entry_type(m.group('hashtype'), m.group('file'),
                                    m.group('hash'))
 
         # Try falling back on the old format
@@ -70,10 +72,10 @@ class SourcesFile(object):
         except ValueError:
             raise MalformedLineError(line)
 
-        return SourceFileEntry('md5', file, hash)
+        return self.entry_type('md5', file, hash)
 
     def add_entry(self, hashtype, file, hash):
-        entry = SourceFileEntry(hashtype, file, hash)
+        entry = self.entry_type(hashtype, file, hash)
 
         for e in self.entries:
             if entry.hashtype != e.hashtype:
@@ -97,10 +99,14 @@ class SourceFileEntry(object):
         self.file = file
 
     def __str__(self):
-        return '%s (%s) = %s\n' % (self.hashtype.upper(), self.file,
-                                   self.hash)
-
+        return '%s  %s\n' % (self.hash, self.file)
 
     def __eq__(self, other):
         return ((self.hashtype, self.hash, self.file) ==
                 (other.hashtype, other.hash, other.file))
+
+
+class BSDSourceFileEntry(SourceFileEntry):
+    def __str__(self):
+        return '%s (%s) = %s\n' % (self.hashtype.upper(), self.file,
+                                   self.hash)

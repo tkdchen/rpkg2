@@ -158,6 +158,8 @@ class Commands(object):
         self._branch_remote = None
         # Name of default remote to be used for new clone
         self.default_branch_remote = 'origin'
+        # Default sources file output format type
+        self.source_entry_type = 'old'
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
@@ -1569,7 +1571,7 @@ class Commands(object):
         if not outdir:
             outdir = self.path
 
-        sourcesf = SourcesFile(self.sources_filename)
+        sourcesf = SourcesFile(self.sources_filename, self.source_entry_type)
 
         for entry in sourcesf.entries:
             # See if we already have a valid copy downloaded
@@ -2238,7 +2240,8 @@ class Commands(object):
         oldpath = os.getcwd()
         os.chdir(self.path)
 
-        sourcesf = SourcesFile(self.sources_filename, replace=replace)
+        sourcesf = SourcesFile(self.sources_filename, self.source_entry_type,
+                               replace=replace)
 
         # Will add new sources to .gitignore if they are not already there.
         gitignore = GitIgnore(os.path.join(self.path, '.gitignore'))
