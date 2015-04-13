@@ -43,7 +43,11 @@ from pyrpkg.sources import HashtypeMixingError, SourcesFile
 
 # Define our own error class
 class rpkgError(Exception):
-    pass
+    faultCode = 1000
+
+class rpkgAuthError(rpkgError):
+    """Raised when there is an error in authentication"""
+    faultCode = 1002
 
 
 # Setup our logger
