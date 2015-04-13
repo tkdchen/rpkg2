@@ -277,10 +277,20 @@ class Commands(object):
             if defaults['authtype'] == 'ssl' or \
                     os.path.isfile(defaults['cert']) and \
                     defaults['authtype'] is None:
-                self._kojisession.ssl_login(defaults['cert'],
-                                            defaults['ca'],
-                                            defaults['serverca'],
-                                            proxyuser=self.runas)
+                try:
+                    self._kojisession.ssl_login(defaults['cert'],
+                                                defaults['ca'],
+                                                defaults['serverca'],
+                                                proxyuser=self.runas)
+                except koji.ssl.SSLCommon.SSL.Error, error:
+                    for (_, _, ssl_reason) in error.message:
+                        # Use heuristic. Some OpenSSL libs doesn't store error
+                        # codes
+                        if ('certificate revoked' in ssl_reason or
+                            'certificate expired' in ssl_reason):
+                            self.log.info("Certificate is revoked or expired.")
+                    raise rpkgAuthError('Could not auth with koji. Login '
+                                        'failed: %s' % error)
             # Or try password auth
             elif defaults['authtype'] == 'password' or self.password \
                     and defaults['authtype'] is None:
