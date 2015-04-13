@@ -572,6 +572,15 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         mockbuild_parser.add_argument(
             '--md5', action='store_const', const='md5', default=None,
             dest='hash', help='Use md5 checksums (for older rpm hosts)')
+        mockbuild_parser.add_argument(
+            '--no-clean', '-n', help='Do not clean chroot before building '
+            'package', action='store_true')
+        mockbuild_parser.add_argument(
+            '--no-cleanup-after', help='Do not clean chroot after building '
+            '(if automatic cleanup is enabled', action='store_true')
+        mockbuild_parser.add_argument(
+            '--no-clean-all', '-N', help='Alias for both --no-clean and '
+            '--no-cleanup-after', action='store_true')
         mockbuild_parser.set_defaults(command=self.mockbuild)
 
     def register_mock_config(self):
@@ -988,10 +997,17 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             self.log.error('Could not download sources: %s' % e)
             sys.exit(1)
 
-        # Pick up any mockargs from the env
         mockargs = []
+
+        if self.args.no_clean or self.args.no_clean_all:
+            mockargs.append('--no-clean')
+
+        if self.args.no_cleanup_after or self.args.no_clean_all:
+            mockargs.append('--no-cleanup-after')
+
+        # Pick up any mockargs from the env
         try:
-            mockargs = os.environ['MOCKARGS'].split()
+            mockargs += os.environ['MOCKARGS'].split()
         except KeyError:
             # there were no args
             pass
