@@ -164,6 +164,10 @@ class Commands(object):
         self.default_branch_remote = 'origin'
         # Default sources file output format type
         self.source_entry_type = 'old'
+        # Set an attribute debug
+        self.debug = False
+        # Set an attribute verbose
+        self.verbose = False
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means

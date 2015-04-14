@@ -113,6 +113,8 @@ class cliClient(object):
         self._cmd.module_name = self.args.module_name
         self._cmd.password = self.args.password
         self._cmd.runas = self.args.runas
+        self._cmd.debug = self.args.debug
+        self._cmd.verbose = self.args.v
 
     # This function loads the extra stuff once we figure out what site
     # we are
@@ -172,8 +174,12 @@ class cliClient(object):
                                  help='Define the directory to work in '
                                  '(defaults to cwd)')
         # Verbosity
-        self.parser.add_argument('-v', action='store_true',
+        self.parser.add_argument('--verbose', '-v', dest='v',
+                                 action='store_true',
                                  help='Run with verbose debug output')
+        self.parser.add_argument('--debug', '-d', dest='debug',
+                                 action='store_true',
+                                 help='Run with debug output')
         self.parser.add_argument('-q', action='store_true',
                                  help='Run quietly only displaying errors')
 
