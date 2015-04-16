@@ -34,17 +34,17 @@ class SourcesFileTestCase(unittest.TestCase):
     def test_parse_empty_line(self):
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
         entry = s.parse_line('')
-        self.assertIsNone(entry)
+        self.assertTrue(entry is None)
 
     def test_parse_eol_line(self):
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
         entry = s.parse_line('\n')
-        self.assertIsNone(entry)
+        self.assertTrue(entry is None)
 
     def test_parse_whitespace_line(self):
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
         entry = s.parse_line('    \n')
-        self.assertIsNone(entry)
+        self.assertTrue(entry is None)
 
     def test_parse_old_style_line(self):
         s = sources.SourcesFile(self.sourcesfile, 'old')
