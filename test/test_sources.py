@@ -94,8 +94,10 @@ class SourcesFileTestCase(unittest.TestCase):
                  ]
 
         for line in lines:
-            with self.assertRaises(sources.MalformedLineError):
+            def raises():
                 s.parse_line(line)
+
+            self.assertRaises(sources.MalformedLineError, raises)
 
     def test_open_new_file(self):
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
@@ -180,8 +182,10 @@ class SourcesFileTestCase(unittest.TestCase):
         with open(self.sourcesfile, 'w') as f:
             f.write(line)
 
-        with self.assertRaises(sources.MalformedLineError):
-            return sources.SourcesFile(self.sourcesfile, 'bsd')
+        def raises():
+            sources.SourcesFile(self.sourcesfile, 'bsd')
+
+        self.assertRaises(sources.MalformedLineError, raises)
 
     def test_add_entry(self):
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
@@ -214,8 +218,10 @@ class SourcesFileTestCase(unittest.TestCase):
         self.assertEqual(len(s.entries), 1)
         self.assertEqual(str(s.entries[-1]), 'MD5 (afile) = ahash\n')
 
-        with self.assertRaises(sources.HashtypeMixingError):
+        def raises():
             s.add_entry('sha512', 'anotherfile', 'anotherhash')
+
+        self.assertRaises(sources.HashtypeMixingError, raises)
 
     def test_write_new_file(self):
         s = sources.SourcesFile(self.sourcesfile, 'bsd')
