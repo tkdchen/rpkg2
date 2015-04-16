@@ -1706,24 +1706,6 @@ class Commands(object):
         raise rpkgError("Error checking for %s at: %s"
                         % (filename, self.lookaside_cgi))
 
-    def upload_file(self, pkg_name, filepath, md5sum):
-        """ Upload a file to the lookaside cache. """
-
-        # Setup the POST data for lookaside CGI request. The use of
-        # 'file' here appears to trigger the actual upload:
-        post_data = [('name', pkg_name),
-                     ('md5sum', md5sum),
-                     ('file', (pycurl.FORM_FILE, filepath))]
-
-        curl = self._create_curl()
-        curl.setopt(pycurl.HTTPPOST, post_data)
-
-        try:
-            curl.perform()
-        except:
-            raise rpkgError('Lookaside failure.')
-        curl.close()
-
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):
         """Initiate a build of the module.  Available options are:
