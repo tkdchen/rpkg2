@@ -913,7 +913,9 @@ class Commands(object):
 
         cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
                '--progress-bar', '-F', 'name=%s' % self.module_name,
-               '-F', 'md5sum=%s' % file_hash, '-F', 'file=@%s' % file]
+               '-F', '%ssum=%s' % (self.lookasidehash, file_hash),
+               '-F', 'file=@%s' % file]
+
         if self.quiet:
             cmd.append('-s')
         cmd.append(self.lookaside_cgi)
@@ -1662,7 +1664,7 @@ class Commands(object):
                 raise rpkgError('Could not check out %s' % branch)
         return
 
-    def file_exists(self, pkg_name, filename, md5sum):
+    def file_exists(self, pkg_name, filename, checksum):
         """
         Return True if the given file exists in the lookaside cache, False
         if not.
@@ -1679,7 +1681,7 @@ class Commands(object):
         # 'filename' here appears to be what differentiates this
         # request from an actual file upload.
         post_data = [('name', pkg_name),
-                     ('md5sum', md5sum),
+                     ('%ssum' % self.lookasidehash, checksum),
                      ('filename', filename)]
 
         curl = self._create_curl()
