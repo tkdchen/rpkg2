@@ -19,21 +19,11 @@ entries, and write these entries to the file in the proper format.
 import os
 import re
 
+from .errors import HashtypeMixingError, MalformedLineError
+
 
 LINE_PATTERN = re.compile(
     r'^(?P<hashtype>[^ ]+?) \((?P<file>[^ )]+?)\) = (?P<hash>[^ ]+?)$')
-
-
-class HashtypeMixingError(Exception):
-    def __init__(self, existing_hashtype, new_hashtype):
-        super(HashtypeMixingError, self).__init__()
-
-        self.existing_hashtype = existing_hashtype
-        self.new_hashtype = new_hashtype
-
-
-class MalformedLineError(Exception):
-    pass
 
 
 class SourcesFile(object):

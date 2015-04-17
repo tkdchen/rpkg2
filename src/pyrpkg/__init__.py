@@ -38,16 +38,8 @@ try:
 except ImportError:
     pass
 
-from pyrpkg.sources import HashtypeMixingError, SourcesFile
-
-
-# Define our own error class
-class rpkgError(Exception):
-    faultCode = 1000
-
-class rpkgAuthError(rpkgError):
-    """Raised when there is an error in authentication"""
-    faultCode = 1002
+from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError
+from pyrpkg.sources import SourcesFile
 
 
 # Setup our logger
