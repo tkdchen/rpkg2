@@ -13,6 +13,10 @@ This module contains a bunch of utilities used elsewhere in pyrpkg.
 """
 
 
+import warnings
+warnings.simplefilter('always', DeprecationWarning)
+
+
 class cached_property(property):
     """A property caching its return value
 
@@ -41,3 +45,19 @@ class cached_property(property):
             v = super(cached_property, self).__get__(inst, type)
             setattr(inst, '_%s' % self.fget.__name__, v)
             return v
+
+
+def warn_deprecated(clsname, oldname, newname):
+    """Emit a deprecation warning
+
+    Args:
+        clsname (str): The name of the class which has its attribute
+            deprecated.
+        oldname (str): The name of the deprecated attribute.
+        newname (str): The name of the new attribute, which should be used
+            instead.
+    """
+    warnings.warn(
+        "%s.%s is deprecated and will be removed eventually.\n    Please "
+        "use %s.%s instead." % (clsname, oldname, clsname, newname),
+        DeprecationWarning, stacklevel=3)
