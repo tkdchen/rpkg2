@@ -14,6 +14,11 @@ way it is done by Fedora, RHEL, and other distributions maintainers.
 """
 
 
+import hashlib
+
+from .errors import InvalidHashType
+
+
 class CGILookasideCache(object):
     """A class to interact with a CGI-based lookaside cache"""
     def __init__(self, hashtype, download_url, upload_url):
@@ -28,3 +33,32 @@ class CGILookasideCache(object):
         self.hashtype = hashtype
         self.download_url = download_url
         self.upload_url = upload_url
+
+    def hash_file(self, filename, hashtype=None):
+        """Compute the hash of a file
+
+        Args:
+            filename (str): The full path to the file. It is assumed to exist.
+            hashtype (str, optional): The hash algorithm to use. (e.g 'md5')
+                This defaults to the hashtype passed to the constructor.
+
+        Returns:
+            The hash digest.
+        """
+        if hashtype is None:
+            hashtype = self.hashtype
+
+        try:
+            sum = hashlib.new(hashtype)
+
+        except ValueError:
+            raise InvalidHashType(hashtype)
+
+        with open(filename, 'rb') as f:
+            chunk = f.read(8192)
+
+            while chunk:
+                sum.update(chunk)
+                chunk = f.read(8192)
+
+        return sum.hexdigest()

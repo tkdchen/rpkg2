@@ -32,3 +32,8 @@ class HashtypeMixingError(rpkgError):
 class MalformedLineError(rpkgError):
     """Raised when parsing a sources file with malformed lines"""
     pass
+
+
+class InvalidHashType(rpkgError):
+    """Raised when we don't know the requested hash algorithm"""
+    pass

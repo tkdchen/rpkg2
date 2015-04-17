@@ -41,7 +41,7 @@ except ImportError:
 from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
-from pyrpkg.utils import cached_property
+from pyrpkg.utils import cached_property, warn_deprecated
 
 
 # Setup our logger
@@ -773,24 +773,9 @@ class Commands(object):
             return False
 
     def _hash_file(self, file, hashtype):
-        """Return the hash of a file given a hash type"""
-
-        try:
-            sum = hashlib.new(hashtype)
-        except ValueError:
-            raise rpkgError('Invalid hash type: %s' % hashtype)
-
-        input = open(file, 'rb')
-        # Loop through the file reading chunks at a time as to not
-        # put the entire file in memory.  That would suck for DVDs
-        while True:
-            chunk = input.read(8192)  # magic number!  Taking suggestions
-            if not chunk:
-                # we're done with the file
-                break
-            sum.update(chunk)
-        input.close()
-        return sum.hexdigest()
+        warn_deprecated(self.__class__.__name__, '_hash_file',
+                        'lookasidecache.hash_file')
+        return self.lookasidecache.hash_file(file, hashtype=hashtype)
 
     def _run_command(self, cmd, shell=False, env=None, pipe=[], cwd=None):
         """Run the given command.
@@ -901,7 +886,7 @@ class Commands(object):
         """
 
         # get the hash
-        sum = self._hash_file(file, hashtype)
+        sum = self.lookasidecache.hash_file(file, hashtype=hashtype)
         # now do the comparison
         if sum == hash:
             return True
@@ -2259,7 +2244,7 @@ class Commands(object):
         uploaded = []
         for f in files:
             # TODO: Skip empty file needed?
-            file_hash = self._hash_file(f, self.lookasidehash)
+            file_hash = self.lookasidecache.hash_file(f)
             self.log.info("Uploading: %s  %s" % (file_hash, f))
             file_basename = os.path.basename(f)
 
