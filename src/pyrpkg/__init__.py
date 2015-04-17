@@ -52,7 +52,7 @@ class NullHandler(logging.Handler):
 h = NullHandler()
 # This is our log object, clients of this library can use this object to
 # define their own logging needs
-log = logging.getLogger("rpkg")
+log = logging.getLogger(__name__)
 # Add the null handler
 log.addHandler(h)
 
