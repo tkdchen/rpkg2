@@ -39,7 +39,9 @@ except ImportError:
     pass
 
 from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError
+from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
+from pyrpkg.utils import cached_property
 
 
 # Setup our logger
@@ -165,6 +167,20 @@ class Commands(object):
     # Properties allow us to "lazy load" various attributes, which also means
     # that we can do clone actions without knowing things like the spec
     # file or rpm data.
+
+    @cached_property
+    def lookasidecache(self):
+        """A helper to interact with the lookaside cache
+
+        This is a pyrpkg.lookaside.CGILookasideCache instance, providing all
+        the needed stuff to communicate with a Fedora-style lookaside cache.
+
+        Downstream users of the pyrpkg API may override this property with
+        their own, returning their own implementation of a lookaside cache
+        helper object.
+        """
+        return CGILookasideCache(
+            self.lookasidehash, self.lookaside, self.lookaside_cgi)
 
     @property
     def path(self):
