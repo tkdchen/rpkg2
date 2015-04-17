@@ -62,3 +62,18 @@ class CGILookasideCache(object):
                 chunk = f.read(8192)
 
         return sum.hexdigest()
+
+    def file_is_valid(self, filename, hash, hashtype=None):
+        """Ensure the file is correct
+
+        Args:
+            filename (str): The full path to the file. It is assumed to exist.
+            hash (str): The known good hash of the file.
+            hashtype (str, optional): The hash algorithm to use. (e.g 'md5')
+                This defaults to the hashtype passed to the constructor.
+
+        Returns:
+            True if the file is valid, False otherwise.
+        """
+        sum = self.hash_file(filename, hashtype)
+        return sum == hash

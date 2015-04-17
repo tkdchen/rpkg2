@@ -53,3 +53,14 @@ class CGILookasideCacheTestCase(unittest.TestCase):
 
         result = lc.hash_file(self.filename, 'md5')
         self.assertEqual(result, 'd41d8cd98f00b204e9800998ecf8427e')
+
+    def test_file_is_valid(self):
+        lc = CGILookasideCache('md5', '_', '_')
+
+        with open(self.filename, 'w') as f:
+            f.write('something')
+
+        self.assertTrue(lc.file_is_valid(self.filename,
+                                         '437b930db84b8079c2dd804a71936b5f'))
+        self.assertFalse(lc.file_is_valid(self.filename, 'not the right hash',
+                                          hashtype='sha512'))

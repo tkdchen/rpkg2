@@ -879,18 +879,10 @@ class Commands(object):
         return
 
     def _verify_file(self, file, hash, hashtype):
-        """Given a file, a hash of that file, and a hashtype, verify.
-
-        Returns True if the file verifies, False otherwise
-
-        """
-
-        # get the hash
-        sum = self.lookasidecache.hash_file(file, hashtype=hashtype)
-        # now do the comparison
-        if sum == hash:
-            return True
-        return False
+        warn_deprecated(self.__class__.__name__, '_verify_file',
+                        'lookasidecache.file_is_valid')
+        return self.lookasidecache.file_is_valid(file, hash,
+                                                 hashtype=hashtype)
 
     def _newer(self, file1, file2):
         """Compare the last modification time of the given files
@@ -1590,7 +1582,7 @@ class Commands(object):
             # See if we already have a valid copy downloaded
             outfile = os.path.join(outdir, entry.file)
             if os.path.exists(outfile):
-                if self._verify_file(outfile, entry.hash, entry.hashtype):
+                if self.lookasidecache.file_is_valid(outfile, entry.hash, hashtype=entry.hashtype):
                     continue
             self.log.info("Downloading %s" % (entry.file))
             urled_file = entry.file.replace(' ', '%20')
@@ -1604,7 +1596,7 @@ class Commands(object):
                 command.append('-s')
             command.append(url)
             self._run_command(command)
-            if not self._verify_file(outfile, entry.hash, entry.hashtype):
+            if not self.lookasidecache.file_is_valid(outfile, entry.hash, hashtype=entry.hashtype):
                 raise rpkgError('%s failed checksum' % entry.file)
         return
 
