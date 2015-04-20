@@ -186,3 +186,84 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         lc = CGILookasideCache('sha512', 'http://example.com', '_')
         self.assertRaises(DownloadError, lc.download, 'pyrpkg',
                           'pyrpkg-0.0.tar.xz', hash, outfile)
+
+    @mock.patch('pyrpkg.lookaside.sys.stdout')
+    def test_print_download_progress(self, mock_stdout):
+        def mock_write(msg):
+            written_lines.append(msg)
+
+        written_lines = []
+        expected_lines = [
+            '\r##################                                                       25.0%',  # nopep8
+            '\r####################################                                     50.0%',  # nopep8
+            '\r######################################################                   75.0%',  # nopep8
+            '\r######################################################################## 100.0%',  # nopep8
+            ]
+
+        mock_stdout.write.side_effect = mock_write
+
+        lc = CGILookasideCache('_', '_', '_')
+        lc.print_progress(2000.0, 500.0, 0.0, 0.0)
+        self.assertEqual(mock_stdout.write.call_count, 1)
+        self.assertEqual(len(written_lines), 1)
+
+        lc.print_progress(2000.0, 1000.0, 0.0, 0.0)
+        self.assertEqual(mock_stdout.write.call_count, 2)
+        self.assertEqual(len(written_lines), 2)
+
+        lc.print_progress(2000.0, 1500.0, 0.0, 0.0)
+        self.assertEqual(mock_stdout.write.call_count, 3)
+        self.assertEqual(len(written_lines), 3)
+
+        lc.print_progress(2000.0, 2000.0, 0.0, 0.0)
+        self.assertEqual(mock_stdout.write.call_count, 4)
+        self.assertEqual(len(written_lines), 4)
+
+        self.assertEqual(written_lines, expected_lines)
+
+    @mock.patch('pyrpkg.lookaside.sys.stdout')
+    def test_print_upload_progress(self, mock_stdout):
+        def mock_write(msg):
+            written_lines.append(msg)
+
+        written_lines = []
+        expected_lines = [
+            '\r##################                                                       25.0%',  # nopep8
+            '\r####################################                                     50.0%',  # nopep8
+            '\r######################################################                   75.0%',  # nopep8
+            '\r######################################################################## 100.0%',  # nopep8
+            ]
+
+        mock_stdout.write.side_effect = mock_write
+
+        lc = CGILookasideCache('_', '_', '_')
+        lc.print_progress(0.0, 0.0, 2000.0, 500.0)
+        self.assertEqual(mock_stdout.write.call_count, 1)
+        self.assertEqual(len(written_lines), 1)
+
+        lc.print_progress(0.0, 0.0, 2000.0, 1000.0)
+        self.assertEqual(mock_stdout.write.call_count, 2)
+        self.assertEqual(len(written_lines), 2)
+
+        lc.print_progress(0.0, 0.0, 2000.0, 1500.0)
+        self.assertEqual(mock_stdout.write.call_count, 3)
+        self.assertEqual(len(written_lines), 3)
+
+        lc.print_progress(0.0, 0.0, 2000.0, 2000.0)
+        self.assertEqual(mock_stdout.write.call_count, 4)
+        self.assertEqual(len(written_lines), 4)
+
+        self.assertEqual(written_lines, expected_lines)
+
+    @mock.patch('pyrpkg.lookaside.sys.stdout')
+    def test_print_no_progress(self, mock_stdout):
+        def mock_write(msg):
+            written_lines.append(msg)
+
+        written_lines = []
+
+        mock_stdout.write.side_effect = mock_write
+
+        lc = CGILookasideCache('_', '_', '_')
+        lc.print_progress(0.0, 0.0, 0.0, 0.0)
+        self.assertEqual(len(written_lines), 0)

@@ -43,6 +43,24 @@ class CGILookasideCache(object):
 
         self.download_path = '%(name)s/%(filename)s/%(hash)s/%(filename)s'
 
+    def print_progress(self, to_download, downloaded, to_upload, uploaded):
+        if to_download > 0:
+            done = downloaded / to_download
+
+        elif to_upload > 0:
+            done = uploaded / to_upload
+
+        else:
+            return
+
+        done_chars = int(done * 72)
+        remain_chars = 72 - done_chars
+        done = int(done * 1000) / 10.0
+
+        p = "\r%s%s %s%%" % ("#" * done_chars, " " * remain_chars, done)
+        sys.stdout.write(p)
+        sys.stdout.flush()
+
     def hash_file(self, filename, hashtype=None):
         """Compute the hash of a file
 
@@ -117,6 +135,8 @@ class CGILookasideCache(object):
             c = pycurl.Curl()
             c.setopt(pycurl.URL, url)
             c.setopt(pycurl.HTTPHEADER, ['Pragma:'])
+            c.setopt(pycurl.NOPROGRESS, False)
+            c.setopt(pycurl.PROGRESSFUNCTION, self.print_progress)
             c.setopt(pycurl.OPT_FILETIME, True)
             c.setopt(pycurl.WRITEDATA, f)
 
@@ -130,6 +150,10 @@ class CGILookasideCache(object):
 
             finally:
                 c.close()
+
+        # Get back a new line, after displaying the download progress
+        sys.stdout.write('\n')
+        sys.stdout.flush()
 
         if status != 200:
             raise DownloadError('Server returned status code %d' % status)
