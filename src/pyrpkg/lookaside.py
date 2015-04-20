@@ -15,8 +15,13 @@ way it is done by Fedora, RHEL, and other distributions maintainers.
 
 
 import hashlib
+import logging
+import os
+import sys
 
-from .errors import InvalidHashType
+import pycurl
+
+from .errors import DownloadError, InvalidHashType
 
 
 class CGILookasideCache(object):
@@ -33,6 +38,10 @@ class CGILookasideCache(object):
         self.hashtype = hashtype
         self.download_url = download_url
         self.upload_url = upload_url
+
+        self.log = logging.getLogger(__name__)
+
+        self.download_path = '%(name)s/%(filename)s/%(hash)s/%(filename)s'
 
     def hash_file(self, filename, hashtype=None):
         """Compute the hash of a file
@@ -77,3 +86,55 @@ class CGILookasideCache(object):
         """
         sum = self.hash_file(filename, hashtype)
         return sum == hash
+
+    def download(self, name, filename, hash, outfile, hashtype=None):
+        """Download a source file
+
+        Args:
+            name (str): The name of the module. (usually the name of the SRPM)
+            filename (str): The name of the file to download.
+            hash (str): The known good hash of the file.
+            outfile (str): The full path where to save the downloaded file.
+            hashtype (str, optional): The hash algorithm. (e.g 'md5')
+                This defaults to the hashtype passed to the constructor.
+        """
+        if hashtype is None:
+            hashtype = self.hashtype
+
+        if os.path.exists(outfile):
+            if self.file_is_valid(outfile, hash, hashtype=hashtype):
+                return
+
+        self.log.info("Downloading %s", filename)
+        urled_file = filename.replace(' ', '%20')
+
+        path_dict = {'name': name, 'filename': urled_file, 'hash': hash}
+        path = self.download_path % path_dict
+        url = '%s/%s' % (self.download_url, path)
+        self.log.debug("Full url: %s" % url)
+
+        with open(outfile, 'wb') as f:
+            c = pycurl.Curl()
+            c.setopt(pycurl.URL, url)
+            c.setopt(pycurl.HTTPHEADER, ['Pragma:'])
+            c.setopt(pycurl.OPT_FILETIME, True)
+            c.setopt(pycurl.WRITEDATA, f)
+
+            try:
+                c.perform()
+                tstamp = c.getinfo(pycurl.INFO_FILETIME)
+                status = c.getinfo(pycurl.RESPONSE_CODE)
+
+            except Exception as e:
+                raise DownloadError(e)
+
+            finally:
+                c.close()
+
+        if status != 200:
+            raise DownloadError('Server returned status code %d' % status)
+
+        os.utime(outfile, (tstamp, tstamp))
+
+        if not self.file_is_valid(outfile, hash, hashtype=hashtype):
+            raise DownloadError('%s failed checksum' % filename)

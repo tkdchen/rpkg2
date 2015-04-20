@@ -20,7 +20,6 @@ if sys.version_info[0:2] >= (2, 5):
 else:
     # We need a subprocess that has check_call
     from kitchen.pycompat27 import subprocess
-import hashlib
 import koji
 import rpm
 import logging
@@ -1579,26 +1578,10 @@ class Commands(object):
         sourcesf = SourcesFile(self.sources_filename, self.source_entry_type)
 
         for entry in sourcesf.entries:
-            # See if we already have a valid copy downloaded
             outfile = os.path.join(outdir, entry.file)
-            if os.path.exists(outfile):
-                if self.lookasidecache.file_is_valid(outfile, entry.hash, hashtype=entry.hashtype):
-                    continue
-            self.log.info("Downloading %s" % (entry.file))
-            urled_file = entry.file.replace(' ', '%20')
-            url = '%s/%s/%s/%s/%s' % (self.lookaside, self.module_name,
-                                      urled_file, entry.hash, urled_file)
-            # These options came from Makefile.common.
-            # Probably need to support wget as well
-            command = ['curl', '-H', 'Pragma:', '-o', outfile, '-R', '-S',
-                       '--fail']
-            if self.quiet:
-                command.append('-s')
-            command.append(url)
-            self._run_command(command)
-            if not self.lookasidecache.file_is_valid(outfile, entry.hash, hashtype=entry.hashtype):
-                raise rpkgError('%s failed checksum' % entry.file)
-        return
+            self.lookasidecache.download(
+                self.module_name, entry.file, entry.hash, outfile,
+                hashtype=entry.hashtype)
 
     def switch_branch(self, branch, fetch=True):
         """Switch the working branch

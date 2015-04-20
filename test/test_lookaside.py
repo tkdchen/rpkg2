@@ -7,17 +7,21 @@
 # the full text of the license.
 
 
+import hashlib
 import os
 import shutil
 import sys
 import tempfile
 import unittest
 
+import mock
+import pycurl
+
 old_path = list(sys.path)
 src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../src')
 sys.path.insert(0, src_path)
 from pyrpkg.lookaside import CGILookasideCache
-from pyrpkg.errors import InvalidHashType
+from pyrpkg.errors import DownloadError, InvalidHashType
 sys.path = old_path
 
 
@@ -64,3 +68,121 @@ class CGILookasideCacheTestCase(unittest.TestCase):
                                          '437b930db84b8079c2dd804a71936b5f'))
         self.assertFalse(lc.file_is_valid(self.filename, 'not the right hash',
                                           hashtype='sha512'))
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_download(self, mock_curl):
+        def mock_getinfo(info):
+            return 200 if info == pycurl.RESPONSE_CODE else 0
+
+        def mock_perform():
+            with open(self.filename, 'rb') as f:
+                curlopts[pycurl.WRITEDATA].write(f.read())
+
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.side_effect = mock_getinfo
+        curl.perform.side_effect = mock_perform
+        curl.setopt.side_effect = mock_setopt
+
+        with open(self.filename, 'wb') as f:
+            f.write(b'content')
+
+        name = 'pyrpkg'
+        filename = 'pyrpkg-0.0.tar.xz'
+        hash = hashlib.sha512(b'content').hexdigest()
+        outfile = os.path.join(self.workdir, 'pyrpkg-0.0.tar.xz')
+        full_url = 'http://example.com/%s/%s/%s/%s' % (name, filename, hash,
+                                                       filename)
+
+        lc = CGILookasideCache('sha512', 'http://example.com', '_')
+        lc.download(name, filename, hash, outfile, hashtype='sha512')
+        self.assertEqual(curl.perform.call_count, 1)
+        self.assertEqual(curlopts[pycurl.URL], full_url)
+        self.assertEqual(os.path.getmtime(outfile), 0)
+
+        with open(outfile) as f:
+            self.assertEqual(f.read(), 'content')
+
+        # Try a second time
+        lc.download(name, filename, hash, outfile)
+        self.assertEqual(curl.perform.call_count, 1)
+
+        # Try a third time
+        os.remove(outfile)
+        lc.download(name, filename, hash, outfile)
+        self.assertEqual(curl.perform.call_count, 2)
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_download_corrupted(self, mock_curl):
+        def mock_getinfo(info):
+            return 200 if info == pycurl.RESPONSE_CODE else 0
+
+        def mock_perform():
+            with open(self.filename) as f:
+                curlopts[pycurl.WRITEDATA].write(f.read())
+
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.side_effect = mock_getinfo
+        curl.perform.side_effect = mock_perform
+        curl.setopt.side_effect = mock_setopt
+
+        with open(self.filename, 'wb') as f:
+            f.write(b'content')
+
+        hash = "not the right hash"
+        outfile = os.path.join(self.workdir, 'pyrpkg-0.0.tar.xz')
+
+        lc = CGILookasideCache('sha512', 'http://example.com', '_')
+        self.assertRaises(DownloadError, lc.download, 'pyrpkg',
+                          'pyrpkg-0.0.tar.xz', hash, outfile)
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_download_failed(self, mock_curl):
+        curl = mock_curl.return_value
+        curl.perform.side_effect = Exception(
+            'Could not resolve host: example.com')
+
+        with open(self.filename, 'wb') as f:
+            f.write(b'content')
+
+        hash = hashlib.sha512(b'content').hexdigest()
+        outfile = os.path.join(self.workdir, 'pyrpkg-0.0.tar.xz')
+
+        lc = CGILookasideCache('sha512', 'http://example.com', '_')
+        self.assertRaises(DownloadError, lc.download, 'pyrpkg',
+                          'pyrpkg-0.0.tar.xz', hash, outfile)
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_download_failed_status_code(self, mock_curl):
+        def mock_getinfo(info):
+            return 500 if info == pycurl.RESPONSE_CODE else 0
+
+        def mock_perform():
+            with open(self.filename) as f:
+                curlopts[pycurl.WRITEDATA].write(f.read())
+
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.side_effect = mock_getinfo
+        curl.perform.side_effect = mock_perform
+        curl.setopt.side_effect = mock_setopt
+
+        with open(self.filename, 'wb') as f:
+            f.write(b'content')
+
+        hash = hashlib.sha512(b'content').hexdigest()
+        outfile = os.path.join(self.workdir, 'pyrpkg-0.0.tar.xz')
+
+        lc = CGILookasideCache('sha512', 'http://example.com', '_')
+        self.assertRaises(DownloadError, lc.download, 'pyrpkg',
+                          'pyrpkg-0.0.tar.xz', hash, outfile)

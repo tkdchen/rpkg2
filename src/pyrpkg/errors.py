@@ -37,3 +37,8 @@ class MalformedLineError(rpkgError):
 class InvalidHashType(rpkgError):
     """Raised when we don't know the requested hash algorithm"""
     pass
+
+
+class DownloadError(rpkgError):
+    """Raised when something went wrong during a download"""
+    pass
