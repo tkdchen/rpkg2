@@ -105,7 +105,7 @@ class CGILookasideCache(object):
         sum = self.hash_file(filename, hashtype)
         return sum == hash
 
-    def download(self, name, filename, hash, outfile, hashtype=None):
+    def download(self, name, filename, hash, outfile, hashtype=None, **kwargs):
         """Download a source file
 
         Args:
@@ -115,6 +115,8 @@ class CGILookasideCache(object):
             outfile (str): The full path where to save the downloaded file.
             hashtype (str, optional): The hash algorithm. (e.g 'md5')
                 This defaults to the hashtype passed to the constructor.
+            **kwargs: Additional keyword arguments. They will be used when
+                contructing the full URL to the file to download.
         """
         if hashtype is None:
             hashtype = self.hashtype
@@ -128,6 +130,7 @@ class CGILookasideCache(object):
 
         path_dict = {'name': name, 'filename': urled_file, 'hash': hash,
                      'hashtype': hashtype}
+        path_dict.update(kwargs)
         path = self.download_path % path_dict
         url = '%s/%s' % (self.download_url, path)
         self.log.debug("Full url: %s" % url)

@@ -116,6 +116,48 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         self.assertEqual(curl.perform.call_count, 2)
 
     @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_download_kwargs(self, mock_curl):
+        def mock_getinfo(info):
+            return 200 if info == pycurl.RESPONSE_CODE else 0
+
+        def mock_perform():
+            with open(self.filename, 'rb') as f:
+                curlopts[pycurl.WRITEDATA].write(f.read())
+
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.side_effect = mock_getinfo
+        curl.perform.side_effect = mock_perform
+        curl.setopt.side_effect = mock_setopt
+
+        with open(self.filename, 'wb') as f:
+            f.write(b'content')
+
+        name = 'pyrpkg'
+        filename = 'pyrpkg-0.0.tar.xz'
+        branch = 'f22'
+        hash = hashlib.sha512(b'content').hexdigest()
+        outfile = os.path.join(self.workdir, 'pyrpkg-0.0.tar.xz')
+
+        path = '%(name)s/%(filename)s/%(branch)s/%(hashtype)s/%(hash)s'
+        full_url = 'http://example.com/%s' % (
+            path % {'name': name, 'filename': filename, 'branch': branch,
+                    'hashtype': 'sha512', 'hash': hash})
+
+        lc = CGILookasideCache('sha512', 'http://example.com', '_')
+
+        # Modify the download path, to try arbitrary kwargs
+        lc.download_path = path
+
+        lc.download(name, filename, hash, outfile, hashtype='sha512',
+                    branch=branch)
+        self.assertEqual(curl.perform.call_count, 1)
+        self.assertEqual(curlopts[pycurl.URL], full_url)
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
     def test_download_corrupted(self, mock_curl):
         def mock_getinfo(info):
             return 200 if info == pycurl.RESPONSE_CODE else 0

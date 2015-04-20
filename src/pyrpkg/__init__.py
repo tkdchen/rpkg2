@@ -1581,7 +1581,7 @@ class Commands(object):
             outfile = os.path.join(outdir, entry.file)
             self.lookasidecache.download(
                 self.module_name, entry.file, entry.hash, outfile,
-                hashtype=entry.hashtype)
+                hashtype=entry.hashtype, branch=self.branch_merge)
 
     def switch_branch(self, branch, fetch=True):
         """Switch the working branch
