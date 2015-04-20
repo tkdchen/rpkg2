@@ -126,7 +126,8 @@ class CGILookasideCache(object):
         self.log.info("Downloading %s", filename)
         urled_file = filename.replace(' ', '%20')
 
-        path_dict = {'name': name, 'filename': urled_file, 'hash': hash}
+        path_dict = {'name': name, 'filename': urled_file, 'hash': hash,
+                     'hashtype': hashtype}
         path = self.download_path % path_dict
         url = '%s/%s' % (self.download_url, path)
         self.log.debug("Full url: %s" % url)
