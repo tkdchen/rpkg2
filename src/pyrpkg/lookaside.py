@@ -26,7 +26,8 @@ from .errors import DownloadError, InvalidHashType
 
 class CGILookasideCache(object):
     """A class to interact with a CGI-based lookaside cache"""
-    def __init__(self, hashtype, download_url, upload_url):
+    def __init__(self, hashtype, download_url, upload_url,
+                 client_cert=None, ca_cert=None):
         """Constructor
 
         Args:
@@ -34,10 +35,19 @@ class CGILookasideCache(object):
             download_url (str): The URL used to download source files.
             upload_url (str): The URL of the CGI script called when uploading
                 source files.
+            client_cert (str, optional): The full path to the client-side
+                certificate to use for HTTPS authentication. It defaults to
+                None, in which case no client-side certificate is used.
+            ca_cert (str, optional): The full path to the CA certificate to
+                use for HTTPS connexions. (e.g if the server certificate is
+                self-signed. It defaults to None, in which case the system CA
+                bundle is used.
         """
         self.hashtype = hashtype
         self.download_url = download_url
         self.upload_url = upload_url
+        self.client_cert = client_cert
+        self.ca_cert = ca_cert
 
         self.log = logging.getLogger(__name__)
 

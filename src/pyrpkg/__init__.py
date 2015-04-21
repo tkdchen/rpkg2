@@ -179,7 +179,8 @@ class Commands(object):
         helper object.
         """
         return CGILookasideCache(
-            self.lookasidehash, self.lookaside, self.lookaside_cgi)
+            self.lookasidehash, self.lookaside, self.lookaside_cgi,
+            client_cert=self.cert_file, ca_cert=self.ca_cert)
 
     @property
     def path(self):
@@ -747,6 +748,29 @@ class Commands(object):
     @property
     def sources_filename(self):
         return os.path.join(self.path, 'sources')
+
+    @property
+    def cert_file(self):
+        """A client-side certificate for SSL authentication
+
+        Downstream users of the pyrpkg API should override this property if
+        they actually need to use a client-side certificate.
+
+        This defaults to None, which means no client-side certificate is used.
+        """
+        return None
+
+    @property
+    def ca_cert(self):
+        """A CA certificate to authenticate the server in SSL connections
+
+        Downstream users of the pyrpkg API should override this property if
+        they actually need to use a CA certificate, usually because their
+        lookaside cache is using HTTPS with a self-signed certificate.
+
+        This defaults to None, which means the system CA bundle is used.
+        """
+        return None
 
     # Define some helper functions, they start with _
     def _create_curl(self):
