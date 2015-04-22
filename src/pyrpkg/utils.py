@@ -1,0 +1,43 @@
+# Copyright (c) 2015 - Red Hat Inc.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
+# the full text of the license.
+
+
+"""Miscellaneous utilities
+
+This module contains a bunch of utilities used elsewhere in pyrpkg.
+"""
+
+
+class cached_property(property):
+    """A property caching its return value
+
+    This is pretty much the same as a normal Python property, except that the
+    decorated function is called only once. Its return value is then saved,
+    subsequent calls will return it without executing the function any more.
+
+    Example:
+        >>> class Foo(object):
+        ...     @cached_property
+        ...     def bar(self):
+        ...         print("Executing Foo.bar...")
+        ...         return 42
+        ...
+        >>> f = Foo()
+        >>> f.bar
+        Executing Foo.bar...
+        42
+        >>> f.bar
+        42
+    """
+    def __get__(self, inst, type=None):
+        try:
+            return getattr(inst, '_%s' % self.fget.__name__)
+        except AttributeError:
+            v = super(cached_property, self).__get__(inst, type)
+            setattr(inst, '_%s' % self.fget.__name__, v)
+            return v
