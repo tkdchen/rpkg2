@@ -26,7 +26,6 @@ import logging
 import git
 import ConfigParser
 import stat
-import StringIO
 import tempfile
 import fnmatch
 import urlparse
@@ -774,11 +773,10 @@ class Commands(object):
 
     # Define some helper functions, they start with _
     def _create_curl(self):
-        """
-        Common curl setup options used for all requests to lookaside.
-        """
-        curl = pycurl.Curl()
+        warn_deprecated(self, '_create_curl',
+                        'lookasidecache.remote_file_exists')
 
+        curl = pycurl.Curl()
         curl.setopt(pycurl.URL, self.lookaside_cgi)
 
         return curl
@@ -1657,48 +1655,10 @@ class Commands(object):
         return
 
     def file_exists(self, pkg_name, filename, checksum):
-        """
-        Return True if the given file exists in the lookaside cache, False
-        if not.
-
-        A rpkgError will be thrown if the request looks bad or something
-        goes wrong. (i.e. the lookaside URL cannot be reached, or the package
-        named does not exist)
-        """
-
-        # String buffer, used to receive output from the curl request:
-        buf = StringIO.StringIO()
-
-        # Setup the POST data for lookaside CGI request. The use of
-        # 'filename' here appears to be what differentiates this
-        # request from an actual file upload.
-        post_data = [('name', pkg_name),
-                     ('%ssum' % self.lookasidehash, checksum),
-                     ('filename', filename)]
-
-        curl = self._create_curl()
-        curl.setopt(pycurl.WRITEFUNCTION, buf.write)
-        curl.setopt(pycurl.HTTPPOST, post_data)
-
-        try:
-            curl.perform()
-        except Exception, e:
-            raise rpkgError('Lookaside failure: %s' % e)
-        curl.close()
-        output = buf.getvalue().strip()
-
-        # Lookaside CGI script returns these strings depending on whether
-        # or not the file exists:
-        if output == "Available":
-            return True
-        if output == "Missing":
-            return False
-
-        # Something unexpected happened, will trigger if the lookaside URL
-        # cannot be reached, the package named does not exist, and probably
-        # some other scenarios as well.
-        raise rpkgError("Error checking for %s at: %s"
-                        % (filename, self.lookaside_cgi))
+        warn_deprecated(self, '_verify_file',
+                        'lookasidecache.remote_file_exists')
+        return self.lookasidecache.remote_file_exists(pkg_name, filename,
+                                                      checksum)
 
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):
@@ -2268,9 +2228,11 @@ class Commands(object):
             if not gitignore.match(file_basename):
                 gitignore.add('/%s' % file_basename)
 
-            if self.file_exists(self.module_name, file_basename, file_hash):
+            if self.lookasidecache.remote_file_exists(
+                    self.module_name, file_basename, file_hash):
                 # Already uploaded, skip it:
                 self.log.info("File already uploaded: %s" % file_basename)
+
             else:
                 # Ensure the new file is readable:
                 os.chmod(f, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)

@@ -42,3 +42,8 @@ class InvalidHashType(rpkgError):
 class DownloadError(rpkgError):
     """Raised when something went wrong during a download"""
     pass
+
+
+class UploadError(rpkgError):
+    """Raised when something went wrong during an upload"""
+    pass

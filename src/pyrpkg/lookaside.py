@@ -15,13 +15,14 @@ way it is done by Fedora, RHEL, and other distributions maintainers.
 
 
 import hashlib
+import io
 import logging
 import os
 import sys
 
 import pycurl
 
-from .errors import DownloadError, InvalidHashType
+from .errors import DownloadError, InvalidHashType, UploadError
 
 
 class CGILookasideCache(object):
@@ -176,3 +177,62 @@ class CGILookasideCache(object):
 
         if not self.file_is_valid(outfile, hash, hashtype=hashtype):
             raise DownloadError('%s failed checksum' % filename)
+
+    def remote_file_exists(self, name, filename, hash):
+        """Verify whether a file exists on the lookaside cache
+
+        Args:
+            name: The name of the module. (usually the name of the SRPM)
+            filename: The name of the file to check for.
+            hash: The known good hash of the file.
+        """
+        post_data = [('name', name),
+                     ('%ssum' % self.hashtype, hash),
+                     ('filename', filename)]
+
+        with io.BytesIO() as buf:
+            c = pycurl.Curl()
+            c.setopt(pycurl.URL, self.upload_url)
+            c.setopt(pycurl.WRITEFUNCTION, buf.write)
+            c.setopt(pycurl.HTTPPOST, post_data)
+
+            if self.client_cert is not None:
+                if os.path.exists(self.client_cert):
+                    c.setopt(pycurl.SSLCERT, self.client_cert)
+                else:
+                    self.log.warn("Missing certificate: %s"
+                                  % self.client_cert)
+
+            if self.ca_cert is not None:
+                if os.path.exists(self.ca_cert):
+                    c.setopt(pycurl.CAINFO, self.ca_cert)
+                else:
+                    self.log.warn("Missing certificate: %s" % self.ca_cert)
+
+            try:
+                c.perform()
+                status = c.getinfo(pycurl.RESPONSE_CODE)
+
+            except Exception as e:
+                raise UploadError(e)
+
+            finally:
+                c.close()
+
+            output = buf.getvalue().strip()
+
+        if status != 200:
+            raise UploadError(output)
+
+        # Lookaside CGI script returns these strings depending on whether
+        # or not the file exists:
+        if output == b'Available':
+            return True
+
+        if output == b'Missing':
+            return False
+
+        # Something unexpected happened
+        self.log.debug(output)
+        raise UploadError('Error checking for %s at %s'
+                          % (filename, self.upload_url))
