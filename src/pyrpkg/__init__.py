@@ -2197,7 +2197,6 @@ class Commands(object):
                                replace=replace)
         gitignore = GitIgnore(os.path.join(self.path, '.gitignore'))
 
-        uploaded = []
         for f in files:
             # TODO: Skip empty file needed?
             file_hash = self.lookasidecache.hash_file(f)
@@ -2231,7 +2230,6 @@ class Commands(object):
             else:
                 self.log.info("Uploading: %s  %s" % (file_hash, f))
                 self._do_curl(file_hash, f)
-                uploaded.append(file_basename)
 
         sourcesf.write()
         gitignore.write()
@@ -2240,10 +2238,6 @@ class Commands(object):
 
         # Change back to original working dir:
         os.chdir(oldpath)
-
-        # Log some info
-        self.log.info('Uploaded and added to .gitignore: %s' %
-                      ' '.join(uploaded))
 
     def prep(self, arch=None, builddir=None):
         """Run rpm -bp on a module
