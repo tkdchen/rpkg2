@@ -2204,7 +2204,6 @@ class Commands(object):
         for f in files:
             # TODO: Skip empty file needed?
             file_hash = self.lookasidecache.hash_file(f)
-            self.log.info("Uploading: %s  %s" % (file_hash, f))
             file_basename = os.path.basename(f)
 
             try:
@@ -2234,6 +2233,7 @@ class Commands(object):
                 self.log.info("File already uploaded: %s" % file_basename)
 
             else:
+                self.log.info("Uploading: %s  %s" % (file_hash, f))
                 # Ensure the new file is readable:
                 os.chmod(f, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
                 self._do_curl(file_hash, f)
