@@ -2196,8 +2196,6 @@ class Commands(object):
 
         sourcesf = SourcesFile(self.sources_filename, self.source_entry_type,
                                replace=replace)
-
-        # Will add new sources to .gitignore if they are not already there.
         gitignore = GitIgnore(os.path.join(self.path, '.gitignore'))
 
         uploaded = []
@@ -2229,7 +2227,6 @@ class Commands(object):
 
             if self.lookasidecache.remote_file_exists(
                     self.module_name, file_basename, file_hash):
-                # Already uploaded, skip it:
                 self.log.info("File already uploaded: %s" % file_basename)
 
             else:
@@ -2240,8 +2237,6 @@ class Commands(object):
                 uploaded.append(file_basename)
 
         sourcesf.write()
-
-        # Write .gitignore with the new sources if anything changed:
         gitignore.write()
 
         self.repo.index.add(['sources', '.gitignore'])
