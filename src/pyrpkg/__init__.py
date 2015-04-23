@@ -25,7 +25,6 @@ import rpm
 import logging
 import git
 import ConfigParser
-import stat
 import tempfile
 import fnmatch
 import urlparse
@@ -2231,8 +2230,6 @@ class Commands(object):
 
             else:
                 self.log.info("Uploading: %s  %s" % (file_hash, f))
-                # Ensure the new file is readable:
-                os.chmod(f, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
                 self._do_curl(file_hash, f)
                 uploaded.append(file_basename)
 
