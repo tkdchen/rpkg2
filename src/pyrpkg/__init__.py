@@ -2427,41 +2427,39 @@ class Commands(object):
             self.load_kojisession()
 
 class GitIgnore(object):
-    """ Smaller wrapper for managing a .gitignore file and it's entries. """
-
+    """A class to manage a .gitignore file"""
     def __init__(self, path):
-        """
-        Create GitIgnore object for the given full path to a .gitignore file.
+        """Constructor
 
-        File does not have to exist yet, and will be created if you write out
-        any changes.
+        Args:
+            path (str): The full path to the .gitignore file. If it does not
+                exist, the file will be created when running GitIgnore.write()
+                for the first time.
         """
         self.path = path
 
         # Lines of the .gitignore file, used to check if entries need to be
         # added or already exist.
         self.__lines = []
-        if os.path.exists(self.path):
-            gitignore_file = open(self.path, 'r')
-            for line in gitignore_file:
-                self.__lines.append(self.__ensure_newline(line))
 
-            gitignore_file.close()
+        if os.path.exists(self.path):
+            with open(self.path, 'r') as f:
+                for line in f:
+                    self.__lines.append(self.__ensure_newline(line))
 
         # Set to True if we end up making any modifications, used to
         # prevent unnecessary writes.
         self.modified = False
 
     def __ensure_newline(self, line):
-        """Append a newline character if the given line didn't have one"""
-        if line.endswith('\n'):
-            return line
-
-        return '%s\n' % line
+        return line if line.endswith('\n') else '%s\n' % line
 
     def add(self, line):
-        """
-        Add a line to .gitignore, but check if it's a duplicate first.
+        """Add a line
+
+        Args:
+            line (str): The line to add to the file. It will not be added if
+                it already matches an existing line.
         """
         if self.match(line):
             return
@@ -2471,18 +2469,34 @@ class GitIgnore(object):
         self.modified = True
 
     def match(self, line):
+        """Check whether the line matches an existing one
+
+        This uses fnmatch to match against wildcards.
+
+        Args:
+            line (str): The new line to match against existing ones.
+
+        Returns:
+            True if the new line matches, False otherwise.
+        """
         line = line.lstrip('/').rstrip('\n')
+
         for entry in self.__lines:
             entry = entry.lstrip('/').rstrip('\n')
             if fnmatch.fnmatch(line, entry):
                 return True
+
         return False
 
     def write(self):
-        """ Write the new .gitignore file if any modifications were made. """
+        """Write the file to the disk
+
+        This will only actually write if necessary, that is if lines have been
+        added since the last time the file was written.
+        """
         if self.modified:
-            gitignore_file = open(self.path, 'w')
-            for line in self.__lines:
-                gitignore_file.write(line)
-            gitignore_file.close()
+            with open(self.path, 'w') as f:
+                for line in self.__lines:
+                    f.write(line)
+
             self.modified = False
