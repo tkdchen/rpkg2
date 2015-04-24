@@ -11,6 +11,27 @@ class GitIgnoreTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workdir)
 
+    def test_add_existing_line(self):
+        import pyrpkg
+        gi = pyrpkg.GitIgnore(os.path.join(self.workdir, 'gitignore'))
+        gi.add('a new line')
+        self.assertTrue(gi.modified)
+
+        # Cheat a bit for unit tests
+        gi.modified = False
+
+        gi.add('a new line')
+        self.assertFalse(gi.modified)
+
+        gi.add('*')
+        self.assertTrue(gi.modified)
+
+        # Cheat a bit for unit tests
+        gi.modified = False
+
+        gi.add('something different')
+        self.assertFalse(gi.modified)
+
     def test_match_empty(self):
         import pyrpkg
         gi = pyrpkg.GitIgnore(os.path.join(self.workdir, 'gitignore'))

@@ -2224,10 +2224,7 @@ class Commands(object):
                     }
                 raise rpkgError(msg)
 
-            # Add this file to .gitignore if it's not already there:
-            if not gitignore.match(file_basename):
-                gitignore.add('/%s' % file_basename)
-
+            gitignore.add('/%s' % file_basename)
             self.lookasidecache.upload(self.module_name, f, file_hash)
 
         sourcesf.write()
@@ -2466,12 +2463,12 @@ class GitIgnore(object):
         """
         Add a line to .gitignore, but check if it's a duplicate first.
         """
-        line = self.__ensure_newline(line)
+        if self.match(line):
+            return
 
-        # Add this line if it doesn't already exist:
-        if line not in self.__lines:
-            self.__lines.append(line)
-            self.modified = True
+        line = self.__ensure_newline(line)
+        self.__lines.append(line)
+        self.modified = True
 
     def match(self, line):
         line = line.lstrip('/').rstrip('\n')
