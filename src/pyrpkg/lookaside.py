@@ -236,3 +236,64 @@ class CGILookasideCache(object):
         self.log.debug(output)
         raise UploadError('Error checking for %s at %s'
                           % (filename, self.upload_url))
+
+    def upload(self, name, filepath, hash):
+        """Upload a source file
+
+        Args:
+            name (str): The name of the module. (usually the name of the SRPM)
+            filepath (str): The full path to the file to upload.
+            hash (str): The known good hash of the file.
+        """
+        filename = os.path.basename(filepath)
+
+        if self.remote_file_exists(name, filename, hash):
+            self.log.info("File already uploaded: %s" % filepath)
+            return
+
+        self.log.info("Uploading: %s" % filepath)
+        post_data = [('name', name),
+                     ('%ssum' % self.hashtype, hash),
+                     ('file', (pycurl.FORM_FILE, filepath))]
+
+        with io.BytesIO() as buf:
+            c = pycurl.Curl()
+            c.setopt(pycurl.URL, self.upload_url)
+            c.setopt(pycurl.NOPROGRESS, False)
+            c.setopt(pycurl.PROGRESSFUNCTION, self.print_progress)
+            c.setopt(pycurl.WRITEFUNCTION, buf.write)
+            c.setopt(pycurl.HTTPPOST, post_data)
+
+            if self.client_cert is not None:
+                if os.path.exists(self.client_cert):
+                    c.setopt(pycurl.SSLCERT, self.client_cert)
+                else:
+                    self.log.warn("Missing certificate: %s" % self.client_cert)
+
+            if self.ca_cert is not None:
+                if os.path.exists(self.ca_cert):
+                    c.setopt(pycurl.CAINFO, self.ca_cert)
+                else:
+                    self.log.warn("Missing certificate: %s" % self.ca_cert)
+
+            try:
+                c.perform()
+                status = c.getinfo(pycurl.RESPONSE_CODE)
+
+            except Exception as e:
+                raise UploadError(e)
+
+            finally:
+                c.close()
+
+            output = buf.getvalue().strip()
+
+        # Get back a new line, after displaying the download progress
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+        if status != 200:
+            raise UploadError(output)
+
+        if output:
+            self.log.debug(output)

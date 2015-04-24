@@ -454,3 +454,138 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         lc = CGILookasideCache('_', '_', '_')
         self.assertRaises(UploadError, lc.remote_file_exists, 'pyrpkg',
                           'pyrpkg-0.tar.xz', 'thehash')
+
+    @mock.patch('pyrpkg.lookaside.logging.getLogger')
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_upload(self, mock_curl, mock_logger):
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        def mock_perform():
+            curlopts[pycurl.WRITEFUNCTION](b'Some output')
+
+        def mock_debug(msg):
+            debug_messages.append(msg)
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.return_value = 200
+        curl.perform.side_effect = mock_perform
+        curl.setopt.side_effect = mock_setopt
+
+        debug_messages = []
+        log = mock_logger.return_value
+        log.debug.side_effect = mock_debug
+
+        lc = CGILookasideCache('sha512', '_', '_')
+
+        with mock.patch.object(lc, 'remote_file_exists', lambda *x: False):
+            lc.upload('pyrpkg', 'pyrpkg-0.0.tar.xz', 'thehash')
+
+        self.assertTrue(pycurl.HTTPPOST in curlopts)
+        self.assertEqual(curlopts[pycurl.HTTPPOST], [
+            ('name', 'pyrpkg'), ('sha512sum', 'thehash'),
+            ('file', (pycurl.FORM_FILE, 'pyrpkg-0.0.tar.xz'))])
+
+        self.assertEqual(debug_messages, [b'Some output'])
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_upload_already_exists(self, mock_curl):
+        curl = mock_curl.return_value
+
+        lc = CGILookasideCache('_', '_', '_')
+        hash = 'thehash'
+
+        with mock.patch.object(lc, 'remote_file_exists', lambda *x: True):
+            lc.upload('pyrpkg', 'pyrpkg-0.0.tar.xz', hash)
+
+        self.assertEqual(curl.perform.call_count, 0)
+        self.assertEqual(curl.setopt.call_count, 0)
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_upload_with_custom_certs(self, mock_curl):
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.return_value = 200
+        curl.setopt.side_effect = mock_setopt
+
+        client_cert = os.path.join(self.workdir, 'my-client-cert.cert')
+        with open(client_cert, 'w'):
+            pass
+
+        ca_cert = os.path.join(self.workdir, 'my-custom-cacert.cert')
+        with open(ca_cert, 'w'):
+            pass
+
+        lc = CGILookasideCache('_', '_', '_', client_cert=client_cert,
+                               ca_cert=ca_cert)
+
+        with mock.patch.object(lc, 'remote_file_exists', lambda *x: False):
+            lc.upload('pyrpkg', 'pyrpkg-0.0.tar.xz', 'thehash')
+
+        self.assertEqual(curlopts[pycurl.SSLCERT], client_cert)
+        self.assertEqual(curlopts[pycurl.CAINFO], ca_cert)
+
+    @mock.patch('pyrpkg.lookaside.logging.getLogger')
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_upload_missing_custom_certs(self, mock_curl, mock_logger):
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        def mock_warn(msg):
+            warn_messages.append(msg)
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.return_value = 200
+        curl.setopt.side_effect = mock_setopt
+
+        warn_messages = []
+        log = mock_logger.return_value
+        log.warn.side_effect = mock_warn
+
+        client_cert = os.path.join(self.workdir, 'my-client-cert.cert')
+        ca_cert = os.path.join(self.workdir, 'my-custom-cacert.cert')
+
+        lc = CGILookasideCache('_', '_', '_', client_cert=client_cert,
+                               ca_cert=ca_cert)
+
+        with mock.patch.object(lc, 'remote_file_exists', lambda *x: False):
+            lc.upload('pyrpkg', 'pyrpkg-0.tar.xz', 'thehash')
+
+        self.assertTrue(pycurl.SSLCERT not in curlopts)
+        self.assertTrue(pycurl.CAINFO not in curlopts)
+        self.assertEqual(len(warn_messages), 2)
+        self.assertTrue('Missing certificate: ' in warn_messages[0])
+        self.assertTrue('Missing certificate: ' in warn_messages[1])
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_upload_failed(self, mock_curl):
+        curl = mock_curl.return_value
+        curl.perform.side_effect = Exception(
+            'Could not resolve host: example.com')
+
+        lc = CGILookasideCache('_', '_', '_')
+
+        with mock.patch.object(lc, 'remote_file_exists', lambda *x: False):
+            self.assertRaises(UploadError, lc.upload, 'pyrpkg',
+                              'pyrpkg-0.tar.xz', 'thehash')
+
+    @mock.patch('pyrpkg.lookaside.pycurl.Curl')
+    def test_upload_failed_status_code(self, mock_curl):
+        def mock_setopt(opt, value):
+            curlopts[opt] = value
+
+        curlopts = {}
+        curl = mock_curl.return_value
+        curl.getinfo.return_value = 500
+        curl.setopt.side_effect = mock_setopt
+
+        lc = CGILookasideCache('sha512', '_', '_')
+
+        with mock.patch.object(lc, 'remote_file_exists', lambda *x: False):
+            self.assertRaises(UploadError, lc.upload, 'pyrpkg',
+                              'pyrpkg-0.tar.xz', 'thehash')

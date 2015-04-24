@@ -914,7 +914,8 @@ class Commands(object):
         return os.path.getmtime(file1) > os.path.getmtime(file2)
 
     def _do_curl(self, file_hash, file):
-        """Use curl manually to upload a file"""
+        warn_deprecated(self.__class__.__name__, '_do_curl',
+                        'lookasidecache.upload')
 
         cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
                '--progress-bar', '-F', 'name=%s' % self.module_name,
@@ -2223,13 +2224,7 @@ class Commands(object):
             if not gitignore.match(file_basename):
                 gitignore.add('/%s' % file_basename)
 
-            if self.lookasidecache.remote_file_exists(
-                    self.module_name, file_basename, file_hash):
-                self.log.info("File already uploaded: %s" % file_basename)
-
-            else:
-                self.log.info("Uploading: %s  %s" % (file_hash, f))
-                self._do_curl(file_hash, f)
+            self.lookasidecache.upload(self.module_name, f, file_hash)
 
         sourcesf.write()
         gitignore.write()
