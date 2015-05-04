@@ -286,7 +286,7 @@ class Commands(object):
                                                 defaults['ca'],
                                                 defaults['serverca'],
                                                 proxyuser=self.runas)
-                except koji.ssl.SSLCommon.SSL.Error, error:
+                except koji.ssl.SSLCommon.SSL.Error as error:
                     for (_, _, ssl_reason) in error.message:
                         # Use heuristic. Some OpenSSL libs doesn't store error
                         # codes
@@ -333,12 +333,12 @@ class Commands(object):
         else:
             try:
                 localbranch = self.repo.active_branch.name
-            except TypeError, e:
+            except TypeError as e:
                 raise rpkgError('Repo in inconsistent state: %s' % e)
             try:
                 merge = self.repo.git.config('--get',
                                              'branch.%s.merge' % localbranch)
-            except git.GitCommandError, e:
+            except git.GitCommandError as e:
                 raise rpkgError('Unable to find remote branch.  Use --dist')
             # Trim off the refs/heads so that we're just working with
             # the branch name
@@ -380,11 +380,11 @@ class Commands(object):
         try:
             url = self.repo.git.config('--get', 'remote.%s.pushurl'
                                        % self.branch_remote)
-        except git.GitCommandError, e:
+        except git.GitCommandError as e:
             try:
                 url = self.repo.git.config('--get', 'remote.%s.url'
                                            % self.branch_remote)
-            except git.GitCommandError, e:
+            except git.GitCommandError as e:
                 raise rpkgError('Unable to find remote push url: %s' % e)
         self._push_url = url
 
@@ -557,7 +557,7 @@ class Commands(object):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
             output, err = proc.communicate()
-        except Exception, e:
+        except Exception as e:
             if err:
                 self.log.debug('Errors occoured while running following'
                                ' command to get N-V-R-E:')
@@ -847,7 +847,7 @@ class Commands(object):
                                           stdout=sys.stdout,
                                           stderr=sys.stderr, cwd=cwd)
             except (subprocess.CalledProcessError,
-                    OSError), e:
+                    OSError) as e:
                 raise rpkgError(e)
             except KeyboardInterrupt:
                 raise rpkgError()
@@ -877,7 +877,7 @@ class Commands(object):
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE, cwd=cwd)
                     output, error = proc.communicate()
-            except OSError, e:
+            except OSError as e:
                 raise rpkgError(e)
             self.log.info(output)
             if proc.returncode:
@@ -1021,7 +1021,7 @@ class Commands(object):
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
             output, error = proc.communicate()
-        except OSError, e:
+        except OSError as e:
             raise rpkgError(e)
         name = output
         if error:
@@ -1039,7 +1039,7 @@ class Commands(object):
                                     stderr=subprocess.PIPE,
                                     env=env)
             output, error = proc.communicate()
-        except OSError, e:
+        except OSError as e:
             raise rpkgError(e)
         # work around signed SRPMs, for these rpm -qpl might print a warning
         # like:
@@ -1186,14 +1186,14 @@ class Commands(object):
         # Create our new top directory
         try:
             os.mkdir(top_path)
-        except (OSError), e:
+        except OSError as e:
             raise rpkgError('Could not create directory for module %s: %s'
                             % (module, e))
 
         # Create a bare clone first. This gives us a good list of branches
         try:
             self.clone(module, top_path, bare_dir=repo_path, anon=anon)
-        except Exception, e:
+        except Exception as e:
             # Clean out our directory
             shutil.rmtree(top_path)
             raise
@@ -1217,7 +1217,7 @@ class Commands(object):
                 branch_git.config("--replace-all",
                                   "remote.%s.url" % self.default_branch_remote,
                                   giturl)
-            except (git.GitCommandError, OSError), e:
+            except (git.GitCommandError, OSError) as e:
                 raise rpkgError('Could not locally clone %s from %s: %s'
                                 % (branch, repo_path, e))
 
@@ -1505,7 +1505,7 @@ class Commands(object):
             (output, errors) = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                                 stderr=subprocess.PIPE,
                                                 cwd=self.path).communicate()
-        except Exception, e:
+        except Exception as e:
             raise rpkgError('Error running gendiff: %s' % e)
 
         # log any errors
@@ -1648,7 +1648,7 @@ class Commands(object):
             try:
                 self.log.info(self.repo.git.checkout('-b', branch, '--track',
                                                      totrack))
-            except Exception, err:
+            except Exception as err:
                 # This needs to be finer grained I think...
                 raise rpkgError('Could not create branch %s: %s'
                                 % (branch, err))
@@ -1824,7 +1824,7 @@ class Commands(object):
         else:
             try:
                 build_reference = self.nvr
-            except rpkgError, error:
+            except rpkgError as error:
                 self.log.warning(error)
                 if nvr_check:
                     self.log.info('Note: You can skip NVR construction & NVR'
@@ -2142,13 +2142,13 @@ class Commands(object):
             if os.path.exists(system_filename):
                 try:
                     shutil.copy2(system_filename, tmp_filename)
-                except Exception, error:
+                except Exception as error:
                     raise rpkgError('Failed to create copy system config file'
                                     ' %s: %s' % (filename, error))
             else:
                 try:
                     open(tmp_filename, 'w').close()
-                except Exception, error:
+                except Exception as error:
                     raise rpkgError('Failed to create empty mock config'
                                     ' file %s: %s'
                                     % (tmp_filename, error))
@@ -2174,7 +2174,7 @@ class Commands(object):
 
         try:
             config_content = self.mock_config()
-        except rpkgError, error:
+        except rpkgError as error:
             self._cleanup_tmp_dir(my_config_dir)
             raise rpkgError('Could not generate config file: %s'
                             % error)
@@ -2182,7 +2182,7 @@ class Commands(object):
         config_file = os.path.join(config_dir, '%s.cfg' % root)
         try:
             open(config_file, 'wb').write(config_content)
-        except IOError, error:
+        except IOError as error:
             self._cleanup_tmp_dir(my_config_dir)
             raise rpkgError('Could not write config file: %s' % error)
 
@@ -2197,7 +2197,7 @@ class Commands(object):
             return
         try:
             shutil.rmtree(tmp_dir)
-        except OSError, error:
+        except OSError as error:
             if error.errno != errno.EEXIST:
                 raise rpkgError('Failed to remove temporary directory'
                                 ' %s. Reason: %s.' % (tmp_dir, error))
@@ -2226,14 +2226,14 @@ class Commands(object):
                                ' request koji to create new one.', chroot_cfg)
                 try:
                     config_dir = self._config_dir_basic(root=root)
-                except rpkgError, error:
+                except rpkgError as error:
                     raise rpkgError('Failed to create mock config directory:'
                                     ' %s' % error)
                 self.log.debug('Temporary mock config directory: %s',
                                config_dir)
                 try:
                     self._config_dir_other(config_dir)
-                except rpkgError, error:
+                except rpkgError as error:
                     self._cleanup_tmp_dir(config_dir)
                     raise rpkgError('Failed to populate mock config directory:'
                                     ' %s' % error)

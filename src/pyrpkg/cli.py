@@ -999,7 +999,7 @@ defined, packages will be built sequentially.""" % {'name': self.name})
     def mockbuild(self):
         try:
             self.cmd.sources()
-        except Exception, e:
+        except Exception as e:
             self.log.error('Could not download sources: %s' % e)
             sys.exit(1)
 
@@ -1020,14 +1020,14 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         try:
             self.cmd.mockbuild(mockargs, self.args.root,
                                hashtype=self.args.hash)
-        except Exception, e:
+        except Exception as e:
             self.log.error('Could not run mockbuild: %s' % e)
             sys.exit(1)
 
     def mock_config(self):
         try:
             print(self.cmd.mock_config(self.args.target, self.args.arch))
-        except Exception, e:
+        except Exception as e:
             self.log.error('Could not generate the mock config: %s' % e)
             sys.exit(1)
 
@@ -1331,7 +1331,7 @@ class TaskWatcher(object):
         error = None
         try:
             result = self.session.getTaskResult(self.id)
-        except (xmlrpclib.Fault,koji.GenericError),e:
+        except (xmlrpclib.Fault, koji.GenericError) as e:
             error = e
         if error is None:
             # print "%s: complete" % self.str()
