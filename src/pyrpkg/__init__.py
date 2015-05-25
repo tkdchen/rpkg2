@@ -40,12 +40,19 @@ from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, warn_deprecated
 
+from osbs.api import OSBS
+from osbs.conf import Configuration
+
 
 # Setup our logger
 # Null logger to avoid spurious messages, add a handler in app code
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+
+
+class UnknownTargetError(Exception):
+    faultCode = 1004
 
 
 h = NullHandler()
@@ -2334,6 +2341,98 @@ class Commands(object):
         # Run the command
         self._run_command(cmd, shell=True)
 
+    def osbs_build(self, config_file, config_section, target_override=False,
+                   yum_repourls=[]):
+        os_conf = Configuration(conf_file=config_file, conf_section=config_section)
+        build_conf = Configuration(conf_file=config_file, conf_section=config_section)
+        osbs = OSBS(os_conf, build_conf)
+
+        git_uri = re.sub(r"^git\+ssh", "git", self.push_url)
+        git_uri = re.sub("^ssh", "git", git_uri)
+        git_uri = re.sub("[^/]+@", "", git_uri)
+        git_ref = self.branch_merge
+        user = self.user
+        component = self.module_name
+        docker_target = self.target
+        if not target_override:
+            # Translate the build target into a docker target,
+            # but only if --target wasn't specified on the command-line
+            docker_target = '%s-docker-candidate' % self.target.split('-candidate')[0]
+
+        build = osbs.create_build(
+            git_uri=git_uri,
+            git_ref=git_ref,
+            user=user,
+            component=component,
+            target=docker_target,
+            architecture="x86_64",
+            yum_repourls=yum_repourls
+        )
+        build_id = build.build_id
+        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
+        for line in osbs.get_build_logs(build_id, follow=True):
+            print(line)
+        build_response = osbs.wait_for_build_to_finish(build_id)
+        if build_response.is_succeeded():
+            repositories = build_response.get_repositories()
+            if repositories:
+                image_names = repositories.get("primary", []) + repositories.get("unique", [])
+                print("You can pull the image with one of the following commands:")
+                for image in image_names:
+                    print("  docker pull %s" % image)
+            else:
+                raise RuntimeError("Build '%s' wasn't processed correctly. Please, report this." % build_id)
+        else:
+            raise RuntimeError("Build has failed.")
+
+    def container_build_koji(self, target_override=False, opts={},
+                                   kojiconfig=None, build_client=None,
+                                   koji_task_watcher=None):
+
+        docker_target = self.target
+        if not target_override:
+            # Translate the build target into a docker target,
+            # but only if --target wasn't specified on the command-line
+            docker_target = '%s-docker-candidate' % self.target.split('-candidate')[0]
+
+        koji_session_backup = (self.build_client, self.kojiconfig)
+        (self.build_client, self.kojiconfig) = (build_client, kojiconfig)
+        try:
+            self.load_kojisession()
+            if "buildContainer" not in self.kojisession.system.listMethods():
+                raise RuntimeError("Kojihub instance does not support buildContainer")
+
+            build_target = self.kojisession.getBuildTarget(docker_target)
+            if not build_target:
+                msg = "Unknown build target: %s" % docker_target
+                self.log.error(msg)
+                raise UnknownTargetError(msg)
+            else:
+                dest_tag = self.kojisession.getTag(build_target['dest_tag'])
+                if not dest_tag:
+                    self.log.error("Unknown destination tag: %s" %
+                                   build_target['dest_tag_name'])
+                if dest_tag['locked'] and not build_opts.scratch:
+                    self.log.error("Destination tag %s is locked" % dest_tag['name'])
+
+            source = self.anongiturl % {"module":self.module_name}
+            source += "#%s" % self.commithash
+
+            task_opts = {}
+            for key in ('scratch', 'name', 'version', 'release'):
+                if key in opts:
+                    task_opts[key] = opts[key]
+            priority = opts.get("priority", None)
+            task_id = self.kojisession.buildContainer(source,
+                                                      docker_target,
+                                                      task_opts,
+                                                      priority=priority)
+            koji_task_watcher(self.kojisession, [task_id])
+        except Exception:
+            raise
+        finally:
+            (self.build_client, self.kojiconfig) = koji_session_backup
+            self.load_kojisession()
 
 class GitIgnore(object):
     """ Smaller wrapper for managing a .gitignore file and it's entries. """

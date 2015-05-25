@@ -23,6 +23,7 @@ import xmlrpclib
 import pwd
 import koji
 
+OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
 
 class cliClient(object):
     """This is a client class for rpkg clients."""
@@ -203,6 +204,7 @@ class cliClient(object):
         self.register_clone()
         self.register_commit()
         self.register_compile()
+        self.register_container_build()
         self.register_diff()
         self.register_gimmespec()
         self.register_gitbuildhash()
@@ -797,6 +799,41 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             'verrel', help='Print the name-version-release')
         verrel_parser.set_defaults(command=self.verrel)
 
+    def register_container_build(self):
+        self.container_build_parser = \
+            self.subparsers.add_parser('container-build',
+                                       help='build a container')
+        osbs_group = self.container_build_parser.add_argument_group('osbs')
+        osbs_group.add_argument('--osbs-config',
+                                help="path to file with configuration of osbs",
+                                metavar="PATH",
+                                default=OSBS_DEFAULT_CONF_FILE)
+        osbs_group.add_argument('--instance',
+                                help=("use specific instance specified "
+                                      "by section name in config"),
+                                metavar="SECTION", default="default")
+        osbs_group.add_argument('--repo-url',
+                                help=("URL of yum repo file"),
+                                nargs='*')
+        koji_group = self.container_build_parser.add_argument_group('koji')
+
+        self.container_build_parser.add_argument('--target',
+                                             help='Override the default target',
+                                             default=None)
+        self.container_build_parser.add_argument('--scratch',
+                                             help='Scratch build',
+                                             action="store_true")
+
+        self.container_build_parser.add_argument('--build-with',
+                                            help='Build container with '
+                                            'specified builder type. Default '
+                                            'is koji',
+                                            dest="build_with",
+                                            choices=("koji", "osbs"),
+                                            default="koji")
+
+        self.container_build_parser.set_defaults(command=self.container_build)
+
     # All the command functions go here
     def usage(self):
         self.parser.print_help()
@@ -961,6 +998,61 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             short = True
         self.cmd.compile(arch=arch, short=short,
                          builddir=self.args.builddir)
+
+    def container_build(self):
+        if self.args.build_with == "koji":
+            self.container_build_koji()
+        elif self.args.build_with == "osbs":
+            self.container_build_osbs()
+
+    def container_build_koji(self):
+        target_override = False
+        # Override the target if we were supplied one
+        if self.args.target:
+            self.cmd._target = self.args.target
+            target_override = True
+
+        opts = {"scratch": self.args.scratch,
+                "quiet": self.args.q}
+
+        section_name = "%s.container-build" % self.name
+        err_msg = "Missing {option} option in [{plugin.section}] section. "\
+                  "Using {option} from [{root.section}]"
+        err_args = {"plugin.section": section_name, "root.section": self.name}
+
+        if self.config.has_option(section_name, "kojiconfig"):
+            kojiconfig=self.config.get(section_name, "kojiconfig")
+        else:
+            err_args["option"] = "kojiconfig"
+            self.log.debug(err_msg % err_args)
+            kojiconfig=self.config.get(self.name, "kojiconfig")
+
+        if self.config.has_option(section_name, "build_client"):
+            build_client=self.config.get(section_name, "build_client")
+        else:
+            err_args["option"] = "kojiconfig"
+            self.log.debug(err_msg % err_args)
+            build_client=self.config.get(self.name, "build_client")
+
+        self.cmd.container_build_koji(target_override, opts=opts,
+                                      kojiconfig=kojiconfig,
+                                      build_client=build_client,
+                                      koji_task_watcher=self._watch_koji_tasks)
+
+    def container_build_osbs(self):
+        target_override = False
+        # Override the target if we were supplied one
+        if self.args.target:
+            self.cmd._target = self.args.target
+            target_override = True
+
+        self.cmd.osbs_build(
+            config_file=self.args.osbs_config,
+            config_section=self.args.instance,
+            target_override=target_override,
+            yum_repourls=self.args.repo_url
+        )
+
 
     def diff(self):
         self.cmd.diff(self.args.cached, self.args.files)

@@ -11,6 +11,7 @@
 # the full text of the license.
 
 import pyrpkg
+import pyrpkg.cli
 import os
 import sys
 import logging
