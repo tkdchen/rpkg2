@@ -2407,7 +2407,7 @@ class Commands(object):
                 if not dest_tag:
                     self.log.error("Unknown destination tag: %s" %
                                    build_target['dest_tag_name'])
-                if dest_tag['locked'] and not build_opts.scratch:
+                if dest_tag['locked'] and 'scratch' not in opts:
                     self.log.error("Destination tag %s is locked" % dest_tag['name'])
 
             source = self.anongiturl % {"module":self.module_name}
