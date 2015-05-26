@@ -35,7 +35,8 @@ try:
 except ImportError:
     pass
 
-from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError
+from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError, \
+     UnknownTargetError
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, warn_deprecated
@@ -49,10 +50,6 @@ from osbs.conf import Configuration
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-
-
-class UnknownTargetError(Exception):
-    faultCode = 1004
 
 
 h = NullHandler()

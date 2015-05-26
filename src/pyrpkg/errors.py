@@ -19,6 +19,9 @@ class rpkgAuthError(rpkgError):
     """Raised in case of authentication errors"""
     faultCode = 1002
 
+class UnknownTargetError(Exception):
+    faultCode = 1004
+
 
 class HashtypeMixingError(rpkgError):
     """Raised when we try to mix hash types in a sources file"""
