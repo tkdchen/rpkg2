@@ -2425,8 +2425,6 @@ class Commands(object):
                                                       task_opts,
                                                       priority=priority)
             koji_task_watcher(self.kojisession, [task_id])
-        except Exception:
-            raise
         finally:
             (self.build_client, self.kojiconfig) = koji_session_backup
             self.load_kojisession()
