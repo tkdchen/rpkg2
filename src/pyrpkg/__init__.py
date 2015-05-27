@@ -2422,6 +2422,10 @@ class Commands(object):
                                                       docker_target,
                                                       task_opts,
                                                       priority=priority)
+            self.log.info('Created task: %s' % task_id)
+            self.log.info('Task info: %s/taskinfo?taskID=%s' % (self.kojiweburl,
+                                                                task_id))
+
             koji_task_watcher(self.kojisession, [task_id])
         finally:
             (self.build_client, self.kojiconfig) = koji_session_backup
