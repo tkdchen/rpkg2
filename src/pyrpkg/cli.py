@@ -816,14 +816,13 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                                 help=("URL of yum repo file"),
                                 nargs='*')
         koji_group = self.container_build_parser.add_argument_group('koji')
+        koji_group.add_argument('--scratch',
+                                help='Scratch build',
+                                action="store_true")
 
         self.container_build_parser.add_argument('--target',
                                              help='Override the default target',
                                              default=None)
-        self.container_build_parser.add_argument('--scratch',
-                                             help='Scratch build',
-                                             action="store_true")
-
         self.container_build_parser.add_argument('--build-with',
                                             help='Build container with '
                                             'specified builder type. Default '
