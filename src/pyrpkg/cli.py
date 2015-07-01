@@ -803,6 +803,10 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         self.container_build_parser = \
             self.subparsers.add_parser('container-build',
                                        help='build a container')
+        self.container_build_parser.add_argument('--repo-url',
+                                                 metavar="URL",
+                                                 help=("URL of yum repo file"),
+                                                 nargs='*')
         osbs_group = self.container_build_parser.add_argument_group('osbs')
         osbs_group.add_argument('--osbs-config',
                                 help="path to file with configuration of osbs",
@@ -812,9 +816,6 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                                 help=("use specific instance specified "
                                       "by section name in config"),
                                 metavar="SECTION", default="default")
-        osbs_group.add_argument('--repo-url',
-                                help=("URL of yum repo file"),
-                                nargs='*')
         koji_group = self.container_build_parser.add_argument_group('koji')
         koji_group.add_argument('--scratch',
                                 help='Scratch build',
@@ -1012,7 +1013,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             target_override = True
 
         opts = {"scratch": self.args.scratch,
-                "quiet": self.args.q}
+                "quiet": self.args.q,
+                "yum_repourls": self.args.repo_url}
 
         section_name = "%s.container-build" % self.name
         err_msg = "Missing {option} option in [{plugin.section}] section. "\

@@ -2414,7 +2414,8 @@ class Commands(object):
             source += "#%s" % self.commithash
 
             task_opts = {}
-            for key in ('scratch', 'name', 'version', 'release'):
+            for key in ('scratch', 'name', 'version', 'release',
+                        'yum_repourls'):
                 if key in opts:
                     task_opts[key] = opts[key]
             priority = opts.get("priority", None)
