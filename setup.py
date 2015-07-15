@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name="rpkg",
-    version="1.35",
+    version="1.36",
     author="Dennis Gilmore",
     author_email="ausil@fedoraproject.org",
     description=("A python library and runtime script for managing RPM"
