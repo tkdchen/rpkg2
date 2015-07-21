@@ -6,4 +6,4 @@ Unless otherwise specified, all files are licensed under GPLv2+.
 There are parts of koji code in pyrpkg/cli, those parts are licensed
 under LGPLv2(.1).  See COPYING-koji for that license statement.
 
-See https://fedorahosted.org/rpkg for more information, bug tracking, etc.
+See https://pagure.io/rpkg for more information, bug tracking, etc.
