@@ -11,6 +11,7 @@
 
 import errno
 import os
+import pwd
 import sys
 import shutil
 import re
@@ -781,7 +782,7 @@ class Commands(object):
 
         # If a site figures out the user differently (like from ssl cert)
         # this is where you'd override and make that happen
-        self._user = os.getlogin()
+        self._user = pwd.getpwuid(os.getuid())[0]
 
     @property
     def password(self):
