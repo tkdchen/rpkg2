@@ -79,7 +79,7 @@ class CommandTestCase(unittest.TestCase):
     def get_tags(self, gitdir):
         result = []
 
-        tags = subprocess.check_output(['git', 'tag', '-n1'], cwd=gitdir)
+        tags = subprocess.Popen(['git', 'tag', '-n1'], cwd=gitdir, stdout=subprocess.PIPE).communicate()[0]
 
         for line in tags.split('\n'):
             if not line:
