@@ -28,7 +28,7 @@ class CommandDeleteTagTestCase(CommandTestCase):
         # Now delete it
         cmd.delete_tag(tag)
         tags = [t for (t, m) in self.get_tags(moduledir)]
-        self.assertNotIn(tag, tags)
+        self.assertFalse(tag in tags)
 
     def test_delete_tag_fails_inexistent(self):
         self.make_new_git(self.module)
