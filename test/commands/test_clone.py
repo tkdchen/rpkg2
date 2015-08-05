@@ -83,6 +83,7 @@ class CommandCloneTestCase(CommandTestCase):
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
 
-        with self.assertRaises(pyrpkg.rpkgError):
+        def raises():
             cmd.clone(self.module, anon=True, branch='rpkg-tests-1',
                       bare_dir='test.git')
+        self.assertRaises(pyrpkg.rpkgError, raises)
