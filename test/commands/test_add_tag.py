@@ -109,8 +109,10 @@ class CommandAddTagTestCase(CommandTestCase):
         cmd.add_tag(tag, message=message)
 
         # Now add the same tag again
-        with self.assertRaises(pyrpkg.rpkgError):
+        def raises():
             cmd.add_tag(tag, message='No, THIS is a release')
+
+        self.assertRaises(pyrpkg.rpkgError, raises)
 
     def test_add_tag_force_replace_existing(self):
         self.make_new_git(self.module)

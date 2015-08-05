@@ -47,5 +47,6 @@ class CommandDeleteTagTestCase(CommandTestCase):
         cmd.path = moduledir
 
         # Try deleting an inexistent tag
-        with self.assertRaises(pyrpkg.rpkgError):
+        def raises():
             cmd.delete_tag(tag)
+        self.assertRaises(pyrpkg.rpkgError, raises)
