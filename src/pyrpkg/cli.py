@@ -495,7 +495,7 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             'import', help='Import srpm content into a module',
             description='This will extract sources, patches, and the spec '
                         'file from an srpm and update the current module '
-                        'accordingly. It will import to the current branch by'
+                        'accordingly. It will import to the current branch by '
                         'default.')
         import_srpm_parser.add_argument(
             '--skip-diffs', help="Don't show diffs when import srpms",
