@@ -75,7 +75,7 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None,
-                 dist=None, target=None, quiet=False):
+                 dist=None, target=None, quiet=False, clone_config=None):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -97,6 +97,8 @@ class Commands(object):
         self.kojiconfig = os.path.expanduser(kojiconfig)
         # The buildsys client to use
         self.build_client = build_client
+        # Config to set after cloning
+        self.clone_config = clone_config
         # A way to override the discovered "distribution"
         self.dist = dist
         # Set the default hashtype
@@ -1177,6 +1179,11 @@ class Commands(object):
 
         self._run_command(cmd, cwd=path)
 
+        if self.clone_config:
+            conf_git = git.Git(
+                os.path.join(path, bare_dir if bare_dir else module))
+            self._clone_config(conf_git, module)
+
         return
 
     def clone_with_dirs(self, module, anon=False):
@@ -1241,6 +1248,12 @@ class Commands(object):
 
         # We don't need this now. Ignore errors since keeping it does no harm
         shutil.rmtree(repo_path, ignore_errors=True)
+
+    def _clone_config(self, conf_git, module):
+        clone_config = self.clone_config.strip() % {'module': module}
+        for confline in clone_config.splitlines():
+            if confline:
+                conf_git.config(*confline.split())
 
     def commit(self, message=None, file=None, files=[], signoff=False):
         """Commit changes to a module (optionally found at path)

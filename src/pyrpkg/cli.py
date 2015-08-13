@@ -109,6 +109,7 @@ class cliClient(object):
                                        dist=self.args.dist,
                                        target=target,
                                        quiet=self.args.q,
+                                       clone_config=items.get('clone_config'),
                                        )
 
         self._cmd.module_name = self.args.module_name

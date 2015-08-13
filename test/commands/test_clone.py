@@ -2,6 +2,8 @@ import os
 import shutil
 import tempfile
 
+import git
+
 from . import CommandTestCase
 
 
@@ -14,11 +16,15 @@ class CommandCloneTestCase(CommandTestCase):
                               self.lookaside_cgi, self.gitbaseurl,
                               self.anongiturl, self.branchre, self.kojiconfig,
                               self.build_client, self.user, self.dist,
-                              self.target, self.quiet)
+                              self.target, self.quiet, self.clone_config)
         cmd.clone(self.module, anon=True)
 
         moduledir = os.path.join(self.path, self.module)
         self.assertTrue(os.path.isdir(os.path.join(moduledir, '.git')))
+        confgit = git.Git(moduledir)
+        self.assertEqual(confgit.config('bz.default-component'), self.module)
+        self.assertEqual(confgit.config('sendemail.to'),
+                         "{}-owner@fedoraproject.org".format(self.module))
 
     def test_clone_anonymous_with_path(self):
         self.make_new_git(self.module)

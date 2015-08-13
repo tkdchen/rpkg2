@@ -24,6 +24,10 @@ class CommandTestCase(unittest.TestCase):
         self.gitbaseurl = 'TODO'
         self.kojiconfig = 'TODO'
         self.build_client = 'TODO'
+        self.clone_config = '''
+            bz.default-component %(module)s
+            sendemail.to %(module)s-owner@fedoraproject.org
+        '''
         self.user = 'TODO'
         self.dist = 'TODO'
         self.target = 'TODO'
