@@ -205,6 +205,7 @@ class cliClient(object):
         self.register_commit()
         self.register_compile()
         self.register_container_build()
+        self.register_container_build_setup()
         self.register_diff()
         self.register_gimmespec()
         self.register_gitbuildhash()
@@ -834,6 +835,19 @@ defined, packages will be built sequentially.""" % {'name': self.name})
 
         self.container_build_parser.set_defaults(command=self.container_build)
 
+    def register_container_build_setup(self):
+        self.container_build_setup_parser = \
+            self.subparsers.add_parser('container-build-setup',
+                                       help='set options for container-build')
+        self.container_build_setup_parser.add_argument(
+            '--autorebuild',
+            help='Turn autorebuilds on/off',
+            choices=['on', 'off'],
+            required=False,
+            default=None)
+        self.container_build_setup_parser.set_defaults(
+            command=self.container_build_setup)
+
     # All the command functions go here
     def usage(self):
         self.parser.print_help()
@@ -1054,6 +1068,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             yum_repourls=self.args.repo_url
         )
 
+    def container_build_setup(self):
+        self.cmd.container_build_setup(autorebuild=self.args.autorebuild)
 
     def diff(self):
         self.cmd.diff(self.args.cached, self.args.files)
