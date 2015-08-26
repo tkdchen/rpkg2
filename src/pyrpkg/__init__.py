@@ -2327,7 +2327,16 @@ class Commands(object):
         # Create a list for unused patches
         unused = []
         # Get the content of spec into memory for fast searching
-        spec = open(self.spec, 'r').read()
+        try:
+            spec = open(self.spec, 'r').read().decode('UTF-8')
+        except UnicodeDecodeError as error:
+            # when can't decode file, ignore chars and show warning
+            spec = open(self.spec, 'r').read().decode(encoding='UTF-8', errors='ignore')
+            line, offset = self._byte_offset_to_line_number(spec, error.start)
+            self.log.warning("\'%s\' codec can't decode byte in position %d:%d : %s"
+                                % (error.encoding, line, offset, error.reason))
+        except:
+            raise
         # Replace %{name} with the package name
         spec = spec.replace("%{name}", self.module_name)
         # Replace %{version} with the package version
@@ -2342,6 +2351,17 @@ class Commands(object):
             if file not in spec:
                 unused.append(file)
         return unused
+
+    def _byte_offset_to_line_number(self, text, offset):
+        offset_inc = 0
+        line_num = 1
+        for line in text.split('\n'):
+            if offset_inc + len(line) + 1 > offset:
+                break
+            else:
+                offset_inc += len(line) + 1
+                line_num += 1
+        return [line_num, offset - offset_inc + 1]
 
     def verify_files(self, builddir=None):
         """Run rpmbuild -bl on a module to verify the %files section
