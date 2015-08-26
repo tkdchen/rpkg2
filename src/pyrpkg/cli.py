@@ -839,11 +839,16 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         self.container_build_setup_parser = \
             self.subparsers.add_parser('container-build-setup',
                                        help='set options for container-build')
-        self.container_build_setup_parser.add_argument(
-            '--autorebuild',
+        group = self.container_build_setup_parser.add_mutually_exclusive_group(required=True)
+        group.add_argument(
+            '--get-autorebuild',
+            help='Get autorebuild value',
+            action='store_true',
+            default=None)
+        group.add_argument(
+            '--set-autorebuild',
             help='Turn autorebuilds on/off',
-            choices=['on', 'off'],
-            required=False,
+            choices=('true', 'false'),
             default=None)
         self.container_build_setup_parser.set_defaults(
             command=self.container_build_setup)
@@ -1069,7 +1074,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         )
 
     def container_build_setup(self):
-        self.cmd.container_build_setup(autorebuild=self.args.autorebuild)
+        self.cmd.container_build_setup(get_autorebuild=self.args.get_autorebuild,
+                                       set_autorebuild=self.args.set_autorebuild)
 
     def diff(self):
         self.cmd.diff(self.args.cached, self.args.files)

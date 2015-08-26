@@ -2436,22 +2436,27 @@ class Commands(object):
             (self.build_client, self.kojiconfig) = koji_session_backup
             self.load_kojisession()
 
-    def container_build_setup(self, autorebuild=None):
-        if autorebuild is None:
-            self.log.info('No change to be done')
-            return
-
+    def container_build_setup(self, get_autorebuild=None, set_autorebuild=None):
         cfp = ConfigParser.SafeConfigParser()
         if os.path.exists(self.osbs_config_filename):
             cfp.read(self.osbs_config_filename)
 
-        if not cfp.has_section('autorebuild'):
-            cfp.add_section('autorebuild')
+        if get_autorebuild is not None:
+            if not cfp.has_option('autorebuild', 'enabled'):
+                self.log.info('true')
+            else:
+                self.log.info('true' if cfp.getboolean('autorebuild', 'enabled')
+                              else 'false')
+        elif set_autorebuild is not None:
+            if not cfp.has_section('autorebuild'):
+                cfp.add_section('autorebuild')
 
-        cfp.set('autorebuild', 'enabled', 'true' if autorebuild == 'on' else 'false')
-        with open(self.osbs_config_filename, 'w') as fp:
-            cfp.write(fp)
+            cfp.set('autorebuild', 'enabled', set_autorebuild)
+            with open(self.osbs_config_filename, 'w') as fp:
+                cfp.write(fp)
 
-        self.repo.index.add([self.osbs_config_filename])
-        self.log.info('Config value changed, don\'t forget to commit %s file',
-                      self.osbs_config_filename)
+            self.repo.index.add([self.osbs_config_filename])
+            self.log.info('Config value changed, don\'t forget to commit'
+                          ' %s file', self.osbs_config_filename)
+        else:
+            self.log.info('Nothing to be done')
