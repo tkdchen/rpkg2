@@ -2341,7 +2341,7 @@ class Commands(object):
         self._run_command(cmd, shell=True)
 
     def osbs_build(self, config_file, config_section, target_override=False,
-                   yum_repourls=[]):
+                   yum_repourls=[], nowait=False):
         os_conf = Configuration(conf_file=config_file, conf_section=config_section)
         build_conf = Configuration(conf_file=config_file, conf_section=config_section)
         osbs = OSBS(os_conf, build_conf)
@@ -2368,6 +2368,11 @@ class Commands(object):
             yum_repourls=yum_repourls
         )
         build_id = build.build_id
+
+        if nowait:
+            self.log.info('Build submited: %s' % build_id)
+            return
+
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
         for line in osbs.get_build_logs(build_id, follow=True):
             print(line)
@@ -2386,7 +2391,8 @@ class Commands(object):
 
     def container_build_koji(self, target_override=False, opts={},
                                    kojiconfig=None, build_client=None,
-                                   koji_task_watcher=None):
+                                   koji_task_watcher=None,
+                                   nowait=False):
 
         docker_target = self.target
         if not target_override:
@@ -2430,8 +2436,8 @@ class Commands(object):
             self.log.info('Created task: %s' % task_id)
             self.log.info('Task info: %s/taskinfo?taskID=%s' % (self.kojiweburl,
                                                                 task_id))
-
-            koji_task_watcher(self.kojisession, [task_id])
+            if not nowait:
+                koji_task_watcher(self.kojisession, [task_id])
         finally:
             (self.build_client, self.kojiconfig) = koji_session_backup
             self.load_kojisession()

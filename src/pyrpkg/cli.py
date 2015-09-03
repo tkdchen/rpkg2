@@ -832,6 +832,10 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                                             dest="build_with",
                                             choices=("koji", "osbs"),
                                             default="koji")
+        self.container_build_parser.add_argument('--nowait',
+                                            action='store_true',
+                                            default=False,
+                                            help="Don't wait on build")
 
         self.container_build_parser.set_defaults(command=self.container_build)
 
@@ -1057,7 +1061,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         self.cmd.container_build_koji(target_override, opts=opts,
                                       kojiconfig=kojiconfig,
                                       build_client=build_client,
-                                      koji_task_watcher=self._watch_koji_tasks)
+                                      koji_task_watcher=self._watch_koji_tasks,
+                                      nowait=self.args.nowait)
 
     def container_build_osbs(self):
         target_override = False
@@ -1070,7 +1075,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             config_file=self.args.osbs_config,
             config_section=self.args.instance,
             target_override=target_override,
-            yum_repourls=self.args.repo_url
+            yum_repourls=self.args.repo_url,
+            nowait=self.args.nowait
         )
 
     def container_build_setup(self):
