@@ -34,7 +34,7 @@ _rpkg()
 
     local options="--help -v -q"
     local options_value="--dist --user --path"
-    local commands="build chain-build ci clean clog clone co commit compile diff gimmespec giturl help \
+    local commands="build chain-build ci clean clog clone co container-build-config commit compile diff gimmespec giturl help \
     gitbuildhash import install lint local mockbuild mock-config new new-sources patch prep pull push scratch-build sources \
     srpm switch-branch tag unused-patches upload verify-files verrel"
 
@@ -120,6 +120,10 @@ _rpkg()
             options_branch="-b"
             after="package"
             ;;
+        container-build-config)
+            options="--get-autorebuild"
+            options_bool="--set-autorebuild"
+            ;;
         commit|ci)
             options="--push --clog --raw --tag"
             options_string="--message"
@@ -199,7 +203,7 @@ _rpkg()
     esac
 
     local all_options="--help $options"
-    local all_options_value="$options_target $options_arches $options_branch $options_string $options_file $options_dir $options_srpm"
+    local all_options_value="$options_target $options_arches $options_branch $options_string $options_file $options_dir $options_srpm $options_bool"
 
     # count non-option parameters
 
@@ -240,6 +244,9 @@ _rpkg()
 
     elif [[ -n $options_dir ]] && in_array "$prev" "$options_dir"; then
         _filedir_exclude_paths -d
+
+    elif [[ -n $options_bool ]] && in_array "$prev" "$options_bool"; then
+        COMPREPLY=( $(compgen -W "true false" -- "$cur") )
 
     elif [[ -n $options_string ]] && in_array "$prev" "$options_string"; then
         COMPREPLY=( )
