@@ -2335,8 +2335,6 @@ class Commands(object):
             line, offset = self._byte_offset_to_line_number(spec, error.start)
             self.log.warning("\'%s\' codec can't decode byte in position %d:%d : %s"
                                 % (error.encoding, line, offset, error.reason))
-        except:
-            raise
         # Replace %{name} with the package name
         spec = spec.replace("%{name}", self.module_name)
         # Replace %{version} with the package version
@@ -2353,6 +2351,11 @@ class Commands(object):
         return unused
 
     def _byte_offset_to_line_number(self, text, offset):
+        """
+        Convert byte offset (given by e.g. DecodeError) to human readable
+        format (line number and char possition)
+        Return a list with line number and char offset
+        """
         offset_inc = 0
         line_num = 1
         for line in text.split('\n'):
