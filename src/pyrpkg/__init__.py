@@ -1670,6 +1670,17 @@ class Commands(object):
         return self.lookasidecache.remote_file_exists(pkg_name, filename,
                                                       checksum)
 
+    def check_repo(self, is_dirty=True, all_pushed=True):
+        if is_dirty:
+            if self.repo.is_dirty():
+                raise rpkgError('%s has uncommitted changes.  Use git status '
+                                'to see details' % self.path)
+        if all_pushed:
+            branch = self.repo.active_branch
+            full_branch = '%s/%s' % (self.branch_remote, self.branch_merge)
+            if self.repo.git.rev_list('%s...%s' % (full_branch, branch)):
+                raise rpkgError('There are unpushed changes in your repo')
+
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):
         """Initiate a build of the module.  Available options are:
@@ -1702,17 +1713,9 @@ class Commands(object):
         # construct the url
         if not url:
             # We don't have a url, so build from the latest commit
-            # Check to see if the tree is dirty
-            if self.repo.is_dirty():
-                raise rpkgError('%s has uncommitted changes.  Use git status '
-                                'to see details' % self.path)
-            # Need to check here to see if the local commit you want to build
-            # is pushed or not
-            branch = self.repo.active_branch
-            full_branch = '%s/%s' % (self.branch_remote, self.branch_merge)
-            if self.repo.git.rev_list('%s...%s' % (full_branch, branch)):
-                raise rpkgError('There are unpushed changes in your repo')
-
+            # Check to see if the tree is dirty and if all local commits
+            # are pushed
+            self.check_repo()
             url = self.anongiturl % {'module': self.module_name} + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
