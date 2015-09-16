@@ -2411,6 +2411,9 @@ class Commands(object):
             if "buildContainer" not in self.kojisession.system.listMethods():
                 raise RuntimeError("Kojihub instance does not support buildContainer")
 
+            # check if repo is dirty and all commits are pushed
+            self.check_repo()
+
             build_target = self.kojisession.getBuildTarget(docker_target)
             if not build_target:
                 msg = "Unknown build target: %s" % docker_target
