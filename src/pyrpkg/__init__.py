@@ -390,7 +390,6 @@ class Commands(object):
 
     def load_push_url(self):
         """Find the pushurl or url of remote of branch we're on."""
-
         try:
             url = self.repo.git.config('--get', 'remote.%s.pushurl'
                                        % self.branch_remote)
@@ -400,7 +399,11 @@ class Commands(object):
                                            % self.branch_remote)
             except git.GitCommandError as e:
                 raise rpkgError('Unable to find remote push url: %s' % e)
-        self._push_url = url
+        if isinstance(url, unicode):
+            # GitPython >= 1.0 return unicode. It must be encoded to string.
+            self._push_url = url.encode('utf-8')
+        else:
+            self._push_url = url
 
     @property
     def commithash(self):
