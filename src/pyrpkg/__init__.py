@@ -69,7 +69,8 @@ class Commands(object):
     # This shouldn't change... often
     UPLOADEXTS = ['tar', 'gz', 'bz2', 'lzma', 'xz', 'Z', 'zip', 'tff',
                   'bin', 'tbz', 'tbz2', 'tgz', 'tlz', 'txz', 'pdf', 'rpm',
-                  'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem', 'spkg']
+                  'jar', 'war', 'db', 'cpio', 'jisp', 'egg', 'gem', 'spkg',
+                  'oxt', 'xpi']
 
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
@@ -2466,3 +2467,4 @@ class Commands(object):
                           ' %s file', self.osbs_config_filename)
         else:
             self.log.info('Nothing to be done')
+
