@@ -1658,9 +1658,9 @@ class Commands(object):
                 self.repo.git.checkout(branch)
                 # The above should have no output, but stash it anyway
                 self.log.info("Switched to branch '%s'" % branch)
-            except:
+            except Exception as err:
                 # This needs to be finer grained I think...
-                raise rpkgError('Could not check out %s' % branch)
+                raise rpkgError('Could not check out %s\n%s' % (branch, err.stderr))
         return
 
     def file_exists(self, pkg_name, filename, checksum):
