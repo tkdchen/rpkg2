@@ -2056,7 +2056,8 @@ class Commands(object):
         # Figure out if we have a valid build target
         build_target = self.anon_kojisession.getBuildTarget(target)
         if not build_target:
-            raise rpkgError('Unknown build target: %s' % target)
+            raise rpkgError('Unknown build target: %s\n'
+                            'Consider using the --target option' % target)
 
         try:
             repoid = self.anon_kojisession.getRepo(
