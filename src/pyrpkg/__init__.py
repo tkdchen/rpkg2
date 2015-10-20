@@ -2490,3 +2490,10 @@ class Commands(object):
                           ' %s file', self.osbs_config_filename)
         else:
             self.log.info('Nothing to be done')
+
+    def copr_build(self, project, srpm_name, nowait):
+        cmd = ['copr-cli', 'build']
+        if nowait:
+            cmd.append('--nowait')
+        cmd.extend([project, srpm_name])
+        self._run_command(cmd)

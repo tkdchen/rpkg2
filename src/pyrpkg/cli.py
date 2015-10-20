@@ -203,6 +203,7 @@ class cliClient(object):
         self.register_clean()
         self.register_clog()
         self.register_clone()
+        self.register_copr_build()
         self.register_commit()
         self.register_compile()
         self.register_container_build()
@@ -718,6 +719,26 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             dest='hash', help='Use md5 checksums (for older rpm hosts)')
         srpm_parser.set_defaults(command=self.srpm)
 
+    def register_copr_build(self):
+        """Register the copr-build target"""
+
+        copr_parser = self.subparsers.add_parser(
+            'copr-build', help='Build package in Copr',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description="""
+Build package in Copr.
+
+Note: you need to have set up correct api key. For more information
+see API KEY section of copr-cli(1) man page.
+""")
+
+        copr_parser.add_argument(
+            '--nowait', action='store_true', default=False,
+            help="Don't wait on build")
+        copr_parser.add_argument(
+            'project', nargs=1, help='Name of the project in format USER/PROJECT')
+        copr_parser.set_defaults(command=self.copr_build)
+
     def register_switch_branch(self):
         """Register the switch-branch target"""
 
@@ -1093,6 +1114,13 @@ defined, packages will be built sequentially.""" % {'name': self.name})
     def container_build_setup(self):
         self.cmd.container_build_setup(get_autorebuild=self.args.get_autorebuild,
                                        set_autorebuild=self.args.set_autorebuild)
+
+    def copr_build(self):
+        self.log.debug('Generating an srpm')
+        self.args.hash = None
+        self.srpm()
+        srpm_name = '%s.src.rpm' % self.cmd.nvr
+        self.cmd.copr_build(self.args.project[0], srpm_name, self.args.nowait)
 
     def diff(self):
         self.cmd.diff(self.args.cached, self.args.files)
