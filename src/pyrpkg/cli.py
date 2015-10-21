@@ -522,7 +522,7 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         install_parser.add_argument(
             '--nocheck', action = 'store_true',
             help = 'nocheck install')
-        install_parser.set_defaults(command=self.install)
+        install_parser.set_defaults(command=self.install,
                                     default = False)
 
     def register_lint(self):
