@@ -42,7 +42,7 @@ class CheckRepoCase(CommandTestCase):
         with self.assertRaises(rpkgError) as cm:
             self.cmd.check_repo(is_dirty=True, all_pushed=False)
         exception = cm.exception
-        self.assertTrue("has uncommitted changes" in exception.message)
+        self.assertTrue("has uncommitted changes" in str(exception))
 
     def test_repo_has_unpushed_changes(self):
         with open(os.path.join(self.clonedir, 'sources'), 'w') as fd:
@@ -59,7 +59,8 @@ class CheckRepoCase(CommandTestCase):
         with self.assertRaises(rpkgError) as cm:
             self.cmd.check_repo(is_dirty=False, all_pushed=True)
         exception = cm.exception
-        self.assertTrue("There are unpushed changes in your repo" in exception.message)
+        self.assertTrue("There are unpushed changes in your repo" in
+                        str(exception))
 
     def test_repo_is_clean(self):
         self.cmd.check_repo(is_dirty=True, all_pushed=False)
