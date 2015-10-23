@@ -7,6 +7,11 @@ import git
 from . import CommandTestCase
 
 
+CLONE_CONFIG = '''
+    bz.default-component %(module)s
+    sendemail.to %(module)s-owner@fedoraproject.org
+'''
+
 class CommandCloneTestCase(CommandTestCase):
     def test_clone_anonymous(self):
         self.make_new_git(self.module)
@@ -17,8 +22,7 @@ class CommandCloneTestCase(CommandTestCase):
                               self.anongiturl, self.branchre, self.kojiconfig,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
-
-        cmd.clone_config = self.clone_config
+        cmd.clone_config = CLONE_CONFIG
         cmd.clone(self.module, anon=True)
 
         moduledir = os.path.join(self.path, self.module)
