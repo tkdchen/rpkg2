@@ -24,7 +24,7 @@ class CommandCloneTestCase(CommandTestCase):
         confgit = git.Git(moduledir)
         self.assertEqual(confgit.config('bz.default-component'), self.module)
         self.assertEqual(confgit.config('sendemail.to'),
-                         "{}-owner@fedoraproject.org".format(self.module))
+                         "%s-owner@fedoraproject.org" % self.module)
 
     def test_clone_anonymous_with_path(self):
         self.make_new_git(self.module)
