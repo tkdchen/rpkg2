@@ -16,7 +16,9 @@ class CommandCloneTestCase(CommandTestCase):
                               self.lookaside_cgi, self.gitbaseurl,
                               self.anongiturl, self.branchre, self.kojiconfig,
                               self.build_client, self.user, self.dist,
-                              self.target, self.quiet, self.clone_config)
+                              self.target, self.quiet)
+
+        cmd.clone_config = self.clone_config
         cmd.clone(self.module, anon=True)
 
         moduledir = os.path.join(self.path, self.module)
