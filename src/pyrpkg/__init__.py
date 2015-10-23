@@ -75,7 +75,7 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None,
-                 dist=None, target=None, quiet=False, clone_config=None):
+                 dist=None, target=None, quiet=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -97,8 +97,6 @@ class Commands(object):
         self.kojiconfig = os.path.expanduser(kojiconfig)
         # The buildsys client to use
         self.build_client = build_client
-        # Config to set after cloning
-        self.clone_config = clone_config
         # A way to override the discovered "distribution"
         self.dist = dist
         # Set the default hashtype
@@ -167,6 +165,8 @@ class Commands(object):
         self.debug = False
         # Set an attribute verbose
         self.verbose = False
+        # Config to set after cloning
+        self.clone_config = None
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
@@ -2490,4 +2490,3 @@ class Commands(object):
                           ' %s file', self.osbs_config_filename)
         else:
             self.log.info('Nothing to be done')
-
