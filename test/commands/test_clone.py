@@ -99,3 +99,20 @@ class CommandCloneTestCase(CommandTestCase):
             cmd.clone(self.module, anon=True, branch='rpkg-tests-1',
                       bare_dir='test.git')
         self.assertRaises(pyrpkg.rpkgError, raises)
+
+    def test_clone_into_dir(self):
+        self.make_new_git(self.module,
+                          branches=['rpkg-tests-1', 'rpkg-tests-2'])
+
+        import pyrpkg
+        cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
+                              self.lookaside_cgi, self.gitbaseurl,
+                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.build_client, self.user, self.dist,
+                              self.target, self.quiet)
+        cmd.clone(
+            self.module, anon=True, branch='rpkg-tests-1', target='new_clone')
+
+        with open(os.path.join(
+                self.path, 'new_clone', '.git', 'HEAD')) as HEAD:
+            self.assertEqual(HEAD.read(), 'ref: refs/heads/rpkg-tests-1\n')
