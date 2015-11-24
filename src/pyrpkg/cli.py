@@ -381,6 +381,10 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         # store the module to be cloned
         clone_parser.add_argument(
             'module', nargs=1, help='Name of the module to clone')
+        # Eventually specify where to clone the module
+        clone_parser.add_argument(
+            "clone_target", default=None, nargs="?",
+            help='Directory in which to clone the module')
         clone_parser.set_defaults(command=self.clone)
 
         # Add an alias for historical reasons
@@ -1014,10 +1018,13 @@ see API KEY section of copr-cli(1) man page.
     def clone(self):
         if self.args.branches:
             self.cmd.clone_with_dirs(self.args.module[0],
-                                     anon=self.args.anonymous)
+                                     anon=self.args.anonymous,
+                                     target=self.args.clone_target)
         else:
-            self.cmd.clone(self.args.module[0], branch=self.args.branch,
-                           anon=self.args.anonymous)
+            self.cmd.clone(self.args.module[0],
+                           branch=self.args.branch,
+                           anon=self.args.anonymous,
+                           target=self.args.clone_target)
 
     def commit(self):
         if self.args.clog:
