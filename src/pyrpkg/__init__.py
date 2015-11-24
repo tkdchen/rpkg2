@@ -1232,7 +1232,8 @@ class Commands(object):
         self._run_command(cmd, cwd=self.path)
         return
 
-    def clone(self, module, path=None, branch=None, bare_dir=None, anon=False):
+    def clone(self, module, path=None, branch=None, bare_dir=None,
+              anon=False, target=None):
         """Clone a repo, optionally check out a specific branch.
 
         module is the name of the module to clone
@@ -1245,6 +1246,8 @@ class Commands(object):
         is a bare clone. None otherwise.
 
         anon is whether or not to clone anonymously
+
+        target is the name of the folder in which to clone the repo
 
         Logs the output and returns nothing.
 
@@ -1281,6 +1284,10 @@ class Commands(object):
         if not bare_dir:
             # --bare and --origin are incompatible
             cmd.extend(['--origin', self.default_branch_remote])
+
+        if target:
+            self.log.debug('Cloning into: %s' % target)
+            cmd.append(target)
 
         self._run_command(cmd, cwd=path)
 
