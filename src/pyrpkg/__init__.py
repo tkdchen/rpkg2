@@ -1303,9 +1303,8 @@ class Commands(object):
             else:
                 base_module = module
 
-            conf_git = git.Git(
-                os.path.join(path, bare_dir if bare_dir else base_module)
-            )
+            git_dir = target if target else bare_dir if bare_dir else base_module
+            conf_git = git.Git(os.path.join(path, git_dir))
             self._clone_config(conf_git, module)
 
         return
