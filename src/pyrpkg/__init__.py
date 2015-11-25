@@ -1276,7 +1276,9 @@ class Commands(object):
             cmd.extend(['-b', branch, giturl])
         elif bare_dir:
             self.log.debug('Cloning %s bare' % giturl)
-            cmd.extend(['--bare', giturl, bare_dir])
+            cmd.extend(['--bare', giturl])
+            if not target:
+                cmd.append(bare_dir)
         else:
             self.log.debug('Cloning %s' % giturl)
             cmd.extend([giturl])
