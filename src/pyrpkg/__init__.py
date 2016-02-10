@@ -1485,10 +1485,12 @@ class Commands(object):
         with fnmatch).
 
         """
+        if tagname is None:
+            tagname = '*'
 
         tags = map(lambda t: t.name, self.repo.tags)
 
-        if tagname is not '*':
+        if tagname != '*':
             tags = filter(lambda t: fnmatch.fnmatch(t, tagname), tags)
 
         for tag in tags:
