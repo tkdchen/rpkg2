@@ -46,7 +46,7 @@ class CommandPatchTestCase(CommandTestCase):
                               self.anongiturl, self.branchre, self.kojiconfig,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
-        text = self.text_utf8.decode(encoding='UTF-8', errors='ignore')
+        text = self.text_utf8.decode('UTF-8', 'ignore')
         line, offset = cmd._byte_offset_to_line_number(text, 9)
         #9 byte offset mean line 3 and second character
         self.assertEqual(line, 3)

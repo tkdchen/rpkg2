@@ -2327,14 +2327,16 @@ class Commands(object):
         # Create a list for unused patches
         unused = []
         # Get the content of spec into memory for fast searching
+        with open(self.spec, 'r') as f:
+            data = f.read()
         try:
-            spec = open(self.spec, 'r').read().decode('UTF-8')
+            spec = data.decode('UTF-8')
         except UnicodeDecodeError as error:
             # when can't decode file, ignore chars and show warning
-            spec = open(self.spec, 'r').read().decode(encoding='UTF-8', errors='ignore')
+            spec = data.decode('UTF-8', 'ignore')
             line, offset = self._byte_offset_to_line_number(spec, error.start)
-            self.log.warning("\'%s\' codec can't decode byte in position %d:%d : %s"
-                                % (error.encoding, line, offset, error.reason))
+            self.log.warning("'%s' codec can't decode byte in position %d:%d : %s"
+                             % (error.encoding, line, offset, error.reason))
         # Replace %{name} with the package name
         spec = spec.replace("%{name}", self.module_name)
         # Replace %{version} with the package version
