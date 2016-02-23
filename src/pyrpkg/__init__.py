@@ -2225,9 +2225,6 @@ class Commands(object):
         Can optionally replace the existing tracked sources
         """
 
-        oldpath = os.getcwd()
-        os.chdir(self.path)
-
         sourcesf = SourcesFile(self.sources_filename, self.source_entry_type,
                                replace=replace)
         gitignore = GitIgnore(os.path.join(self.path, '.gitignore'))
@@ -2261,9 +2258,6 @@ class Commands(object):
         gitignore.write()
 
         self.repo.index.add(['sources', '.gitignore'])
-
-        # Change back to original working dir:
-        os.chdir(oldpath)
 
     def prep(self, arch=None, builddir=None):
         """Run rpm -bp on a module
