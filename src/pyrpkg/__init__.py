@@ -641,7 +641,8 @@ class Commands(object):
             osver = re.search(r'rhel-\d.*$', self.branch_merge).group()
         except AttributeError:
             raise rpkgError('Could not find the base OS ver from branch name'
-                            ' %s' % self.branch_merge)
+                            ' %s. Consider using --dist option' %
+                            self.branch_merge)
         self._distvar, self._distval = osver.split('-')
         self._distval = self._distval.replace('.', '_')
         self._disttag = 'el%s' % self._distval
