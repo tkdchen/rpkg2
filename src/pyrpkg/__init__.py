@@ -2395,6 +2395,7 @@ class Commands(object):
 
     def osbs_build(self, config_file, config_section, target_override=False,
                    yum_repourls=[], nowait=False):
+        self.check_repo()
         os_conf = Configuration(conf_file=config_file, conf_section=config_section)
         build_conf = Configuration(conf_file=config_file, conf_section=config_section)
         osbs = OSBS(os_conf, build_conf)
@@ -2446,7 +2447,8 @@ class Commands(object):
                                    kojiconfig=None, build_client=None,
                                    koji_task_watcher=None,
                                    nowait=False):
-
+        # check if repo is dirty and all commits are pushed
+        self.check_repo()
         docker_target = self.target
         if not target_override:
             # Translate the build target into a docker target,
@@ -2459,9 +2461,6 @@ class Commands(object):
             self.load_kojisession()
             if "buildContainer" not in self.kojisession.system.listMethods():
                 raise RuntimeError("Kojihub instance does not support buildContainer")
-
-            # check if repo is dirty and all commits are pushed
-            self.check_repo()
 
             build_target = self.kojisession.getBuildTarget(docker_target)
             if not build_target:
