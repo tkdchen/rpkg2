@@ -75,7 +75,7 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None,
-                 dist=None, target=None, quiet=False):
+                 dist=None, target=None, quiet=False, distgit_namespaced=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -167,6 +167,9 @@ class Commands(object):
         self.verbose = False
         # Config to set after cloning
         self.clone_config = None
+        # Git namespacing for more than just rpm build artifacts
+        self.distgit_namespaced = distgit_namespaced
+
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
@@ -522,7 +525,12 @@ class Commands(object):
         try:
             if self.push_url:
                 parts = urlparse.urlparse(self.push_url)
-                module_name = posixpath.basename(parts.path)
+
+                if self.distgit_namespaced:
+                    module_name = "/".join(parts.path.split("/")[-2:])
+                else:
+                    module_name = posixpath.basename(parts.path)
+
                 if module_name.endswith('.git'):
                     module_name = module_name[:-len('.git')]
                 self._module_name = module_name
@@ -1081,6 +1089,49 @@ class Commands(object):
 
         return((name, files, uploadfiles))
 
+    def _get_namespace_giturl(self, module):
+        """Get the namespaced git url, if DistGit namespaces enabled
+
+        Takes a module name
+
+        Returns a string of giturl
+
+        """
+
+        if self.distgit_namespaced:
+            if '/' in module:
+                giturl = self.gitbaseurl % \
+                    {'user': self.user, 'module': module}
+            else:
+                # Default to rpms namespace for backwards compat
+                giturl = self.gitbaseurl % \
+                    {'user': self.user, 'module': "rpms/%s" % module}
+        else:
+            giturl = self.gitbaseurl % \
+                {'user': self.user, 'module': module}
+
+        return giturl
+
+    def _get_namespace_anongiturl(self, module):
+        """Get the namespaced git url, if DistGit namespaces enabled
+
+        Takes a module name
+
+        Returns a string of giturl
+
+        """
+
+        if self.distgit_namespaced:
+            if '/' in module:
+                giturl = self.anongiturl % {'module': module}
+            else:
+                # Default to rpms namespace for backwards compat
+                giturl = self.anongiturl % {'module': "rpms/%s" % module}
+        else:
+            giturl = self.anongiturl % {'module': module}
+
+        return giturl
+
     def add_tag(self, tagname, force=False, message=None, file=None):
         """Add a git tag to the repository
 
@@ -1155,9 +1206,9 @@ class Commands(object):
             self._branch_remote = None
         # construct the git url
         if anon:
-            giturl = self.anongiturl % {'module': module}
+            giturl = self._get_namespace_anongiturl(module)
         else:
-            giturl = self.gitbaseurl % {'user': self.user, 'module': module}
+            giturl = self._get_namespace_giturl(module)
 
         # Create the command
         cmd = ['git', 'clone']
@@ -1184,8 +1235,18 @@ class Commands(object):
         self._run_command(cmd, cwd=path)
 
         if self.clone_config:
+            # Handle namespaced modules
+            # Example:
+            #   module: docker/cockpit
+            #       The path will just be os.path.join(path, "cockpit")
+            if "/" in module:
+                base_module = module.split("/")[-1]
+            else:
+                base_module = module
+
             conf_git = git.Git(
-                os.path.join(path, bare_dir if bare_dir else module))
+                os.path.join(path, bare_dir if bare_dir else base_module)
+            )
             self._clone_config(conf_git, module)
 
         return
@@ -1208,9 +1269,9 @@ class Commands(object):
 
         # construct the git url
         if anon:
-            giturl = self.anongiturl % {'module': module}
+            giturl = self._get_namespace_anongiturl(module)
         else:
-            giturl = self.gitbaseurl % {'user': self.user, 'module': module}
+            giturl = self._get_namespace_giturl(module)
 
         # Create our new top directory
         try:
@@ -1347,7 +1408,7 @@ class Commands(object):
         """Discover the latest commit has for a given module and return it"""
 
         # This is stupid that I have to use subprocess :/
-        url = self.anongiturl % {'module': module}
+        url = self._get_namespace_anongiturl(module)
         # This cmd below only works to scratch build rawhide
         # We need something better for epel
         cmd = ['git', 'ls-remote', url, 'refs/heads/%s' % branch]
@@ -1386,7 +1447,7 @@ class Commands(object):
             # snag everything after the last # mark
             cvstag = buildsource.rsplit('#')[-1]
             # Now read the remote repo to figure out the hash from the tag
-            giturl = self.anongiturl % {'module': bdata['name']}
+            giturl = self._get_namespace_anongiturl(bdata['name'])
             cmd = ['git', 'ls-remote', '--tags', giturl, cvstag]
             self.log.debug('Querying git server for tag info')
             try:
@@ -1735,7 +1796,7 @@ class Commands(object):
             # Check to see if the tree is dirty and if all local commits
             # are pushed
             self.check_repo()
-            url = self.anongiturl % {'module': self.module_name} + \
+            url = self._get_namespace_anongiturl(self.module_name) + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
         build_target = self.kojisession.getBuildTarget(self.target)
@@ -1931,7 +1992,7 @@ class Commands(object):
     def giturl(self):
         """Return the git url that would be used for building"""
 
-        url = self.anongiturl % {'module': self.module_name} + \
+        url = self._get_namespace_giturl(self.module_name) + \
             '?#%s' % self.commithash
         return url
 
@@ -2475,7 +2536,8 @@ class Commands(object):
                 if dest_tag['locked'] and 'scratch' not in opts:
                     self.log.error("Destination tag %s is locked" % dest_tag['name'])
 
-            source = self.anongiturl % {"module":self.module_name}
+            print self.module_name
+            source = self._get_namespace_anongiturl(self.module_name)
             source += "#%s" % self.commithash
 
             task_opts = {}
