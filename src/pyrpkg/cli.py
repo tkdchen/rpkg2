@@ -95,11 +95,7 @@ class cliClient(object):
         # load items from the config file
         items = dict(self.config.items(self.name, raw=True))
 
-        if items.has_key("distgit_namespaced"):
-            dg_namespaced = items["distgit_namespaced"]
-        else:
-            dg_namespaced = False
-
+        dg_namespaced = items.get("distgit_namespaced", False)
 
         # Create the cmd object
         self._cmd = self.site.Commands(self.args.path,

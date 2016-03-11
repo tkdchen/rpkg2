@@ -1992,7 +1992,7 @@ class Commands(object):
     def giturl(self):
         """Return the git url that would be used for building"""
 
-        url = self._get_namespace_giturl(self.module_name) + \
+        url = self._get_namespace_anongiturl(self.module_name) + \
             '?#%s' % self.commithash
         return url
 
@@ -2536,7 +2536,6 @@ class Commands(object):
                 if dest_tag['locked'] and 'scratch' not in opts:
                     self.log.error("Destination tag %s is locked" % dest_tag['name'])
 
-            print self.module_name
             source = self._get_namespace_anongiturl(self.module_name)
             source += "#%s" % self.commithash
 
