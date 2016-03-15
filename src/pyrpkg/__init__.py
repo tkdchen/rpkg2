@@ -128,6 +128,8 @@ class Commands(object):
         self._mockconfig = None
         # The name of the cloned module
         self._module_name = None
+        # The distgit namespaced name of the cloned module
+        self._ns_module_name = None
         # The name of the module from spec file
         self._module_name_spec = None
         # The rpm name-version-release of the cloned module
@@ -170,7 +172,6 @@ class Commands(object):
         # Git namespacing for more than just rpm build artifacts
         self.distgit_namespaced = distgit_namespaced
 
-
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
     # that we can do clone actions without knowing things like the spec
@@ -203,6 +204,7 @@ class Commands(object):
             self._push_url = None
             self._branch_remote = None
             self._repo = None
+            self._ns_module_name = None
         self._path = value
 
     @property
@@ -526,10 +528,10 @@ class Commands(object):
             if self.push_url:
                 parts = urlparse.urlparse(self.push_url)
 
-                if self.distgit_namespaced:
-                    module_name = "/".join(parts.path.split("/")[-2:])
-                else:
-                    module_name = posixpath.basename(parts.path)
+                # FIXME
+                # if self.distgit_namespaced:
+                #     self._module_name = "/".join(parts.path.split("/")[-2:])
+                module_name = posixpath.basename(parts.path)
 
                 if module_name.endswith('.git'):
                     module_name = module_name[:-len('.git')]
@@ -545,6 +547,37 @@ class Commands(object):
 
         raise rpkgError('Could not find current module name.'
                         ' Use --module-name.')
+
+    @property
+    def ns_module_name(self):
+        """This property ensures the module attribute"""
+
+        if not self._ns_module_name:
+            self.load_ns_module_name()
+        return self._ns_module_name
+
+    @ns_module_name.setter
+    def ns_module_name(self, ns_module_name):
+        self._ns_module_name = ns_module_name
+
+    def load_ns_module_name(self):
+        """Loads a package module."""
+
+        try:
+            if self.push_url:
+                parts = urlparse.urlparse(self.push_url)
+
+                if self.distgit_namespaced:
+                    ns_module_name = "/".join(parts.path.split("/")[-2:])
+                else:
+                    ns_module_name = posixpath.basename(parts.path)
+
+                if ns_module_name.endswith('.git'):
+                    ns_module_name = ns_module_name[:-len('.git')]
+                self._ns_module_name = ns_module_name
+                return
+        except rpkgError:
+            self.log.info('Failed to get ns_module_name from Git url or pushurl')
 
     @property
     def nvr(self):
@@ -1796,7 +1829,7 @@ class Commands(object):
             # Check to see if the tree is dirty and if all local commits
             # are pushed
             self.check_repo()
-            url = self._get_namespace_anongiturl(self.module_name) + \
+            url = self._get_namespace_anongiturl(self.ns_module_name) + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
         build_target = self.kojisession.getBuildTarget(self.target)
@@ -1992,7 +2025,7 @@ class Commands(object):
     def giturl(self):
         """Return the git url that would be used for building"""
 
-        url = self._get_namespace_anongiturl(self.module_name) + \
+        url = self._get_namespace_anongiturl(self.ns_module_name) + \
             '?#%s' % self.commithash
         return url
 
@@ -2358,6 +2391,7 @@ class Commands(object):
         self.srpmname = os.path.join(self.path,
                                      "%s-%s-%s.src.rpm"
                                      % (self.module_name, self.ver, self.rel))
+
         # See if we need to build the srpm
         if os.path.exists(self.srpmname):
             self.log.debug('Srpm found, rewriting it.')
@@ -2530,7 +2564,7 @@ class Commands(object):
                 if dest_tag['locked'] and 'scratch' not in opts:
                     self.log.error("Destination tag %s is locked" % dest_tag['name'])
 
-            source = self._get_namespace_anongiturl(self.module_name)
+            source = self._get_namespace_anongiturl(self.ns_module_name)
             source += "#%s" % self.commithash
 
             task_opts = {}
