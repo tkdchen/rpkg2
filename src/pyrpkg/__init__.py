@@ -568,7 +568,10 @@ class Commands(object):
                 parts = urlparse.urlparse(self.push_url)
 
                 if self.distgit_namespaced:
-                    ns_module_name = "/".join(parts.path.split("/")[-2:])
+                    path_parts = [p for p in parts.path.split("/") if p]
+                    if len(path_parts) == 1:
+                        path_parts.insert(0, "rpms")
+                    ns_module_name = "/".join(path_parts[-2:])
                 else:
                     ns_module_name = posixpath.basename(parts.path)
 
