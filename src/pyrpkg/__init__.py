@@ -560,6 +560,13 @@ class Commands(object):
     def ns_module_name(self, ns_module_name):
         self._ns_module_name = ns_module_name
 
+    def _print_old_checkout_warning(self, module):
+        self.log.warning('Your git configuration does not use a namespace.')
+        self.log.warning('Consider updating your git configuration by running:')
+        self.log.warning('  git remote set-url %s %s'
+                         % (self.branch_remote,
+                            self._get_namespace_giturl(module)))
+
     def load_ns_module_name(self):
         """Loads a package module."""
 
@@ -570,6 +577,7 @@ class Commands(object):
                 if self.distgit_namespaced:
                     path_parts = [p for p in parts.path.split("/") if p]
                     if len(path_parts) == 1:
+                        self._print_old_checkout_warning(path_parts[0])
                         path_parts.insert(0, "rpms")
                     ns_module_name = "/".join(path_parts[-2:])
                 else:
