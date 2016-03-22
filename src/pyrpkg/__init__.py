@@ -29,6 +29,7 @@ import tempfile
 import fnmatch
 import urlparse
 import posixpath
+import git
 # Try to import krb, it's OK if it fails
 try:
     import krbV
@@ -1705,7 +1706,7 @@ class Commands(object):
         self._run_command(cmd, cwd=self.path)
         return
 
-    def push(self):
+    def push(self, force=False):
         """Push changes to the remote repository"""
 
         # see if our branch is tracking anything
@@ -1713,6 +1714,24 @@ class Commands(object):
             self.load_branch_merge()
         except:
             self.log.warn('Current branch cannot be pushed anywhere!')
+        # check missing patches
+        ts = rpm.TransactionSet()
+        specfile = ts.parseSpec(self.spec)
+        missing_patches = []
+        for source in specfile.sources:
+            if source[0].endswith('.patch'):
+                patch = source[0]
+                hdc = self.repo.head.commit.tree
+                try:
+                    # check if patch is in the repository
+                    hdc[patch]
+                except KeyError:
+                    missing_patches.append(patch)
+        if missing_patches:
+            if not force:
+                raise rpkgError("%s contains untracked patches.\n%s\nConsider "
+                                "to add them to repository or use --force "
+                                "option" % (self.spec, missing_patches))
         cmd = ['git', 'push']
         if self.quiet:
             cmd.append('-q')
