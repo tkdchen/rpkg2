@@ -20,5 +20,5 @@ class CommandPackageNameTestCase(CommandTestCase):
 
         # pycurl can't handle unicode variable
         # module_name needs to be string
-        self.assertNotEquals(type(cmd.module_name), unicode)
-        self.assertEquals(type(cmd.module_name), str)
+        self.assertNotEqual(type(cmd.module_name), unicode)
+        self.assertEqual(type(cmd.module_name), str)

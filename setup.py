@@ -17,6 +17,7 @@ setup(
     scripts=['src/rpkg'],
     data_files=[('/etc/bash_completion.d', ['src/rpkg.bash']),
                 ('/etc/rpkg', ['src/rpkg.conf'])],
+    install_requires=['six'],
     test_suite='nose.collector',
     classifiers=(
         'Development Status :: 5 - Production/Stable',

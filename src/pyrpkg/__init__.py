@@ -24,12 +24,13 @@ import koji
 import rpm
 import logging
 import git
-import ConfigParser
 import tempfile
 import fnmatch
-import urlparse
 import posixpath
 import git
+import six
+from six.moves import configparser
+from six.moves import urllib
 # Try to import krb, it's OK if it fails
 try:
     import krbV
@@ -246,7 +247,7 @@ class Commands(object):
             }
 
         # Process the configs in order, global, user, then any option passed
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         confs = [self.kojiconfig,
                  os.path.expanduser('~/.koji/config')]
         config.read(confs)
@@ -427,7 +428,7 @@ class Commands(object):
         """Discover the latest commit to the package"""
 
         # Get the commit hash
-        comobj = self.repo.iter_commits().next()
+        comobj = six.next(self.repo.iter_commits())
         # Work around different versions of GitPython
         if hasattr(comobj, 'sha'):
             self._commit = comobj.sha
@@ -531,7 +532,7 @@ class Commands(object):
 
         try:
             if self.push_url:
-                parts = urlparse.urlparse(self.push_url)
+                parts = urllib.parse.urlparse(self.push_url)
 
                 # FIXME
                 # if self.distgit_namespaced:
@@ -577,7 +578,7 @@ class Commands(object):
 
         try:
             if self.push_url:
-                parts = urlparse.urlparse(self.push_url)
+                parts = urllib.parse.urlparse(self.push_url)
 
                 if self.distgit_namespaced:
                     path_parts = [p for p in parts.path.split("/") if p]

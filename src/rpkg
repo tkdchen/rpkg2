@@ -15,7 +15,7 @@ import pyrpkg.cli
 import os
 import sys
 import logging
-import ConfigParser
+from six.moves import configparser
 import argparse
 
 # Setup an argparser and parse the known commands to get the config file
@@ -31,7 +31,7 @@ if not os.path.exists(args.config) and not other[-1] in ['--help', '-h']:
     sys.exit(1)
 
 # Setup a configuration object and read config file data
-config = ConfigParser.SafeConfigParser()
+config = configparser.SafeConfigParser()
 config.read(args.config)
 
 client = pyrpkg.cli.cliClient(config)

@@ -19,7 +19,7 @@ import logging
 import time
 import random
 import string
-import xmlrpclib
+from six.moves import xmlrpc_client
 import pwd
 import koji
 
@@ -1360,7 +1360,7 @@ see API KEY section of copr-cli(1) man page.
                             all_done = False
                 if all_done:
                     if not self.args.q:
-                        print
+                        print("")
                         self._display_task_results(tasks)
                     break
 
@@ -1501,7 +1501,7 @@ class TaskWatcher(object):
         error = None
         try:
             result = self.session.getTaskResult(self.id)
-        except (xmlrpclib.Fault, koji.GenericError) as e:
+        except (xmlrpc_client.Fault, koji.GenericError) as e:
             error = e
         if error is None:
             # print "%s: complete" % self.str()
