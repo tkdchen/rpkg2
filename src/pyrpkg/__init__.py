@@ -538,7 +538,7 @@ class Commands(object):
                 self._module_name = module_name
                 return
         except rpkgError:
-            self.log.info('Failed to get module name from Git url or pushurl')
+            self.log.warning('Failed to get module name from Git url or pushurl')
 
         self.load_nameverrel()
         if self._module_name_spec:
@@ -588,7 +588,7 @@ class Commands(object):
                 self._ns_module_name = ns_module_name
                 return
         except rpkgError:
-            self.log.info('Failed to get ns_module_name from Git url or pushurl')
+            self.log.warning('Failed to get ns_module_name from Git url or pushurl')
 
     @property
     def nvr(self):
