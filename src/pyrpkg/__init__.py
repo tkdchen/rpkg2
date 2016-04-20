@@ -2008,7 +2008,7 @@ class Commands(object):
         clogfile.writelines(cloglines)
 
     def compile(self, arch=None, short=False, builddir=None, nocheck=False):
-        """Run rpm -bc on a module
+        """Run rpmbuild -bc on a module
 
         optionally for a specific arch, or short-circuit it, or
         define an alternate builddir
