@@ -623,7 +623,7 @@ class Commands(object):
         # we can split it later.  When there are subpackages, we get a
         # listing for each subpackage.  We only care about the first.
         cmd.extend(['-q', '--qf', '"%{NAME} %{EPOCH} %{VERSION} %{RELEASE}??"',
-                    '--specfile', os.path.join(self.path, self.spec)])
+                    '--specfile', '"%s"' % os.path.join(self.path, self.spec)])
         joined_cmd = ' '.join(cmd)
         try:
             proc = subprocess.Popen(joined_cmd, shell=True,
@@ -686,7 +686,7 @@ class Commands(object):
         return(self._rpmdefines)
 
     def load_rpmdefines(self):
-        """Populate rpmdefines based on branch data"""
+        """Populate rpmdefines based on current active branch"""
 
         # This is another function ripe for subclassing
 
