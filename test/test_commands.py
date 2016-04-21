@@ -209,13 +209,24 @@ class LoadNameVerRelTest(GitMixin, unittest.TestCase):
         This test aims to test the space appearing in path does not break rpm
         command execution.
 
-        For this test purpose, firstly, docpkg-dev-repo has to be cloned to a
+        For this test purpose, firstly, original repo has to be cloned to a
         new place which has a name containing arbitrary spaces.
         """
         cloned_repo_dir = '/tmp/rpkg test cloned repo'
         if os.path.exists(cloned_repo_dir):
             shutil.rmtree(cloned_repo_dir)
-        self.cmd.repo.clone(cloned_repo_dir)
+        cloned_repo = self.cmd.repo.clone(cloned_repo_dir)
+
+        # Switching to branch eng-rhel-6 explicitly is required by running this
+        # on RHEL6/7 because an old version of git is available in the
+        # repo.
+        # The failure reason is, old version of git makes the master as the
+        # active branch in cloned repository, whatever the current active
+        # branch is in the remote repository.
+        # As of fixing this, I ran test on Fedora 23 with git 2.5.5, and test
+        # fails on RHEL7 with git 1.8.3.1
+        cloned_repo.git.checkout('eng-rhel-6')
+
         cmd = make_commands(path=cloned_repo_dir)
 
         cmd.load_nameverrel()
