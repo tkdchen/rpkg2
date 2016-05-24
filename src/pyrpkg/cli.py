@@ -1510,8 +1510,9 @@ class TaskWatcher(object):
             # Already done, nothing else to report
             return False
         last = self.info
-        self.info = self.session.getTaskInfo(self.id, request=True)
-        if self.info is None:
+        try:
+            self.info = self.session.getTaskInfo(self.id, request=True)
+        except koji.GenericError:
             raise Exception("No such task id: %i" % self.id)
         state = self.info['state']
         if last:
