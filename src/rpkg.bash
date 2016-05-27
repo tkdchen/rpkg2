@@ -29,12 +29,12 @@ _rpkg()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
     fi
-    
+
     # global options
 
     local options="--help -v -q"
     local options_value="--dist --user --path"
-    local commands="build chain-build ci clean clog clone co container-build-config commit compile copr-build diff gimmespec giturl help \
+    local commands="build chain-build ci clean clog clone co container-build container-build-config commit compile copr-build diff gimmespec giturl help \
     gitbuildhash import install lint local mockbuild mock-config new new-sources patch prep pull push scratch-build sources \
     srpm switch-branch tag unused-patches upload verify-files verrel"
 
@@ -119,6 +119,11 @@ _rpkg()
             options="--branches --anonymous"
             options_branch="-b"
             after="package"
+            ;;
+        container-build)
+            options="--scratch --nowait"
+            options_target="--target"
+            options_string="--release --repo-url"
             ;;
         container-build-config)
             options="--get-autorebuild"
