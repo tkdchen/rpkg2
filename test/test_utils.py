@@ -8,7 +8,7 @@ import mock
 old_path = list(sys.path)
 src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../src')
 sys.path.insert(0, src_path)
-from pyrpkg.utils import cached_property, warn_deprecated
+from pyrpkg.utils import cached_property, warn_deprecated, log_result
 sys.path = old_path
 
 
@@ -157,3 +157,50 @@ class DeprecationUtilsTestCase(unittest.TestCase):
         warnings.simplefilter('error', DeprecationWarning)
         self.assertRaises(DeprecationWarning, foo.old_method)
         self.assertEqual(len(written_lines), 1)
+
+
+class LogResultTestCase(unittest.TestCase):
+    def setUp(self):
+        self.logs = []
+        def info(msg):
+            self.logs.append(msg)
+        self.log_func = info
+
+    def test_dict_result(self):
+        obj = {'spam': 'maps'}
+        expected = [
+            'spam:',
+            '  maps',
+        ]
+        log_result(self.log_func, obj)
+        self.assertEqual(self.logs, expected)
+
+    def test_list_result(self):
+        obj = ['eggs', 'bacon', 'hash']
+        expected = [
+            'eggs',
+            'bacon',
+            'hash',
+        ]
+        log_result(self.log_func, obj)
+        self.assertEqual(self.logs, expected)
+
+    def test_str_result(self):
+        obj = 'spam'
+        expected = [
+            'spam',
+        ]
+        log_result(self.log_func, obj)
+        self.assertEqual(self.logs, expected)
+
+    def test_complex_result(self):
+        obj = {'breakfast': ['eggs', 'bacon', {'spam': 'maps'}]}
+        expected = [
+            'breakfast:',
+            '  eggs',
+            '  bacon',
+            '  spam:',
+            '    maps',
+        ]
+        log_result(self.log_func, obj)
+        self.assertEqual(self.logs, expected)

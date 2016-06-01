@@ -40,7 +40,7 @@ from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError, \
 from .gitignore import GitIgnore
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
-from pyrpkg.utils import cached_property, warn_deprecated
+from pyrpkg.utils import cached_property, warn_deprecated, log_result
 
 from osbs.api import OSBS
 from osbs.conf import Configuration
@@ -2596,7 +2596,16 @@ class Commands(object):
             self.log.info('Task info: %s/taskinfo?taskID=%s' % (self.kojiweburl,
                                                                 task_id))
             if not nowait:
-                koji_task_watcher(self.kojisession, [task_id])
+                rv = koji_task_watcher(self.kojisession, [task_id])
+                if rv == 0:
+                    result = self.kojisession.getTaskResult(task_id)
+                    try:
+                        result["koji_builds"] = ["%s/buildinfo?buildID=%s" % (self.kojiweburl, build_id)
+                                                 for build_id in result.get("koji_builds", [])]
+                    except TypeError:
+                        pass
+                    log_result(self.log.info, result)
+
         finally:
             (self.build_client, self.kojiconfig) = koji_session_backup
             self.load_kojisession()

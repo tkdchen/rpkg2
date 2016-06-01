@@ -61,3 +61,20 @@ def warn_deprecated(clsname, oldname, newname):
         "%s.%s is deprecated and will be removed eventually.\n    Please "
         "use %s.%s instead." % (clsname, oldname, clsname, newname),
         DeprecationWarning, stacklevel=3)
+
+
+def _log_value(log_func, value, level, indent, suffix=''):
+    offset = ' ' * level * indent
+    log_func(''.join([offset, str(value), suffix]))
+
+
+def log_result(log_func, result, level=0, indent=2):
+    if isinstance(result, list):
+        for item in result:
+            log_result(log_func, item, level)
+    elif isinstance(result, dict):
+        for key, value in result.items():
+            _log_value(log_func, key, level, indent, ':')
+            log_result(log_func, value, level+1)
+    else:
+        _log_value(log_func, result, level, indent)
