@@ -1718,7 +1718,7 @@ class Commands(object):
         try:
             self.load_branch_merge()
         except:
-            self.log.warn('Current branch cannot be pushed anywhere!')
+            self.log.warning('Current branch cannot be pushed anywhere!')
         # check missing patches
         ts = rpm.TransactionSet()
         specfile = ts.parseSpec(self.spec)
@@ -2127,7 +2127,7 @@ class Commands(object):
         # Check for srpm
         srpm = "%s-%s-%s.src.rpm" % (self.module_name, self.ver, self.rel)
         if not os.path.exists(os.path.join(self.path, srpm)):
-            log.warn('No srpm found')
+            log.warning('No srpm found')
 
         # Get the possible built arches
         arches = self._get_build_arches_from_spec()
@@ -2141,7 +2141,7 @@ class Commands(object):
                                                     arch))
                              if file.endswith('.rpm')])
         if not rpms:
-            log.warn('No rpm found')
+            log.warning('No rpm found')
         cmd = ['rpmlint']
         if info:
             cmd.extend(['-i'])

@@ -395,7 +395,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
 
         warn_messages = []
         log = mock_logger.return_value
-        log.warn.side_effect = mock_warn
+        log.warning.side_effect = mock_warn
 
         client_cert = os.path.join(self.workdir, 'my-client-cert.cert')
         ca_cert = os.path.join(self.workdir, 'my-custom-cacert.cert')
@@ -545,7 +545,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
 
         warn_messages = []
         log = mock_logger.return_value
-        log.warn.side_effect = mock_warn
+        log.warning.side_effect = mock_warn
 
         client_cert = os.path.join(self.workdir, 'my-client-cert.cert')
         ca_cert = os.path.join(self.workdir, 'my-custom-cacert.cert')

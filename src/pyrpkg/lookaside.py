@@ -200,14 +200,14 @@ class CGILookasideCache(object):
                 if os.path.exists(self.client_cert):
                     c.setopt(pycurl.SSLCERT, self.client_cert)
                 else:
-                    self.log.warn("Missing certificate: %s"
-                                  % self.client_cert)
+                    self.log.warning("Missing certificate: %s"
+                                     % self.client_cert)
 
             if self.ca_cert is not None:
                 if os.path.exists(self.ca_cert):
                     c.setopt(pycurl.CAINFO, self.ca_cert)
                 else:
-                    self.log.warn("Missing certificate: %s" % self.ca_cert)
+                    self.log.warning("Missing certificate: %s" % self.ca_cert)
 
             try:
                 c.perform()
@@ -268,13 +268,14 @@ class CGILookasideCache(object):
                 if os.path.exists(self.client_cert):
                     c.setopt(pycurl.SSLCERT, self.client_cert)
                 else:
-                    self.log.warn("Missing certificate: %s" % self.client_cert)
+                    self.log.warning("Missing certificate: %s"
+                                     % self.client_cert)
 
             if self.ca_cert is not None:
                 if os.path.exists(self.ca_cert):
                     c.setopt(pycurl.CAINFO, self.ca_cert)
                 else:
-                    self.log.warn("Missing certificate: %s" % self.ca_cert)
+                    self.log.warning("Missing certificate: %s" % self.ca_cert)
 
             try:
                 c.perform()
