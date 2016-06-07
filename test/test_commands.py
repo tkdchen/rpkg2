@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 import unittest
+import subprocess
 
 import git
 from mock import patch
@@ -64,30 +65,45 @@ mkdir $RPM_BUILD_ROOT
 '''
 
 
+def run(cmd, **kwargs):
+    returncode = subprocess.call(cmd, **kwargs)
+    if returncode != 0:
+        raise RuntimeError('Command fails. Command: %s. Return code %d' % (
+            ' '.join(cmd), returncode))
+
+
 def setup_module():
     # create a base repo
     global repo_path
     repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-')
-    repo = git.Repo.init(repo_path)
+
     # Add spec file to this repo and commit
     spec_file_path = os.path.join(repo_path, 'package.spec')
     with open(spec_file_path, 'w') as f:
         f.write(spec_file)
-    index = repo.index
-    index.add([spec_file_path])
-    index.commit('initial commit')
 
-    repo.git.branch('eng-rhel-6')
-    repo.git.branch('eng-rhel-6.5')
-    repo.git.branch('eng-rhel-7')
+    git_cmds = [
+        ['git', 'init'],
+        ['git', 'add', spec_file_path],
+        ['git', 'commit', '-m', 'initial commit'],
+        ['git', 'branch', 'eng-rhel-6'],
+        ['git', 'branch', 'eng-rhel-6.5'],
+        ['git', 'branch', 'eng-rhel-7'],
+        ]
+    for cmd in git_cmds:
+        run(cmd, cwd=repo_path)
 
     # Clone the repo
     global cloned_repo_path
     cloned_repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-cloned-')
-    repo = repo.clone(cloned_repo_path)
-    repo.git.branch('--track', 'eng-rhel-6', 'origin/eng-rhel-6')
-    repo.git.branch('--track', 'eng-rhel-6.5', 'origin/eng-rhel-6.5')
-    repo.git.branch('--track', 'eng-rhel-7', 'origin/eng-rhel-7')
+    git_cmds = [
+        ['git', 'clone', repo_path, cloned_repo_path],
+        ['git', 'branch', '--track', 'eng-rhel-6', 'origin/eng-rhel-6'],
+        ['git', 'branch', '--track', 'eng-rhel-6.5', 'origin/eng-rhel-6.5'],
+        ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],
+        ]
+    for cmd in git_cmds:
+        run(cmd, cwd=cloned_repo_path)
 
 
 def teardown_module():
