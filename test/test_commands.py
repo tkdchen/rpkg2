@@ -214,10 +214,10 @@ class LoadNameVerRelTest(GitMixin, unittest.TestCase):
     def test_load_from_spec(self):
         """Ensure name, version, release can be loaded from a valid SPEC"""
         self.cmd.load_nameverrel()
-        self.assertEquals('docpkg', self.cmd._module_name_spec)
-        self.assertEquals('0', self.cmd._epoch)
-        self.assertEquals('1.2', self.cmd._ver)
-        self.assertEquals('2', self.cmd._rel)
+        self.assertEqual('docpkg', self.cmd._module_name_spec)
+        self.assertEqual('0', self.cmd._epoch)
+        self.assertEqual('1.2', self.cmd._ver)
+        self.assertEqual('2', self.cmd._rel)
 
     def test_load_spec_where_path_contains_space(self):
         """Ensure load_nameverrel works with a repo whose path contains space
@@ -246,10 +246,10 @@ class LoadNameVerRelTest(GitMixin, unittest.TestCase):
         cmd = make_commands(path=cloned_repo_dir)
 
         cmd.load_nameverrel()
-        self.assertEquals('docpkg', cmd._module_name_spec)
-        self.assertEquals('0', cmd._epoch)
-        self.assertEquals('1.2', cmd._ver)
-        self.assertEquals('2', cmd._rel)
+        self.assertEqual('docpkg', cmd._module_name_spec)
+        self.assertEqual('0', cmd._epoch)
+        self.assertEqual('1.2', cmd._ver)
+        self.assertEqual('2', cmd._rel)
 
     @patch('pyrpkg.Commands.load_rpmdefines', new=mock_load_rpmdefines)
     @patch('pyrpkg.Commands.load_spec',
@@ -280,7 +280,7 @@ class LoadBranchMergeTest(GitMixin, unittest.TestCase):
     def test_load_branch_merge_from_eng_rhel_6(self):
         self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
         self.cmd.load_branch_merge()
-        self.assertEquals(self.cmd._branch_merge, 'eng-rhel-6')
+        self.assertEqual(self.cmd._branch_merge, 'eng-rhel-6')
 
     def test_load_branch_merge_from_eng_rhel_6_5(self):
         """
@@ -289,7 +289,7 @@ class LoadBranchMergeTest(GitMixin, unittest.TestCase):
         """
         self.checkout_branch(self.cmd.repo, 'eng-rhel-6.5')
         self.cmd.load_branch_merge()
-        self.assertEquals(self.cmd._branch_merge, 'eng-rhel-6.5')
+        self.assertEqual(self.cmd._branch_merge, 'eng-rhel-6.5')
 
     def test_load_branch_merge_from_not_remote_merge_branch(self):
         """Ensure load_branch_merge fails against local-branch
@@ -303,7 +303,7 @@ class LoadBranchMergeTest(GitMixin, unittest.TestCase):
         try:
             self.cmd.load_branch_merge()
         except rpkgError as e:
-            self.assertEquals('Unable to find remote branch.  Use --dist',
+            self.assertEqual('Unable to find remote branch.  Use --dist',
                               str(e))
         else:
             self.fail("It's expected to raise rpkgError, but not.")
@@ -319,7 +319,7 @@ class LoadBranchMergeTest(GitMixin, unittest.TestCase):
 
         cmd = make_commands(dist='branch_merge')
         cmd.load_branch_merge()
-        self.assertEquals('branch_merge', cmd._branch_merge)
+        self.assertEqual('branch_merge', cmd._branch_merge)
 
 
 class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
@@ -357,7 +357,7 @@ class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
 
         for var, val in expected_defines.iteritems():
             self.assertTrue(var in defines)
-            self.assertEquals(val, defines[var])
+            self.assertEqual(val, defines[var])
 
     def test_load_rpmdefines_from_eng_rhel_6(self):
         """Run load_rpmdefines against branch eng-rhel-6"""
