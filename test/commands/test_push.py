@@ -57,7 +57,7 @@ class CommandPushTestCase(CommandTestCase):
             self.fail("No unpushed patches. This shouldn't raise exception")
 
 
-    def test_push_one_uncommited_patch(self):
+    def test_push_one_uncommitted_patch(self):
         self.make_new_git(self.module)
 
         import pyrpkg
@@ -74,7 +74,7 @@ class CommandPushTestCase(CommandTestCase):
 
         specfile_path = self.module + ".spec"
 
-        # add uncommited patch
+        # add uncommitted patch
         with open(specfile_path, 'w') as specfile:
             specfile.write(SPECFILE_TEMPLATE % "Patch: test.patch")
             specfile.close()
@@ -87,7 +87,7 @@ class CommandPushTestCase(CommandTestCase):
 
         self.assertRaises(pyrpkg.rpkgError, raises)
 
-    def test_push_uncommited_patch_with_force_option(self):
+    def test_push_uncommitted_patch_with_force_option(self):
         self.make_new_git(self.module)
 
         import pyrpkg
@@ -111,13 +111,13 @@ class CommandPushTestCase(CommandTestCase):
         with open("test.patch", 'w') as f:
             f.close()
 
-        # Don't check uncommited patches
+        # Don't check uncommitted patches
         try:
             cmd.push(force=True)
         except pyrpkg.rpkgError:
             self.fail("No unpushed patches. This shouldn't raise exception")
 
-    def test_push_commited_patch(self):
+    def test_push_committed_patch(self):
         self.make_new_git(self.module)
 
         import pyrpkg
@@ -151,7 +151,7 @@ class CommandPushTestCase(CommandTestCase):
         except pyrpkg.rpkgError:
             self.fail("No unpushed patches. This shouldn't raise exception")
 
-    def test_push_part_commited_patches(self):
+    def test_push_part_committed_patches(self):
         self.make_new_git(self.module)
 
         import pyrpkg

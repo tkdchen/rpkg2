@@ -2485,7 +2485,7 @@ class Commands(object):
     def _byte_offset_to_line_number(self, text, offset):
         """
         Convert byte offset (given by e.g. DecodeError) to human readable
-        format (line number and char possition)
+        format (line number and char position)
         Return a list with line number and char offset
         """
         offset_inc = 0
@@ -2548,7 +2548,7 @@ class Commands(object):
         build_id = build.build_id
 
         if nowait:
-            self.log.info('Build submited: %s' % build_id)
+            self.log.info('Build submitted: %s' % build_id)
             return
 
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
