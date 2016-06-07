@@ -95,7 +95,7 @@ _rpkg()
     local after= after_more=
 
     case $command in
-        help|gimmespec|gitbuildhash|giturl|lint|new|push|unused-patches|verrel)
+        help|gimmespec|gitbuildhash|giturl|lint|new|unused-patches|verrel)
             ;;
         build)
             options="--nowait --background --skip-tag --scratch --md5"
@@ -183,6 +183,9 @@ _rpkg()
             ;;
         pull)
             options="--rebase --no-rebase"
+            ;;
+        push)
+            options="--force"
             ;;
         scratch-build)
             options="--nowait --background --md5"

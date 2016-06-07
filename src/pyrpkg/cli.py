@@ -681,6 +681,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
 
         push_parser = self.subparsers.add_parser(
             'push', help='Push changes to remote repository')
+        push_parser.add_argument('--force', '-f', help='Force push',
+        action='store_true')
         push_parser.set_defaults(command=self.push)
 
     def register_scratch_build(self):
@@ -1223,7 +1225,7 @@ see API KEY section of copr-cli(1) man page.
                       norebase=self.args.no_rebase)
 
     def push(self):
-        self.cmd.push()
+        self.cmd.push(self.args.force)
 
     def scratch_build(self):
         # A scratch build is just a build with --scratch
