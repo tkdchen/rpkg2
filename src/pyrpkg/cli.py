@@ -1225,7 +1225,7 @@ see API KEY section of copr-cli(1) man page.
                       norebase=self.args.no_rebase)
 
     def push(self):
-        self.cmd.push(self.args.force)
+        self.cmd.push(getattr(self.args, 'force', False))
 
     def scratch_build(self):
         # A scratch build is just a build with --scratch
