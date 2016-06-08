@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import six
+
 from . import CommandTestCase
 
 
@@ -13,6 +15,8 @@ class CommandPatchTestCase(CommandTestCase):
         self.text_utf8 = "ěšč\n" \
                          "ščř\n" \
                          "ýáí"
+        if six.PY3:
+            self.text_utf8 = self.text_utf8.encode("utf-8")
 
     def test_byte_offset_first_line(self):
         import pyrpkg

@@ -1,5 +1,7 @@
 import os
 
+import six
+
 from . import CommandTestCase
 
 
@@ -19,6 +21,6 @@ class CommandPackageNameTestCase(CommandTestCase):
         cmd.path = moduledir
 
         # pycurl can't handle unicode variable
-        # module_name needs to be string
-        self.assertNotEqual(type(cmd.module_name), unicode)
-        self.assertEqual(type(cmd.module_name), str)
+        # module_name needs to be a byte string
+        self.assertNotEqual(type(cmd.module_name), six.text_type)
+        self.assertEqual(type(cmd.module_name), six.binary_type)

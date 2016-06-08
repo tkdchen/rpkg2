@@ -355,7 +355,7 @@ class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
             define.replace("'", '').split(' ', 1)[1] for
             define in self.cmd._rpmdefines)])
 
-        for var, val in expected_defines.iteritems():
+        for var, val in expected_defines.items():
             self.assertTrue(var in defines)
             self.assertEqual(val, defines[var])
 
