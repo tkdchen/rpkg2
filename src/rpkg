@@ -12,6 +12,7 @@
 
 import pyrpkg
 import pyrpkg.cli
+import pyrpkg.utils
 import os
 import sys
 import logging
@@ -40,7 +41,7 @@ client.parse_cmdline()
 
 if not client.args.path:
     try:
-        client.args.path=os.getcwd()
+        client.args.path = pyrpkg.utils.getcwd()
     except:
         print('Could not get current path, have you deleted it?')
         sys.exit(1)

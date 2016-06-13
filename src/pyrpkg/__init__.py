@@ -43,6 +43,7 @@ from .gitignore import GitIgnore
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, warn_deprecated, log_result
+from pyrpkg.utils import u, getcwd
 
 from osbs.api import OSBS
 from osbs.conf import Configuration

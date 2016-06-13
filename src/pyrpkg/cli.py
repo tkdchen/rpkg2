@@ -23,6 +23,8 @@ from six.moves import xmlrpc_client
 import pwd
 import koji
 
+import utils
+
 OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
 
 class cliClient(object):
@@ -176,6 +178,7 @@ class cliClient(object):
                                  help='Run Koji commands as a different user')
         # Let the user define a path to work in rather than cwd
         self.parser.add_argument('--path', default=None,
+                                 type=utils.u,
                                  help='Define the directory to work in '
                                  '(defaults to cwd)')
         # Verbosity

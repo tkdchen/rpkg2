@@ -16,6 +16,16 @@ This module contains a bunch of utilities used elsewhere in pyrpkg.
 import warnings
 warnings.simplefilter('always', DeprecationWarning)
 
+import os
+import six
+
+if six.PY3:
+    u = lambda s: s
+    getcwd = os.getcwd
+else:
+    u = lambda s: s.decode('utf-8')
+    getcwd = os.getcwdu
+
 
 class cached_property(property):
     """A property caching its return value
