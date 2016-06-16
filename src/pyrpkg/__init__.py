@@ -411,7 +411,7 @@ class Commands(object):
                                             % self.branch_remote)
                 except git.GitCommandError as e:
                     raise rpkgError('Unable to find remote push url: %s' % e)
-        if isinstance(url, unicode):
+        if isinstance(url, six.text_type):
             # GitPython >= 1.0 return unicode. It must be encoded to string.
             self._push_url = url.encode('utf-8')
         else:
@@ -540,8 +540,8 @@ class Commands(object):
                 #     self._module_name = "/".join(parts.path.split("/")[-2:])
                 module_name = posixpath.basename(parts.path)
 
-                if module_name.endswith('.git'):
-                    module_name = module_name[:-len('.git')]
+                if module_name.endswith(b'.git'):
+                    module_name = module_name[:-len(b'.git')]
                 self._module_name = module_name
                 return
         except rpkgError:
@@ -630,6 +630,7 @@ class Commands(object):
         joined_cmd = ' '.join(cmd)
         try:
             proc = subprocess.Popen(joined_cmd, shell=True,
+                                    universal_newlines=True,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
             output, err = proc.communicate()
