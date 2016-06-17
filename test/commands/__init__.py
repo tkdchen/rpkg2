@@ -55,7 +55,7 @@ class CommandTestCase(unittest.TestCase):
         subprocess.check_call(['git', 'clone', 'file://%s' % moduledir],
                               cwd=cloneroot, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
-        clonedir = os.path.join(cloneroot, module)
+        clonedir = os.path.join(cloneroot, module.split('/')[-1])
         open(os.path.join(clonedir, '.gitignore'), 'w').close()
         open(os.path.join(clonedir, 'sources'), 'w').close()
         subprocess.check_call(['git', 'add', '.gitignore', 'sources'],

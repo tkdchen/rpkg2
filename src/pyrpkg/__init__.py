@@ -1235,7 +1235,8 @@ class Commands(object):
         self._run_command(cmd, cwd=self.path)
         return
 
-    def clone(self, module, path=None, branch=None, bare_dir=None, anon=False):
+    def clone(self, module, path=None, branch=None, bare_dir=None,
+              anon=False, target=None):
         """Clone a repo, optionally check out a specific branch.
 
         module is the name of the module to clone
@@ -1248,6 +1249,8 @@ class Commands(object):
         is a bare clone. None otherwise.
 
         anon is whether or not to clone anonymously
+
+        target is the name of the folder in which to clone the repo
 
         Logs the output and returns nothing.
 
@@ -1276,7 +1279,9 @@ class Commands(object):
             cmd.extend(['-b', branch, giturl])
         elif bare_dir:
             self.log.debug('Cloning %s bare' % giturl)
-            cmd.extend(['--bare', giturl, bare_dir])
+            cmd.extend(['--bare', giturl])
+            if not target:
+                cmd.append(bare_dir)
         else:
             self.log.debug('Cloning %s' % giturl)
             cmd.extend([giturl])
@@ -1285,26 +1290,30 @@ class Commands(object):
             # --bare and --origin are incompatible
             cmd.extend(['--origin', self.default_branch_remote])
 
+        if target:
+            self.log.debug('Cloning into: %s' % target)
+            cmd.append(target)
+
         self._run_command(cmd, cwd=path)
 
         if self.clone_config:
-            # Handle namespaced modules
-            # Example:
-            #   module: docker/cockpit
-            #       The path will just be os.path.join(path, "cockpit")
-            if "/" in module:
-                base_module = module.split("/")[-1]
-            else:
-                base_module = module
-
-            conf_git = git.Git(
-                os.path.join(path, bare_dir if bare_dir else base_module)
-            )
+            base_module = self.get_base_module(module)
+            git_dir = target if target else bare_dir if bare_dir else base_module
+            conf_git = git.Git(os.path.join(path, git_dir))
             self._clone_config(conf_git, module)
 
         return
 
-    def clone_with_dirs(self, module, anon=False):
+    def get_base_module(self, module):
+        # Handle namespaced modules
+        # Example:
+        #   module: docker/cockpit
+        #       The path will just be os.path.join(path, "cockpit")
+        if "/" in module:
+            return module.split("/")[-1]
+        return module
+
+    def clone_with_dirs(self, module, anon=False, target=None):
         """Clone a repo old style with subdirs for each branch.
 
         module is the name of the module to clone
@@ -1316,7 +1325,7 @@ class Commands(object):
         self._push_url = None
         self._branch_remote = None
         # Get the full path of, and git object for, our directory of branches
-        top_path = os.path.join(self.path, module)
+        top_path = os.path.join(self.path, target or self.get_base_module(module))
         top_git = git.Git(top_path)
         repo_path = os.path.join(top_path, 'rpkg.git')
 
