@@ -55,6 +55,11 @@ class CGILookasideCache(object):
         self.download_path = '%(name)s/%(filename)s/%(hash)s/%(filename)s'
 
     def print_progress(self, to_download, downloaded, to_upload, uploaded):
+        if not sys.stdout.isatty():
+            # Don't print progress if not outputting into TTY. The progress
+            # output is not useful in logs.
+            return
+
         if to_download > 0:
             done = downloaded / to_download
 
