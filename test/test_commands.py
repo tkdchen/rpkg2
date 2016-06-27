@@ -85,7 +85,9 @@ def setup_module():
     git_cmds = [
         ['git', 'init'],
         ['git', 'add', spec_file_path],
-        ['git', 'commit', '-m', 'initial commit'],
+        ['git', 'config', 'user.email', 'cqi@redhat.com'],
+        ['git', 'config', 'user.name', 'Chenxiong Qi'],
+        ['git', 'commit', '-m', '"initial commit"'],
         ['git', 'branch', 'eng-rhel-6'],
         ['git', 'branch', 'eng-rhel-6.5'],
         ['git', 'branch', 'eng-rhel-7'],
