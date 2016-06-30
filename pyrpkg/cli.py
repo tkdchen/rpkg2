@@ -704,11 +704,13 @@ defined, packages will be built sequentially.""" % {'name': self.name})
 
         # Make it part of self to be used later
         self.new_sources_parser = self.subparsers.add_parser(
-            'new-sources', help='Upload new source files',
-            description='This will upload new source files to the lookaside '
-                        'cache and remove any existing ones. The "sources" '
-                        'and .gitignore files will be updated with the new '
-                        'uploaded file(s).')
+            'new-sources',
+            help='Upload source files',
+            description='This will upload new source file(s) to lookaside '
+                        'cache, and all file names listed in sources file '
+                        'will be replaced. .gitignore will be also updated '
+                        'with new uploaded file(s). Please remember to '
+                        'commit them.')
         self.new_sources_parser.add_argument('files', nargs='+')
         self.new_sources_parser.set_defaults(command=self.new_sources, replace=True)
 
@@ -894,10 +896,13 @@ see API KEY section of copr-cli(1) man page.
 
         upload_parser = self.subparsers.add_parser(
             'upload', parents=[self.new_sources_parser],
-            conflict_handler='resolve', help='Upload source files',
-            description='This command will add a new source archive to the '
-                        'lookaside cache. The sources and .gitignore file '
-                        'will be updated with the new file(s).')
+            conflict_handler='resolve',
+            help='Upload source files',
+            description='This command will upload new source file(s) to '
+                        'lookaside cache. Source file names are appended to '
+                        'sources file, and .gitignore will be also updated '
+                        'with new uploaded file(s). Please remember to commit '
+                        'them.')
         upload_parser.set_defaults(command=self.upload, replace=False)
 
     def register_verify_files(self):
