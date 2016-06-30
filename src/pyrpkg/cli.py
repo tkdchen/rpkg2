@@ -862,7 +862,6 @@ see API KEY section of copr-cli(1) man page.
         koji_group.add_argument('--scratch',
                                 help='Scratch build',
                                 action="store_true")
-        koji_group.add_argument('--release', help='Set release value')
 
         self.container_build_parser.add_argument('--target',
                                              help='Override the default target',
@@ -1086,9 +1085,6 @@ see API KEY section of copr-cli(1) man page.
         opts = {"scratch": self.args.scratch,
                 "quiet": self.args.q,
                 "yum_repourls": self.args.repo_url}
-
-        if hasattr(self.args, "release") and self.args.release:
-            opts["release"] = self.args.release
 
         section_name = "%s.container-build" % self.name
         err_msg = "Missing {option} option in [{plugin.section}] section. "\

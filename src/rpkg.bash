@@ -123,7 +123,7 @@ _rpkg()
         container-build)
             options="--scratch --nowait"
             options_target="--target"
-            options_string="--release --repo-url"
+            options_string="--repo-url"
             ;;
         container-build-config)
             options="--get-autorebuild"
