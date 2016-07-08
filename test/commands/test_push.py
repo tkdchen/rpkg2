@@ -1,14 +1,11 @@
-import os
-import shutil
-import tempfile
+# -*- coding: utf-8 -*-
 
-import git
-import subprocess
+import os
 
 from . import CommandTestCase
 
 
-SPECFILE_TEMPLATE="""Name:           test
+SPECFILE_TEMPLATE = """Name:           test
 Version:        1.0
 Release:        1.0
 Summary:        test
@@ -28,6 +25,8 @@ CLONE_CONFIG = '''
     bz.default-component %(module)s
     sendemail.to %(module)s-owner@fedoraproject.org
 '''
+
+
 class CommandPushTestCase(CommandTestCase):
     def test_push_without_patches(self):
         self.make_new_git(self.module)
@@ -55,7 +54,6 @@ class CommandPushTestCase(CommandTestCase):
             cmd.push()
         except pyrpkg.rpkgError:
             self.fail("No unpushed patches. This shouldn't raise exception")
-
 
     def test_push_one_uncommitted_patch(self):
         self.make_new_git(self.module)
@@ -190,3 +188,31 @@ class CommandPushTestCase(CommandTestCase):
             cmd.push()
 
         self.assertRaises(pyrpkg.rpkgError, raises)
+
+    def test_push_outside_repo(self):
+        """push from outside repo with --path option"""
+
+        self.make_new_git(self.module)
+
+        import pyrpkg
+        cmd = pyrpkg.Commands(self.path, self.lookaside,
+                              self.lookasidehash,
+                              self.lookaside_cgi, self.gitbaseurl,
+                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.build_client, self.user, self.dist,
+                              self.target, self.quiet)
+        cmd.clone_config = CLONE_CONFIG
+        cmd.clone(self.module, anon=True)
+        cmd.path = os.path.join(self.path, self.module)
+        os.chdir(os.path.join(self.path, self.module))
+
+        spec_file = 'module.spec'
+        with open(spec_file, 'w') as f:
+            f.write(SPECFILE_TEMPLATE % '')
+
+        cmd.repo.index.add([spec_file])
+        cmd.repo.index.commit("add SPEC")
+
+        # Now, change directory to parent and test the push
+        os.chdir(self.path)
+        cmd.push()

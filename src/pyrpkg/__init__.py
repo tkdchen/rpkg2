@@ -1733,7 +1733,7 @@ class Commands(object):
             self.log.warning('Current branch cannot be pushed anywhere!')
         # check missing patches
         ts = rpm.TransactionSet()
-        specfile = ts.parseSpec(self.spec)
+        specfile = ts.parseSpec(os.path.join(self.path, self.spec))
         missing_patches = []
         for source in specfile.sources:
             if source[0].endswith('.patch'):
