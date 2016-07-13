@@ -44,6 +44,12 @@ class SourcesFile(object):
                     if entry and entry not in self.entries:
                         self.entries.append(entry)
 
+    def __contains__(self, filename):
+        for entry in self.entries:
+            if entry.file == filename:
+                return True
+        return False
+
     def parse_line(self, line):
         stripped = line.strip()
 

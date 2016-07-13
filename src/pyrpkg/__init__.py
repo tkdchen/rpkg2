@@ -28,8 +28,9 @@ import git
 import tempfile
 import fnmatch
 import posixpath
-import git
 import six
+import glob
+from ConfigParser import ConfigParser
 from six.moves import configparser
 from six.moves import urllib
 # Try to import krb, it's OK if it fails
@@ -39,12 +40,11 @@ except ImportError:
     pass
 
 from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError, \
-     UnknownTargetError
+    UnknownTargetError
 from .gitignore import GitIgnore
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, warn_deprecated, log_result
-from pyrpkg.utils import u, getcwd
 
 from osbs.api import OSBS
 from osbs.conf import Configuration
@@ -79,7 +79,8 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None,
-                 dist=None, target=None, quiet=False, distgit_namespaced=False):
+                 dist=None, target=None, quiet=False,
+                 distgit_namespaced=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -230,19 +231,19 @@ class Commands(object):
         defaults = {
             'server': None,
             'topurl': 'http://localhost/kojiroot',
-            'weburl' : 'http://localhost/koji',
+            'weburl': 'http://localhost/koji',
             'cert': '~/.koji/client.crt',
             'ca': '~/.koji/clientca.crt',
             'serverca': '~/.koji/serverca.crt',
             'authtype': None,
             'krbservice': None,
-            'timeout' : None,
-            'keepalive' : True,
+            'timeout': None,
+            'keepalive': True,
             'max_retries': None,
             'retry_interval': None,
-            'anon_retry' : True,
-            'offline_retry' : None,
-            'offline_retry_interval' : None,
+            'anon_retry': True,
+            'offline_retry': None,
+            'offline_retry_interval': None,
             'use_fast_upload': None,
             'debug': None,
             'debug_xmlrpc': None
@@ -261,12 +262,12 @@ class Commands(object):
                     if name in ('keepalive', 'anon_retry', 'offline_retry',
                                 'use_fast_upload',
                                 'debug', 'debug_xmlrpc'):
-                        defaults[name] = config.getboolean(os.path.basename(
-                                self.build_client), name)
+                        defaults[name] = config.getboolean(
+                            os.path.basename(self.build_client), name)
                     elif name in ('timeout', 'max_retries', 'retry_interval',
                                   'offline_retry_interval'):
-                        defaults[name] = config.getint(os.path.basename(
-                                self.build_client), name)
+                        defaults[name] = config.getint(
+                            os.path.basename(self.build_client), name)
                     else:
                         defaults[name] = value
         if not defaults['server']:
@@ -313,8 +314,8 @@ class Commands(object):
                     for (_, _, ssl_reason) in error.message:
                         # Use heuristic. Some OpenSSL libs doesn't store error
                         # codes
-                        if ('certificate revoked' in ssl_reason or
-                            'certificate expired' in ssl_reason):
+                        if 'certificate revoked' in ssl_reason or \
+                           'certificate expired' in ssl_reason:
                             self.log.info("Certificate is revoked or expired.")
                     raise rpkgAuthError('Could not auth with koji. Login '
                                         'failed: %s' % error)
@@ -400,16 +401,15 @@ class Commands(object):
     def load_push_url(self):
         """Find the pushurl or url of remote of branch we're on."""
         try:
-            url = self.repo.git.remote('get-url', '--push',
-                                    self.branch_remote)
+            url = self.repo.git.remote('get-url', '--push', self.branch_remote)
         except git.GitCommandError as e:
             try:
-                url = self.repo.git.config('--get', 'remote.%s.pushurl'
-                                        % self.branch_remote)
+                url = self.repo.git.config(
+                    '--get', 'remote.%s.pushurl' % self.branch_remote)
             except git.GitCommandError as e:
                 try:
-                    url = self.repo.git.config('--get', 'remote.%s.url'
-                                            % self.branch_remote)
+                    url = self.repo.git.config(
+                        '--get', 'remote.%s.url' % self.branch_remote)
                 except git.GitCommandError as e:
                     raise rpkgError('Unable to find remote push url: %s' % e)
         if isinstance(url, six.text_type):
@@ -596,7 +596,8 @@ class Commands(object):
                 self._ns_module_name = ns_module_name
                 return
         except rpkgError:
-            self.log.warning('Failed to get ns_module_name from Git url or pushurl')
+            self.log.warning(
+                'Failed to get ns_module_name from Git url or pushurl')
 
     @property
     def nvr(self):
@@ -1325,7 +1326,8 @@ class Commands(object):
         self._push_url = None
         self._branch_remote = None
         # Get the full path of, and git object for, our directory of branches
-        top_path = os.path.join(self.path, target or self.get_base_module(module))
+        top_path = os.path.join(self.path,
+                                target or self.get_base_module(module))
         top_git = git.Git(top_path)
         repo_path = os.path.join(top_path, 'rpkg.git')
 
@@ -1723,6 +1725,22 @@ class Commands(object):
         self._run_command(cmd, cwd=self.path)
         return
 
+    def find_untracked_patches(self):
+        """Find patches that are not tracked by git and sources both"""
+        file_pattern = os.path.join(self.path, '*.patch')
+        patches_in_repo = [os.path.basename(filename) for filename
+                           in glob.glob(file_pattern)]
+
+        git_tree = self.repo.head.commit.tree
+        sources_file = SourcesFile(self.sources_filename,
+                                   self.source_entry_type)
+
+        patches_not_tracked = [
+            patch for patch in patches_in_repo
+            if patch not in git_tree and patch not in sources_file]
+
+        return patches_not_tracked
+
     def push(self, force=False):
         """Push changes to the remote repository"""
 
@@ -1731,29 +1749,18 @@ class Commands(object):
             self.load_branch_merge()
         except:
             self.log.warning('Current branch cannot be pushed anywhere!')
-        # check missing patches
-        ts = rpm.TransactionSet()
-        specfile = ts.parseSpec(os.path.join(self.path, self.spec))
-        missing_patches = []
-        for source in specfile.sources:
-            if source[0].endswith('.patch'):
-                patch = source[0]
-                hdc = self.repo.head.commit.tree
-                try:
-                    # check if patch is in the repository
-                    hdc[patch]
-                except KeyError:
-                    missing_patches.append(patch)
-        if missing_patches:
-            if not force:
-                raise rpkgError("%s contains untracked patches.\n%s\nConsider "
-                                "to add them to repository or use --force "
-                                "option" % (self.spec, missing_patches))
+
+        untracked_patches = self.find_untracked_patches()
+        if untracked_patches:
+            self.log.warning(
+                'Patches %s %s not tracked within either git or sources',
+                ', '.join(untracked_patches),
+                'is' if len(untracked_patches) == 1 else 'are')
+
         cmd = ['git', 'push']
         if self.quiet:
             cmd.append('-q')
         self._run_command(cmd, cwd=self.path)
-        return
 
     def sources(self, outdir=None):
         """Download source files"""
@@ -1821,7 +1828,8 @@ class Commands(object):
                 self.log.info("Switched to branch '%s'" % branch)
             except Exception as err:
                 # This needs to be finer grained I think...
-                raise rpkgError('Could not check out %s\n%s' % (branch, err.stderr))
+                raise rpkgError('Could not check out %s\n%s' % (branch,
+                                                                err.stderr))
         return
 
     def file_exists(self, pkg_name, filename, checksum):
@@ -2580,9 +2588,9 @@ class Commands(object):
             raise RuntimeError("Build has failed.")
 
     def container_build_koji(self, target_override=False, opts={},
-                                   kojiconfig=None, build_client=None,
-                                   koji_task_watcher=None,
-                                   nowait=False):
+                             kojiconfig=None, build_client=None,
+                             koji_task_watcher=None,
+                             nowait=False):
         # check if repo is dirty and all commits are pushed
         self.check_repo()
         docker_target = self.target
@@ -2625,15 +2633,17 @@ class Commands(object):
                                                       task_opts,
                                                       priority=priority)
             self.log.info('Created task: %s' % task_id)
-            self.log.info('Task info: %s/taskinfo?taskID=%s' % (self.kojiweburl,
-                                                                task_id))
+            self.log.info('Task info: %s/taskinfo?taskID=%s',
+                          self.kojiweburl, task_id)
             if not nowait:
                 rv = koji_task_watcher(self.kojisession, [task_id])
                 if rv == 0:
                     result = self.kojisession.getTaskResult(task_id)
                     try:
-                        result["koji_builds"] = ["%s/buildinfo?buildID=%s" % (self.kojiweburl, build_id)
-                                                 for build_id in result.get("koji_builds", [])]
+                        result["koji_builds"] = [
+                            "%s/buildinfo?buildID=%s" % (self.kojiweburl,
+                                                         build_id)
+                            for build_id in result.get("koji_builds", [])]
                     except TypeError:
                         pass
                     log_result(self.log.info, result)
@@ -2642,7 +2652,8 @@ class Commands(object):
             (self.build_client, self.kojiconfig) = koji_session_backup
             self.load_kojisession()
 
-    def container_build_setup(self, get_autorebuild=None, set_autorebuild=None):
+    def container_build_setup(self, get_autorebuild=None,
+                              set_autorebuild=None):
         cfp = ConfigParser.SafeConfigParser()
         if os.path.exists(self.osbs_config_filename):
             cfp.read(self.osbs_config_filename)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import git
 
 from . import CommandTestCase
 
@@ -28,166 +29,16 @@ CLONE_CONFIG = '''
 
 
 class CommandPushTestCase(CommandTestCase):
-    def test_push_without_patches(self):
-        self.make_new_git(self.module)
 
-        import pyrpkg
-        cmd = pyrpkg.Commands(self.path, self.lookaside,
-                              self.lookasidehash,
-                              self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
-                              self.build_client, self.user, self.dist,
-                              self.target, self.quiet)
-        cmd.clone_config = CLONE_CONFIG
-        cmd.clone(self.module, anon=True)
-        cmd.path = os.path.join(self.path, self.module)
-        os.chdir(os.path.join(self.path, self.module))
+    def setUp(self):
+        # Tests within this case would change working directory. Changing back
+        # to original directory to avoid any potential problems.
+        self.original_dir = os.path.abspath(os.curdir)
+        super(CommandPushTestCase, self).setUp()
 
-        specfile_path = self.module + ".spec"
-
-        # specfile with no patches
-        with open(specfile_path, 'w') as specfile:
-            specfile.write(SPECFILE_TEMPLATE % "")
-            specfile.close()
-
-        try:
-            cmd.push()
-        except pyrpkg.rpkgError:
-            self.fail("No unpushed patches. This shouldn't raise exception")
-
-    def test_push_one_uncommitted_patch(self):
-        self.make_new_git(self.module)
-
-        import pyrpkg
-        cmd = pyrpkg.Commands(self.path, self.lookaside,
-                              self.lookasidehash,
-                              self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
-                              self.build_client, self.user, self.dist,
-                              self.target, self.quiet)
-        cmd.clone_config = CLONE_CONFIG
-        cmd.clone(self.module, anon=True)
-        cmd.path = os.path.join(self.path, self.module)
-        os.chdir(os.path.join(self.path, self.module))
-
-        specfile_path = self.module + ".spec"
-
-        # add uncommitted patch
-        with open(specfile_path, 'w') as specfile:
-            specfile.write(SPECFILE_TEMPLATE % "Patch: test.patch")
-            specfile.close()
-
-        with open("test.patch", 'w') as f:
-            f.close()
-
-        def raises():
-            cmd.push()
-
-        self.assertRaises(pyrpkg.rpkgError, raises)
-
-    def test_push_uncommitted_patch_with_force_option(self):
-        self.make_new_git(self.module)
-
-        import pyrpkg
-        cmd = pyrpkg.Commands(self.path, self.lookaside,
-                              self.lookasidehash,
-                              self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
-                              self.build_client, self.user, self.dist,
-                              self.target, self.quiet)
-        cmd.clone_config = CLONE_CONFIG
-        cmd.clone(self.module, anon=True)
-        cmd.path = os.path.join(self.path, self.module)
-        os.chdir(os.path.join(self.path, self.module))
-
-        specfile_path = self.module + ".spec"
-
-        with open(specfile_path, 'w') as specfile:
-            specfile.write(SPECFILE_TEMPLATE % "Patch: test.patch")
-            specfile.close()
-
-        with open("test.patch", 'w') as f:
-            f.close()
-
-        # Don't check uncommitted patches
-        try:
-            cmd.push(force=True)
-        except pyrpkg.rpkgError:
-            self.fail("No unpushed patches. This shouldn't raise exception")
-
-    def test_push_committed_patch(self):
-        self.make_new_git(self.module)
-
-        import pyrpkg
-        cmd = pyrpkg.Commands(self.path, self.lookaside,
-                              self.lookasidehash,
-                              self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
-                              self.build_client, self.user, self.dist,
-                              self.target, self.quiet)
-        cmd.clone_config = CLONE_CONFIG
-        cmd.clone(self.module, anon=True)
-        cmd.path = os.path.join(self.path, self.module)
-        os.chdir(os.path.join(self.path, self.module))
-
-        specfile_path = self.module + ".spec"
-
-        # add patch and commit it
-        patch = "test.patch"
-        with open(specfile_path, 'w') as specfile:
-            specfile.write(SPECFILE_TEMPLATE % ("Patch: %s" % patch))
-            specfile.close()
-
-        with open("test.patch", 'w') as f:
-            f.close()
-
-        cmd.repo.index.add([specfile_path, patch])
-        cmd.repo.index.commit("add Patch")
-
-        try:
-            cmd.push()
-        except pyrpkg.rpkgError:
-            self.fail("No unpushed patches. This shouldn't raise exception")
-
-    def test_push_part_committed_patches(self):
-        self.make_new_git(self.module)
-
-        import pyrpkg
-        cmd = pyrpkg.Commands(self.path, self.lookaside,
-                              self.lookasidehash,
-                              self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
-                              self.build_client, self.user, self.dist,
-                              self.target, self.quiet)
-        cmd.clone_config = CLONE_CONFIG
-        cmd.clone(self.module, anon=True)
-        cmd.path = os.path.join(self.path, self.module)
-        os.chdir(os.path.join(self.path, self.module))
-
-        specfile_path = self.module + ".spec"
-
-        # add two patches and commit only one
-        patch = "test.patch"
-        patch2 = "test2.patch"
-
-        with open(specfile_path, 'w') as specfile:
-            specfile.write(SPECFILE_TEMPLATE % ("Patch: %s\nPatch1: %s" %
-                                                (patch, patch2)))
-            specfile.close()
-
-        with open(patch, 'w') as f:
-            f.close()
-        with open(patch2, 'w') as f:
-            f.close()
-
-        # add only one patch
-        cmd.repo.index.add([specfile_path, patch])
-        cmd.repo.index.commit("add Patch")
-
-        def raises():
-            cmd.push()
-
-        self.assertRaises(pyrpkg.rpkgError, raises)
+    def tearDown(self):
+        os.chdir(self.original_dir)
+        super(CommandPushTestCase, self).tearDown()
 
     def test_push_outside_repo(self):
         """push from outside repo with --path option"""
@@ -216,3 +67,71 @@ class CommandPushTestCase(CommandTestCase):
         # Now, change directory to parent and test the push
         os.chdir(self.path)
         cmd.push()
+
+
+class TestPushWithPatches(CommandTestCase):
+
+    def setUp(self):
+        super(TestPushWithPatches, self).setUp()
+
+        self.make_new_git(self.module)
+
+        import pyrpkg
+        self.cmd = pyrpkg.Commands(self.path, self.lookaside,
+                                   self.lookasidehash,
+                                   self.lookaside_cgi, self.gitbaseurl,
+                                   self.anongiturl, self.branchre,
+                                   self.kojiconfig,
+                                   self.build_client, self.user, self.dist,
+                                   self.target, self.quiet)
+        self.cmd.clone_config = CLONE_CONFIG
+        self.cmd.clone(self.module, anon=True)
+        self.cmd.path = os.path.join(self.path, self.module)
+        os.chdir(os.path.join(self.path, self.module))
+
+        # Track SPEC and a.patch in git
+        spec_file = 'module.spec'
+        with open(spec_file, 'w') as f:
+            f.write(SPECFILE_TEMPLATE % '''Patch0: a.patch
+Patch1: b.path
+Patch2: c.path
+Patch3: d.path
+''')
+
+        for patch_file in ('a.patch', 'b.patch', 'c.patch', 'd.patch'):
+            with open(patch_file, 'w') as f:
+                f.write(patch_file)
+
+        # Track c.patch in sources
+        from pyrpkg.sources import SourcesFile
+        sources_file = SourcesFile(self.cmd.sources_filename,
+                                   self.cmd.source_entry_type)
+        file_hash = self.cmd.lookasidecache.hash_file('c.patch')
+        sources_file.add_entry(self.cmd.lookasidehash, 'c.patch', file_hash)
+        sources_file.write()
+
+        self.cmd.repo.index.add([spec_file, 'a.patch', 'sources'])
+        self.cmd.repo.index.commit('add SPEC and patches')
+
+    def test_find_untracked_patches(self):
+        untracked_patches = self.cmd.find_untracked_patches()
+        untracked_patches.sort()
+        self.assertEqual(['b.patch', 'd.patch'], untracked_patches)
+
+    def test_push_not_blocked_by_untracked_patches(self):
+        self.cmd.push()
+
+        # Verify added files are pushed to origin
+        origin_repo_path = self.cmd.repo.git.config(
+            '--get', 'remote.origin.url').replace('file://', '')
+        origin_repo = git.Repo(origin_repo_path)
+        git_tree = origin_repo.head.commit.tree
+        self.assertTrue('a.patch' in git_tree)
+        self.assertTrue('b.patch' not in git_tree)
+        self.assertTrue('c.patch' not in git_tree)
+        self.assertTrue('d.patch' not in git_tree)
+
+        sources_content = origin_repo.git.show('master:sources').strip()
+        with open('sources', 'r') as f:
+            expected_sources_content = f.read().strip()
+        self.assertEqual(expected_sources_content, sources_content)
