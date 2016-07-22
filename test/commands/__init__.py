@@ -8,6 +8,7 @@ import unittest
 
 class CommandTestCase(unittest.TestCase):
     def setUp(self):
+        self.origin_dir = os.getcwd()
         self.path = tempfile.mkdtemp(prefix='rpkg-tests.')
         self.gitroot = os.path.join(self.path, 'gitroot')
 
@@ -33,6 +34,7 @@ class CommandTestCase(unittest.TestCase):
         self.target = 'TODO'
 
     def tearDown(self):
+        os.chdir(self.origin_dir)
         shutil.rmtree(self.path)
 
     def make_new_git(self, module, branches=None):

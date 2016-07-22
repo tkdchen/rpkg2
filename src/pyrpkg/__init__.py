@@ -1845,8 +1845,10 @@ class Commands(object):
                                 'to see details' % self.path)
         if all_pushed:
             branch = self.repo.active_branch
-            full_branch = '%s/%s' % (self.branch_remote, self.branch_merge)
-            if self.repo.git.rev_list('%s...%s' % (full_branch, branch)):
+            remote = self.repo.git.config('--get', 'branch.%s.remote' % branch)
+            merge = self.repo.git.config('--get', 'branch.%s.merge' % branch).replace('refs/heads',
+                                                                                      remote)
+            if self.repo.git.rev_list('%s...%s' % (merge, branch)):
                 raise rpkgError('There are unpushed changes in your repo')
 
     def build(self, skip_tag=False, scratch=False, background=False,

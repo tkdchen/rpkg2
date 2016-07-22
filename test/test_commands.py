@@ -12,23 +12,6 @@ from mock import patch
 from pyrpkg import Commands
 from pyrpkg import rpkgError
 
-
-# Path to repositories that is for running tests
-# For running tests, we need two repositories at least that should be created
-# firstly. repo_path points to the repository representing a remote repository
-# and containing a SPEC file for now.
-# Within this repository, by default, three branches are created by default for
-# convenience, that are eng-rhel-6, eng-rhel-6.5, and eng-rhel-7.
-repo_path = None
-
-# This is the path pointing to the repository cloned from remote repository at
-# repo_path. Cloning this repository aims to provide a useful git repository
-# for tests, that contains available metadata related to origin remote
-# repository.
-# By default, local branches eng-rhel-6, eng-rhel-6.5, and eng-rhel-7 tracking
-# remote branches individually are created.
-cloned_repo_path = None
-
 # Following global variables are used to construct Commands for tests in this
 # module. Only for testing purpose, and they are not going to be used for
 # hitting real services.
@@ -72,73 +55,69 @@ def run(cmd, **kwargs):
             ' '.join(cmd), returncode))
 
 
-def setup_module():
-    # create a base repo
-    global repo_path
-    repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-')
+class CommandTestCase(unittest.TestCase):
 
-    # Add spec file to this repo and commit
-    spec_file_path = os.path.join(repo_path, 'package.spec')
-    with open(spec_file_path, 'w') as f:
-        f.write(spec_file)
+    def setUp(self):
+        # create a base repo
+        self.repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-')
 
-    git_cmds = [
-        ['git', 'init'],
-        ['git', 'add', spec_file_path],
-        ['git', 'config', 'user.email', 'cqi@redhat.com'],
-        ['git', 'config', 'user.name', 'Chenxiong Qi'],
-        ['git', 'commit', '-m', '"initial commit"'],
-        ['git', 'branch', 'eng-rhel-6'],
-        ['git', 'branch', 'eng-rhel-6.5'],
-        ['git', 'branch', 'eng-rhel-7'],
-        ]
-    for cmd in git_cmds:
-        run(cmd, cwd=repo_path)
+        # Add spec file to this repo and commit
+        spec_file_path = os.path.join(self.repo_path, 'package.spec')
+        with open(spec_file_path, 'w') as f:
+            f.write(spec_file)
 
-    # Clone the repo
-    global cloned_repo_path
-    cloned_repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-cloned-')
-    git_cmds = [
-        ['git', 'clone', repo_path, cloned_repo_path],
-        ['git', 'branch', '--track', 'eng-rhel-6', 'origin/eng-rhel-6'],
-        ['git', 'branch', '--track', 'eng-rhel-6.5', 'origin/eng-rhel-6.5'],
-        ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],
-        ]
-    for cmd in git_cmds:
-        run(cmd, cwd=cloned_repo_path)
+        git_cmds = [
+            ['git', 'init'],
+            ['git', 'add', spec_file_path],
+            ['git', 'config', 'user.email', 'cqi@redhat.com'],
+            ['git', 'config', 'user.name', 'Chenxiong Qi'],
+            ['git', 'commit', '-m', '"initial commit"'],
+            ['git', 'branch', 'eng-rhel-6'],
+            ['git', 'branch', 'eng-rhel-6.5'],
+            ['git', 'branch', 'eng-rhel-7'],
+            ]
+        for cmd in git_cmds:
+            run(cmd, cwd=self.repo_path)
 
+        # Clone the repo
+        self.cloned_repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-cloned-')
+        git_cmds = [
+            ['git', 'clone', self.repo_path, self.cloned_repo_path],
+            ['git', 'branch', '--track', 'eng-rhel-6', 'origin/eng-rhel-6'],
+            ['git', 'branch', '--track', 'eng-rhel-6.5', 'origin/eng-rhel-6.5'],
+            ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],
+            ]
+        for cmd in git_cmds:
+            run(cmd, cwd=self.cloned_repo_path)
 
-def teardown_module():
-    shutil.rmtree(repo_path)
-    shutil.rmtree(cloned_repo_path)
+    def tearDown(self):
+        shutil.rmtree(self.repo_path)
+        shutil.rmtree(self.cloned_repo_path)
 
+    def make_commands(self, path=None, user=None, dist=None, target=None, quiet=None):
+        """Helper method for creating Commands object for test cases
 
-def make_commands(path=None, user=None, dist=None, target=None, quiet=None):
-    """Helper method for creating Commands object for test cases
+        This is where you should extend to add more features to support
+        additional requirements from other Commands specific test cases.
 
-    This is where you should extend to add more features to support additional
-    requirements from other Commands specific test cases.
+        Some tests need customize one of user, dist, target, and quiet options
+        when creating an instance of Commands. Keyword arguments user, dist,
+        target, and quiet here is for this purpose.
 
-    Some tests need customize one of user, dist, target, and quiet options when
-    creating an instance of Commands. Keyword arguments user, dist, target, and
-    quiet here is for this purpose.
-
-    :param str path: path to repository where this Commands will work on top of
-    :param str user: user passed to --user option
-    :param str dist: dist passed to --dist option
-    :param str target: target passed to --target option
-    :param str quiet: quiet passed to --quiet option
-    """
-    _repo_path = path if path else cloned_repo_path
-    return Commands(_repo_path,
-                    lookaside, lookasidehash, lookaside_cgi,
-                    gitbaseurl, anongiturl,
-                    branchre,
-                    kojiconfig, build_client,
-                    user=user, dist=dist, target=target, quiet=quiet)
-
-
-class GitMixin(object):
+        :param str path: path to repository where this Commands will work on
+        top of
+        :param str user: user passed to --user option
+        :param str dist: dist passed to --dist option
+        :param str target: target passed to --target option
+        :param str quiet: quiet passed to --quiet option
+        """
+        _repo_path = path if path else self.cloned_repo_path
+        return Commands(_repo_path,
+                        lookaside, lookasidehash, lookaside_cgi,
+                        gitbaseurl, anongiturl,
+                        branchre,
+                        kojiconfig, build_client,
+                        user=user, dist=dist, target=target, quiet=quiet)
 
     def checkout_branch(self, repo, branch_name):
         """Checkout to a local branch
@@ -157,6 +136,13 @@ class GitMixin(object):
 
     def create_branch(self, repo, branch_name):
         repo.git.branch(branch_name)
+
+    def make_a_dummy_commit(self, repo):
+        filename = os.path.join(repo.working_dir, 'document.txt')
+        with open(filename, 'a+') as f:
+            f.write('Hello rpkg')
+        repo.index.add([filename])
+        repo.index.commit('update document')
 
 
 def mock_load_rpmdefines(self):
@@ -206,11 +192,12 @@ def mock_load_branch_merge(fake_branch_merge):
     return mocked_method
 
 
-class LoadNameVerRelTest(GitMixin, unittest.TestCase):
+class LoadNameVerRelTest(CommandTestCase):
     """Test case for Commands.load_nameverrel"""
 
     def setUp(self):
-        self.cmd = make_commands()
+        super(LoadNameVerRelTest, self).setUp()
+        self.cmd = self.make_commands()
         self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
 
     def test_load_from_spec(self):
@@ -245,7 +232,7 @@ class LoadNameVerRelTest(GitMixin, unittest.TestCase):
         # fails on RHEL7 with git 1.8.3.1
         cloned_repo.git.checkout('eng-rhel-6')
 
-        cmd = make_commands(path=cloned_repo_dir)
+        cmd = self.make_commands(path=cloned_repo_dir)
 
         cmd.load_nameverrel()
         self.assertEqual('docpkg', cmd._module_name_spec)
@@ -269,15 +256,13 @@ class LoadNameVerRelTest(GitMixin, unittest.TestCase):
         self.assertRaises(rpkgError, self.cmd.load_nameverrel)
 
 
-class LoadBranchMergeTest(GitMixin, unittest.TestCase):
+class LoadBranchMergeTest(CommandTestCase):
     """Test case for testing Commands.load_branch_merge"""
 
     def setUp(self):
-        self.cmd = make_commands()
-        self.origin_active_head = self.cmd.repo.active_branch
+        super(LoadBranchMergeTest, self).setUp()
 
-    def tearDown(self):
-        self.origin_active_head.checkout()
+        self.cmd = self.make_commands()
 
     def test_load_branch_merge_from_eng_rhel_6(self):
         self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
@@ -319,24 +304,17 @@ class LoadBranchMergeTest(GitMixin, unittest.TestCase):
         """
         self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
 
-        cmd = make_commands(dist='branch_merge')
+        cmd = self.make_commands(dist='branch_merge')
         cmd.load_branch_merge()
         self.assertEqual('branch_merge', cmd._branch_merge)
 
 
-class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
+class LoadRPMDefinesTest(CommandTestCase):
     """Test case for Commands.load_rpmdefines"""
 
     def setUp(self):
-        self.cmd = make_commands()
-
-        # Branch will be checked out to a different one according to each
-        # test's purpose. So, save current active branch, and checkout back
-        # when each test finishes.
-        self.origin_active_head = self.cmd.repo.active_branch
-
-    def tearDown(self):
-        self.origin_active_head.checkout()
+        super(LoadRPMDefinesTest, self).setUp()
+        self.cmd = self.make_commands()
 
     def assert_loaded_rpmdefines(self, branch_name, expected_defines):
         self.checkout_branch(self.cmd.repo, branch_name)
@@ -364,11 +342,11 @@ class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
     def test_load_rpmdefines_from_eng_rhel_6(self):
         """Run load_rpmdefines against branch eng-rhel-6"""
         expected_rpmdefines = {
-            '_sourcedir': cloned_repo_path,
-            '_specdir': cloned_repo_path,
-            '_builddir': cloned_repo_path,
-            '_srcrpmdir': cloned_repo_path,
-            '_rpmdir': cloned_repo_path,
+            '_sourcedir': self.cloned_repo_path,
+            '_specdir': self.cloned_repo_path,
+            '_builddir': self.cloned_repo_path,
+            '_srcrpmdir': self.cloned_repo_path,
+            '_rpmdir': self.cloned_repo_path,
             'dist': u'.el6',
             'rhel': u'6',
             'el6': u'1',
@@ -382,11 +360,11 @@ class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
         method test_load_rpmdefines_from_eng_rhel_6.
         """
         expected_rpmdefines = {
-            '_sourcedir': cloned_repo_path,
-            '_specdir': cloned_repo_path,
-            '_builddir': cloned_repo_path,
-            '_srcrpmdir': cloned_repo_path,
-            '_rpmdir': cloned_repo_path,
+            '_sourcedir': self.cloned_repo_path,
+            '_specdir': self.cloned_repo_path,
+            '_builddir': self.cloned_repo_path,
+            '_srcrpmdir': self.cloned_repo_path,
+            '_rpmdir': self.cloned_repo_path,
             'dist': u'.el6_5',
             'rhel': u'6',
             'el6_5': u'1',
@@ -405,3 +383,51 @@ class LoadRPMDefinesTest(GitMixin, unittest.TestCase):
         test requires.
         """
         self.assertRaises(rpkgError, self.cmd.load_rpmdefines)
+
+
+class CheckRepoWithOrWithoutDistOptionCase(CommandTestCase):
+    """Check whether there are unpushed changes with or without specified dist
+
+    Ensure check_repo works in a correct way to check if there are unpushed
+    changes, and this should not be affected by specified dist or not.
+    Bug 1169663 describes a concrete use case and this test case is designed
+    as what that bug describs.
+    """
+
+    def setUp(self):
+        super(CheckRepoWithOrWithoutDistOptionCase, self).setUp()
+
+        private_branch = 'private-dev-branch'
+        origin_repo = git.Repo(self.repo_path)
+        origin_repo.git.checkout('master')
+        origin_repo.git.branch(private_branch)
+        self.make_a_dummy_commit(origin_repo)
+
+        cloned_repo = git.Repo(self.cloned_repo_path)
+        cloned_repo.git.pull()
+        cloned_repo.git.checkout('-b', private_branch, 'origin/%s' % private_branch)
+        for i in xrange(3):
+            self.make_a_dummy_commit(cloned_repo)
+        cloned_repo.git.push()
+
+    def test_check_repo_with_specificed_dist(self):
+        cmd = self.make_commands(self.cloned_repo_path, dist='eng-rhel-6')
+        try:
+            cmd.check_repo()
+        except rpkgError as e:
+            if 'There are unpushed changes in your repo' in e:
+                self.fail('There are unpushed changes in your repo. This '
+                          'should not happen. Something must be going wrong.')
+
+            self.fail('Should not fail. Something must be going wrong.')
+
+    def test_check_repo_without_specificed_dist(self):
+        cmd = self.make_commands(self.cloned_repo_path)
+        try:
+            cmd.check_repo()
+        except rpkgError as e:
+            if 'There are unpushed changes in your repo' in e:
+                self.fail('There are unpushed changes in your repo. This '
+                          'should not happen. Something must be going wrong.')
+
+            self.fail('Should not fail. Something must be going wrong.')
