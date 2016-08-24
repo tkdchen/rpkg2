@@ -832,7 +832,7 @@ see API KEY section of copr-cli(1) man page.
             help='Locally verify %%files section',
             description="Locally run 'rpmbuild -bl' to verify the spec file's"
                         " %files sections. This requires a successful run of "
-                        "the 'compile' target.")
+                        "'{0} install' in advance.".format(self.name))
         verify_files_parser.set_defaults(command=self.verify_files)
 
     def register_verrel(self):
