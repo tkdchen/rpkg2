@@ -176,6 +176,8 @@ class CGILookasideCache(object):
         sys.stdout.flush()
 
         if status != 200:
+            self.log.info('Remove downloaded invalid file %s', outfile)
+            os.remove(outfile)
             raise DownloadError('Server returned status code %d' % status)
 
         os.utime(outfile, (tstamp, tstamp))
