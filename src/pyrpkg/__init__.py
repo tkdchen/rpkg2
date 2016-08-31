@@ -937,11 +937,10 @@ class Commands(object):
                     subprocess.check_call(command, env=environ, shell=shell,
                                           stdout=sys.stdout,
                                           stderr=sys.stderr, cwd=cwd)
-            except (subprocess.CalledProcessError,
-                    OSError) as e:
+            except (subprocess.CalledProcessError, OSError) as e:
                 raise rpkgError(e)
             except KeyboardInterrupt:
-                raise rpkgError()
+                raise rpkgError('Command is terminated by user.')
         else:
             # Ok, we're not on a live tty, so pipe and log.
             if pipe:
@@ -964,17 +963,15 @@ class Commands(object):
                                             cwd=cwd)
                     output, error = proc.communicate()
                 else:
-                    proc = subprocess.Popen(command, env=environ, shell=shell,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE, cwd=cwd)
-                    output, error = proc.communicate()
-            except OSError as e:
+                    proc = subprocess.Popen(command, env=environ, shell=shell, cwd=cwd)
+                    proc.wait()
+            except KeyboardInterrupt:
+                raise rpkgError('Command is terminated by user.')
+            except Exception as e:
                 raise rpkgError(e)
-            self.log.info(output)
-            if proc.returncode:
-                raise rpkgError('Command %s returned code %s with error: %s'
-                                % (' '.join(cmd), proc.returncode, error))
-        return
+
+            if proc.returncode != 0:
+                raise rpkgError('Command %s returned code %s' % (' '.join(cmd), proc.returncode))
 
     def _verify_file(self, file, hash, hashtype):
         warn_deprecated(self.__class__.__name__, '_verify_file',
