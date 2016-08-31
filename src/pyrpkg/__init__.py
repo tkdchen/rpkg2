@@ -878,9 +878,10 @@ class Commands(object):
     def _run_command(self, cmd, shell=False, env=None, pipe=[], cwd=None):
         """Run the given command.
 
-        Will determine if caller is on a real tty and if so stream to the tty
-
-        Or else will run and log output.
+        _run_command is able to run single command or two commands via pipe.
+        Whatever the way to run the command, output to both stdout and stderr
+        will not be captured and output to terminal directly, that is useful
+        for caller to redirect.
 
         cmd is a list of the command and arguments
 
@@ -893,15 +894,13 @@ class Commands(object):
         cwd is the optional directory to run the command from
 
         Raises on error, or returns nothing.
-
         """
 
         # Process any environment variables.
         environ = os.environ
         if env:
             for item in env.keys():
-                self.log.debug('Adding %s:%s to the environment' %
-                               (item, env[item]))
+                self.log.debug('Adding %s:%s to the environment', item, env[item])
                 environ[item] = env[item]
         # Check if we're supposed to be on a shell.  If so, the command must
         # be a string, and not a list.
@@ -910,68 +909,28 @@ class Commands(object):
         if shell:
             command = ' '.join(cmd)
             pipecmd = ' '.join(pipe)
-        # Check to see if we're on a real tty, if so, stream it baby!
-        if sys.stdout.isatty():
-            if pipe:
-                self.log.debug('Running %s | %s directly on the tty' %
-                               (' '.join(cmd), ' '.join(pipe)))
-            else:
-                self.log.debug('Running %s directly on the tty' %
-                               ' '.join(cmd))
-            try:
-                if pipe:
-                    # We're piping the stderr over as well, which is probably a
-                    # bad thing, but rpmbuild likes to put useful data on
-                    # stderr, so....
-                    proc = subprocess.Popen(command, env=environ, shell=shell,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT, cwd=cwd)
-                    subprocess.check_call(pipecmd, env=environ, shell=shell,
-                                          stdin=proc.stdout,
-                                          stdout=sys.stdout,
-                                          stderr=sys.stderr, cwd=cwd)
-                    (output, err) = proc.communicate()
-                    if proc.returncode:
-                        raise rpkgError('Non zero exit')
-                else:
-                    subprocess.check_call(command, env=environ, shell=shell,
-                                          stdout=sys.stdout,
-                                          stderr=sys.stderr, cwd=cwd)
-            except (subprocess.CalledProcessError, OSError) as e:
-                raise rpkgError(e)
-            except KeyboardInterrupt:
-                raise rpkgError('Command is terminated by user.')
-        else:
-            # Ok, we're not on a live tty, so pipe and log.
-            if pipe:
-                self.log.debug('Running %s | %s and logging output' %
-                               (' '.join(cmd), ' '.join(pipe)))
-            else:
-                self.log.debug('Running %s and logging output' %
-                               ' '.join(cmd))
-            try:
-                if pipe:
-                    proc1 = subprocess.Popen(command, env=environ,
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.STDOUT,
-                                             shell=shell,
-                                             cwd=cwd)
-                    proc = subprocess.Popen(pipecmd, env=environ, shell=shell,
-                                            stdin=proc1.stdout,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE,
-                                            cwd=cwd)
-                    output, error = proc.communicate()
-                else:
-                    proc = subprocess.Popen(command, env=environ, shell=shell, cwd=cwd)
-                    proc.wait()
-            except KeyboardInterrupt:
-                raise rpkgError('Command is terminated by user.')
-            except Exception as e:
-                raise rpkgError(e)
 
-            if proc.returncode != 0:
-                raise rpkgError('Command %s returned code %s' % (' '.join(cmd), proc.returncode))
+        if pipe:
+            self.log.debug('Running: %s | %s', ' '.join(cmd), ' '.join(pipe))
+        else:
+            self.log.debug('Running: %s', ' '.join(cmd))
+
+        try:
+            if pipe:
+                # We're piping the stderr over as well, which is probably a
+                # bad thing, but rpmbuild likes to put useful data on
+                # stderr, so....
+                proc = subprocess.Popen(command, env=environ, shell=shell, cwd=cwd,
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.check_call(pipecmd, env=environ, shell=shell, cwd=cwd, stdin=proc.stdout)
+            else:
+                subprocess.check_call(command, env=environ, shell=shell, cwd=cwd)
+        except (subprocess.CalledProcessError, OSError) as e:
+            raise rpkgError(e)
+        except KeyboardInterrupt:
+            raise rpkgError('Command is terminated by user.')
+        except Exception as e:
+            raise rpkgError(e)
 
     def _verify_file(self, file, hash, hashtype):
         warn_deprecated(self.__class__.__name__, '_verify_file',
