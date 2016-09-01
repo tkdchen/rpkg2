@@ -1626,7 +1626,10 @@ class Commands(object):
         """Return changes in a repo since the last tag"""
 
         # Find the latest tag
-        tag = self.repo.git.describe('--tags', '--abbrev=0')
+        try:
+            tag = self.repo.git.describe('--tags', '--abbrev=0')
+        except git.exc.GitCommandError:
+            raise rpkgError('Cannot get changes because there are no tags in this repo.')
         # Now get the diff
         self.log.debug('Diffing from tag %s' % tag)
         return self.repo.git.diff('-M', tag)
