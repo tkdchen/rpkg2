@@ -44,7 +44,7 @@ from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError, \
 from .gitignore import GitIgnore
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
-from pyrpkg.utils import cached_property, warn_deprecated, log_result
+from pyrpkg.utils import cached_property, log_result
 
 from osbs.api import OSBS
 from osbs.conf import Configuration
@@ -849,15 +849,6 @@ class Commands(object):
         return None
 
     # Define some helper functions, they start with _
-    def _create_curl(self):
-        warn_deprecated(self, '_create_curl',
-                        'lookasidecache.remote_file_exists')
-
-        curl = pycurl.Curl()
-        curl.setopt(pycurl.URL, self.lookaside_cgi)
-
-        return curl
-
     def _has_krb_creds(self):
         # This function is lifted from /usr/bin/koji
         if 'krbV' not in sys.modules:
@@ -869,11 +860,6 @@ class Commands(object):
             return True
         except krbV.Krb5Error:
             return False
-
-    def _hash_file(self, file, hashtype):
-        warn_deprecated(self.__class__.__name__, '_hash_file',
-                        'lookasidecache.hash_file')
-        return self.lookasidecache.hash_file(file, hashtype=hashtype)
 
     def _run_command(self, cmd, shell=False, env=None, pipe=[], cwd=None):
         """Run the given command.
@@ -932,12 +918,6 @@ class Commands(object):
         except Exception as e:
             raise rpkgError(e)
 
-    def _verify_file(self, file, hash, hashtype):
-        warn_deprecated(self.__class__.__name__, '_verify_file',
-                        'lookasidecache.file_is_valid')
-        return self.lookasidecache.file_is_valid(file, hash,
-                                                 hashtype=hashtype)
-
     def _newer(self, file1, file2):
         """Compare the last modification time of the given files
 
@@ -946,20 +926,6 @@ class Commands(object):
         """
 
         return os.path.getmtime(file1) > os.path.getmtime(file2)
-
-    def _do_curl(self, file_hash, file):
-        warn_deprecated(self.__class__.__name__, '_do_curl',
-                        'lookasidecache.upload')
-
-        cmd = ['curl', '--fail', '-o', '/dev/null', '--show-error',
-               '--progress-bar', '-F', 'name=%s' % self.module_name,
-               '-F', '%ssum=%s' % (self.lookasidehash, file_hash),
-               '-F', 'file=@%s' % file]
-
-        if self.quiet:
-            cmd.append('-s')
-        cmd.append(self.lookaside_cgi)
-        self._run_command(cmd)
 
     def _get_build_arches_from_spec(self):
         """Given the path to an spec, retrieve the build arches
@@ -1790,12 +1756,6 @@ class Commands(object):
                 raise rpkgError('Could not check out %s\n%s' % (branch,
                                                                 err.stderr))
         return
-
-    def file_exists(self, pkg_name, filename, checksum):
-        warn_deprecated(self, '_verify_file',
-                        'lookasidecache.remote_file_exists')
-        return self.lookasidecache.remote_file_exists(pkg_name, filename,
-                                                      checksum)
 
     def check_repo(self, is_dirty=True, all_pushed=True):
         if is_dirty:
