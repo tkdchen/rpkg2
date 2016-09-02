@@ -276,9 +276,8 @@ class Commands(object):
         for name in ('cert', 'ca', 'serverca'):
             if defaults[name]:
                 defaults[name] = os.path.expanduser(defaults[name])
-        self.log.debug('Initiating a %s session to %s' %
-                       (os.path.basename(self.build_client),
-                        defaults['server']))
+        self.log.debug('Initiating a %s session to %s',
+                       os.path.basename(self.build_client), defaults['server'])
         session_opts = {}
         for name in ('krbservice', 'timeout', 'keepalive',
                      'max_retries', 'retry_interval', 'anon_retry',
@@ -571,9 +570,8 @@ class Commands(object):
     def _print_old_checkout_warning(self, module):
         self.log.warning('Your git configuration does not use a namespace.')
         self.log.warning('Consider updating your git configuration by running:')
-        self.log.warning('  git remote set-url %s %s'
-                         % (self.branch_remote,
-                            self._get_namespace_giturl(module)))
+        self.log.warning('  git remote set-url %s %s',
+                         self.branch_remote, self._get_namespace_giturl(module))
 
     def load_ns_module_name(self):
         """Loads a package module."""
@@ -596,8 +594,7 @@ class Commands(object):
                 self._ns_module_name = ns_module_name
                 return
         except rpkgError:
-            self.log.warning(
-                'Failed to get ns_module_name from Git url or pushurl')
+            self.log.warning('Failed to get ns_module_name from Git url or pushurl')
 
     @property
     def nvr(self):
@@ -638,15 +635,13 @@ class Commands(object):
             output, err = proc.communicate()
         except Exception as e:
             if err:
-                self.log.debug('Errors occoured while running following'
-                               ' command to get N-V-R-E:')
+                self.log.debug('Errors occoured while running following command to get N-V-R-E:')
                 self.log.debug(joined_cmd)
                 self.log.error(err)
             raise rpkgError('Could not query n-v-r of %s: %s'
                             % (self.module_name, e))
         if err:
-            self.log.debug('Errors occoured while running following command to'
-                           ' get N-V-R-E:')
+            self.log.debug('Errors occoured while running following command to get N-V-R-E:')
             self.log.debug(joined_cmd)
             self.log.error(err)
         # Get just the output, then split it by ??, grab the first and split
@@ -677,7 +672,7 @@ class Commands(object):
     def load_repo(self):
         """Create a repo object from our path"""
 
-        self.log.debug('Creating repo object from %s' % self.path)
+        self.log.debug('Creating repo object from %s', self.path)
         try:
             self._repo = git.Repo(self.path)
         except git.InvalidGitRepositoryError:
@@ -1042,13 +1037,13 @@ class Commands(object):
         locals = []
         for ref in refs:
             if type(ref) == git.Head:
-                self.log.debug('Found local branch %s' % ref.name)
+                self.log.debug('Found local branch %s', ref.name)
                 locals.append(ref.name)
             elif type(ref) == git.RemoteReference:
                 if ref.remote_head == 'HEAD':
                     self.log.debug('Skipping remote branch alias HEAD')
                     continue  # Not useful in this context
-                self.log.debug('Found remote branch %s' % ref.name)
+                self.log.debug('Found remote branch %s', ref.name)
                 remotes.append(ref.name)
         return (locals, remotes)
 
@@ -1073,7 +1068,7 @@ class Commands(object):
         files = []
         uploadfiles = []
         cmd = ['rpm', '-qpl', srpm]
-        self.log.debug('Running: %s' % ' '.join(cmd))
+        self.log.debug('Running: %s', ' '.join(cmd))
         env = dict(os.environ)
         env["LANG"] = "C"
         try:
@@ -1167,7 +1162,7 @@ class Commands(object):
         cmd.append(tagname)
         # make it so
         self._run_command(cmd, cwd=self.path)
-        self.log.info('Tag \'%s\' was created' % tagname)
+        self.log.info('Tag \'%s\' was created', tagname)
 
     def clean(self, dry=False, useignore=True):
         """Clean a module checkout of untracked files.
@@ -1232,15 +1227,15 @@ class Commands(object):
             raise rpkgError('Cannot combine bare cloning with a branch')
         elif branch:
             # For now we have to use switch branch
-            self.log.debug('Checking out a specific branch %s' % giturl)
+            self.log.debug('Checking out a specific branch %s', giturl)
             cmd.extend(['-b', branch, giturl])
         elif bare_dir:
-            self.log.debug('Cloning %s bare' % giturl)
+            self.log.debug('Cloning %s bare', giturl)
             cmd.extend(['--bare', giturl])
             if not target:
                 cmd.append(bare_dir)
         else:
-            self.log.debug('Cloning %s' % giturl)
+            self.log.debug('Cloning %s', giturl)
             cmd.extend([giturl])
 
         if not bare_dir:
@@ -1248,7 +1243,7 @@ class Commands(object):
             cmd.extend(['--origin', self.default_branch_remote])
 
         if target:
-            self.log.debug('Cloning into: %s' % target)
+            self.log.debug('Cloning into: %s', target)
             cmd.append(target)
 
         self._run_command(cmd, cwd=path)
@@ -1394,7 +1389,7 @@ class Commands(object):
         except git.GitCommandError as e:
             raise rpkgError(e)
 
-        self.log.info('Tag %s was deleted' % tagname)
+        self.log.info('Tag %s was deleted', tagname)
 
     def diff(self, cached=False, files=[]):
         """Execute a git diff
@@ -1533,7 +1528,7 @@ class Commands(object):
         # Look through our files and if it isn't in the new files, remove it.
         for file in ourfiles:
             if file not in files:
-                self.log.info("Removing no longer used file: %s" % file)
+                self.log.info("Removing no longer used file: %s", file)
                 self.repo.index.remove([file])
                 os.remove(file)
 
@@ -1590,7 +1585,7 @@ class Commands(object):
         except git.exc.GitCommandError:
             raise rpkgError('Cannot get changes because there are no tags in this repo.')
         # Now get the diff
-        self.log.debug('Diffing from tag %s' % tag)
+        self.log.debug('Diffing from tag %s', tag)
         return self.repo.git.diff('-M', tag)
 
     def patch(self, suffix, rediff=False):
@@ -1622,7 +1617,7 @@ class Commands(object):
 
         # Try to run the command and capture the output
         try:
-            self.log.debug('Running %s' % ' '.join(cmd))
+            self.log.debug('Running %s', ' '.join(cmd))
             (output, errors) = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                                 stderr=subprocess.PIPE,
                                                 cwd=self.path).communicate()
@@ -1641,8 +1636,7 @@ class Commands(object):
         if rediff:
             oldpatch = open(os.path.join(self.path, outfile), 'r').readlines()
             # back up the old file
-            self.log.debug('Moving existing patch %s to %s~' % (outfile,
-                                                                outfile))
+            self.log.debug('Moving existing patch %s to %s~', outfile, outfile)
             os.rename(os.path.join(self.path, outfile),
                       '%s~' % os.path.join(self.path, outfile))
             # Capture the lines preceding the diff
@@ -1725,8 +1719,7 @@ class Commands(object):
         """Download source files"""
 
         if not os.path.exists(self.sources_filename):
-            self.log.info("sources file doesn't exist. Source files download"
-                          " skipped.")
+            self.log.info("sources file doesn't exist. Source files download skipped.")
             return
 
         # Default to putting the files where the module is
@@ -1774,8 +1767,7 @@ class Commands(object):
             else:
                 raise rpkgError('Unknown remote branch %s' % full_branch)
             try:
-                self.log.info(self.repo.git.checkout('-b', branch, '--track',
-                                                     totrack))
+                self.log.info(self.repo.git.checkout('-b', branch, '--track', totrack))
             except Exception as err:
                 # This needs to be finer grained I think...
                 raise rpkgError('Could not create branch %s: %s'
@@ -1784,7 +1776,7 @@ class Commands(object):
             try:
                 self.repo.git.checkout(branch)
                 # The above should have no output, but stash it anyway
-                self.log.info("Switched to branch '%s'" % branch)
+                self.log.info("Switched to branch '%s'", branch)
             except Exception as err:
                 # This needs to be finer grained I think...
                 raise rpkgError('Could not check out %s\n%s' % (branch,
@@ -1930,7 +1922,7 @@ class Commands(object):
         # Now submit the task and get the task_id to return
         # Handle the chain build version
         if chain:
-            self.log.debug('Adding %s to the chain' % url)
+            self.log.debug('Adding %s to the chain', url)
             # If we're dealing with build sets the behaviour of the last
             # package changes, and we add it to the last (potentially empty)
             # set.  Otherwise the last package just gets added to the end of
@@ -1942,28 +1934,23 @@ class Commands(object):
             # This next list comp is ugly, but it's how we properly get a :
             # put in between each build set
             cmd.extend(' : '.join([' '.join(sets) for sets in chain]).split())
-            self.log.info('Chain building %s + %s for %s' % (build_reference,
-                                                             chain[:-1],
-                                                             self.target))
-            self.log.debug('Building chain %s for %s with options %s and a '
-                           'priority of %s' %
-                           (chain, self.target, opts, priority))
+            self.log.info('Chain building %s + %s for %s', build_reference, chain[:-1], self.target)
+            self.log.debug('Building chain %s for %s with options %s and a priority of %s',
+                           chain, self.target, opts, priority)
             self.log.debug(' '.join(cmd))
             task_id = self.kojisession.chainBuild(chain, self.target, opts,
                                                   priority=priority)
         # Now handle the normal build
         else:
             cmd.append(url)
-            self.log.info('Building %s for %s' % (build_reference,
-                                                  self.target))
-            self.log.debug('Building %s for %s with options %s and a priority '
-                           'of %s' % (url, self.target, opts, priority))
+            self.log.info('Building %s for %s', build_reference, self.target)
+            self.log.debug('Building %s for %s with options %s and a priority of %s',
+                           url, self.target, opts, priority)
             self.log.debug(' '.join(cmd))
             task_id = self.kojisession.build(url, self.target, opts,
                                              priority=priority)
-        self.log.info('Created task: %s' % task_id)
-        self.log.info('Task info: %s/taskinfo?taskID=%s' % (self.kojiweburl,
-                                                            task_id))
+        self.log.info('Created task: %s', task_id)
+        self.log.info('Task info: %s/taskinfo?taskID=%s', self.kojiweburl, task_id)
         return task_id
 
     def clog(self, raw=False):
@@ -2312,8 +2299,7 @@ class Commands(object):
                 except rpkgError as error:
                     raise rpkgError('Failed to create mock config directory:'
                                     ' %s' % error)
-                self.log.debug('Temporary mock config directory: %s',
-                               config_dir)
+                self.log.debug('Temporary mock config directory: %s', config_dir)
                 try:
                     self._config_dir_other(config_dir)
                 except rpkgError as error:
@@ -2328,8 +2314,7 @@ class Commands(object):
         try:
             self._run_command(cmd)
         finally:
-            self.log.debug('Cleaning up mock temporary config directory: %s',
-                           config_dir)
+            self.log.debug('Cleaning up mock temporary config directory: %s', config_dir)
             self._cleanup_tmp_dir(config_dir)
 
     def upload(self, files, replace=False):
@@ -2446,8 +2431,8 @@ class Commands(object):
             # when can't decode file, ignore chars and show warning
             spec = data.decode('UTF-8', 'ignore')
             line, offset = self._byte_offset_to_line_number(spec, error.start)
-            self.log.warning("'%s' codec can't decode byte in position %d:%d : %s"
-                             % (error.encoding, line, offset, error.reason))
+            self.log.warning("'%s' codec can't decode byte in position %d:%d : %s",
+                             error.encoding, line, offset, error.reason)
         # Replace %{name} with the package name
         spec = spec.replace("%{name}", self.module_name)
         # Replace %{version} with the package version
@@ -2529,7 +2514,7 @@ class Commands(object):
         build_id = build.build_id
 
         if nowait:
-            self.log.info('Build submitted: %s' % build_id)
+            self.log.info('Build submitted: %s', build_id)
             return
 
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
@@ -2575,10 +2560,9 @@ class Commands(object):
             else:
                 dest_tag = self.kojisession.getTag(build_target['dest_tag'])
                 if not dest_tag:
-                    self.log.error("Unknown destination tag: %s" %
-                                   build_target['dest_tag_name'])
+                    self.log.error("Unknown destination tag: %s", build_target['dest_tag_name'])
                 if dest_tag['locked'] and 'scratch' not in opts:
-                    self.log.error("Destination tag %s is locked" % dest_tag['name'])
+                    self.log.error("Destination tag %s is locked", dest_tag['name'])
 
             source = self._get_namespace_anongiturl(self.ns_module_name)
             source += "#%s" % self.commithash
@@ -2593,9 +2577,8 @@ class Commands(object):
                                                       docker_target,
                                                       task_opts,
                                                       priority=priority)
-            self.log.info('Created task: %s' % task_id)
-            self.log.info('Task info: %s/taskinfo?taskID=%s',
-                          self.kojiweburl, task_id)
+            self.log.info('Created task: %s', task_id)
+            self.log.info('Task info: %s/taskinfo?taskID=%s', self.kojiweburl, task_id)
             if not nowait:
                 rv = koji_task_watcher(self.kojisession, [task_id])
                 if rv == 0:
@@ -2623,8 +2606,7 @@ class Commands(object):
             if not cfp.has_option('autorebuild', 'enabled'):
                 self.log.info('true')
             else:
-                self.log.info('true' if cfp.getboolean('autorebuild', 'enabled')
-                              else 'false')
+                self.log.info('true' if cfp.getboolean('autorebuild', 'enabled') else 'false')
         elif set_autorebuild is not None:
             if not cfp.has_section('autorebuild'):
                 cfp.add_section('autorebuild')
@@ -2634,8 +2616,8 @@ class Commands(object):
                 cfp.write(fp)
 
             self.repo.index.add([self.osbs_config_filename])
-            self.log.info('Config value changed, don\'t forget to commit'
-                          ' %s file', self.osbs_config_filename)
+            self.log.info("Config value changed, don't forget to commit %s file",
+                          self.osbs_config_filename)
         else:
             self.log.info('Nothing to be done')
 
