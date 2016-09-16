@@ -20,7 +20,5 @@ class CommandPackageNameTestCase(CommandTestCase):
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
 
-        # pycurl can't handle unicode variable
-        # module_name needs to be a byte string
-        self.assertNotEqual(type(cmd.module_name), six.text_type)
-        self.assertEqual(type(cmd.module_name), six.binary_type)
+        self.assertNotEqual(type(cmd.module_name), six.binary_type)
+        self.assertEqual(type(cmd.module_name), six.text_type)

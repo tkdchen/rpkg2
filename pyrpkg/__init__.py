@@ -407,9 +407,9 @@ class Commands(object):
                     raise rpkgError('Unable to find remote push url: %s' % e)
         if isinstance(url, six.text_type):
             # GitPython >= 1.0 return unicode. It must be encoded to string.
-            self._push_url = url.encode('utf-8')
-        else:
             self._push_url = url
+        else:
+            self._push_url = url.decode('utf-8')
 
     @property
     def commithash(self):
@@ -490,7 +490,8 @@ class Commands(object):
         """Get the local arch as defined by rpm"""
 
         proc = subprocess.Popen(['rpm --eval %{_arch}'], shell=True,
-                                stdout=subprocess.PIPE)
+                                stdout=subprocess.PIPE,
+                                universal_newlines=True)
         self._localarch = proc.communicate()[0].strip('\n')
 
     @property
@@ -534,8 +535,8 @@ class Commands(object):
                 #     self._module_name = "/".join(parts.path.split("/")[-2:])
                 module_name = posixpath.basename(parts.path)
 
-                if module_name.endswith(b'.git'):
-                    module_name = module_name[:-len(b'.git')]
+                if module_name.endswith('.git'):
+                    module_name = module_name[:-len('.git')]
                 self._module_name = module_name
                 return
         except rpkgError:
