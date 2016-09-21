@@ -1084,7 +1084,8 @@ see API KEY section of copr-cli(1) man page.
 
         opts = {"scratch": self.args.scratch,
                 "quiet": self.args.q,
-                "yum_repourls": self.args.repo_url}
+                "yum_repourls": self.args.repo_url,
+                "git_branch": self.cmd.branch_merge}
 
         section_name = "%s.container-build" % self.name
         err_msg = "Missing {option} option in [{plugin.section}] section. "\

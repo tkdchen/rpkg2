@@ -2453,7 +2453,8 @@ class Commands(object):
         git_uri = re.sub(r"^git\+ssh", "git", self.push_url)
         git_uri = re.sub("^ssh", "git", git_uri)
         git_uri = re.sub("[^/]+@", "", git_uri)
-        git_ref = self.branch_merge
+        git_ref = self.commithash
+        git_branch = self.branch_merge
         user = self.user
         component = self.module_name
         docker_target = self.target
@@ -2465,6 +2466,7 @@ class Commands(object):
         build = osbs.create_build(
             git_uri=git_uri,
             git_ref=git_ref,
+            git_branch=git_branch,
             user=user,
             component=component,
             target=docker_target,
@@ -2529,7 +2531,7 @@ class Commands(object):
 
             task_opts = {}
             for key in ('scratch', 'name', 'version', 'release',
-                        'yum_repourls'):
+                        'yum_repourls', 'git_branch'):
                 if key in opts:
                     task_opts[key] = opts[key]
             priority = opts.get("priority", None)
