@@ -1,14 +1,9 @@
 import os
 import shutil
-import sys
 import tempfile
 import unittest
 
-old_path = list(sys.path)
-src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../src')
-sys.path.insert(0, src_path)
 from pyrpkg import sources
-sys.path = old_path
 
 
 class SourceFileEntryTestCase(unittest.TestCase):
@@ -232,7 +227,7 @@ class SourcesFileTestCase(unittest.TestCase):
         s.write()
 
         with open(self.sourcesfile) as f:
-             lines = f.readlines()
+            lines = f.readlines()
 
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'MD5 (afile) = ahash\n')
@@ -250,7 +245,7 @@ class SourcesFileTestCase(unittest.TestCase):
         s.write()
 
         with open(self.sourcesfile) as f:
-             lines = f.readlines()
+            lines = f.readlines()
 
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], 'MD5 (afile) = ahash\n')
@@ -269,11 +264,7 @@ class SourcesFileTestCase(unittest.TestCase):
         s.write()
 
         with open(self.sourcesfile) as f:
-             lines = f.readlines()
+            lines = f.readlines()
 
         self.assertEqual(len(lines), 1)
         self.assertEqual(lines[0], 'MD5 (thirdfile) = thirdhash\n')
-
-
-if __name__ == '__main__':
-    unittest.main()

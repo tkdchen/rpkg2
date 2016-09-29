@@ -10,34 +10,27 @@
 # the full text of the license.
 
 import errno
-import os
-import pwd
-import sys
-import shutil
-import re
-import pycurl
-if sys.version_info[0:2] >= (2, 5):
-    import subprocess
-else:
-    # We need a subprocess that has check_call
-    from kitchen.pycompat27 import subprocess
-import koji
-import rpm
-import logging
-import git
-import tempfile
 import fnmatch
-import posixpath
-import six
+import git
 import glob
+import koji
+import logging
+import os
+import posixpath
+import pwd
+import re
+import rpm
+import shutil
+import six
+import sys
+import tempfile
+
 from ConfigParser import ConfigParser
+
+from osbs.api import OSBS
+from osbs.conf import Configuration
 from six.moves import configparser
 from six.moves import urllib
-# Try to import krb, it's OK if it fails
-try:
-    import krbV
-except ImportError:
-    pass
 
 from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError, \
     UnknownTargetError
@@ -46,13 +39,21 @@ from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, log_result
 
-from osbs.api import OSBS
-from osbs.conf import Configuration
+if sys.version_info[0:2] >= (2, 5):
+    import subprocess
+else:
+    # We need a subprocess that has check_call
+    from kitchen.pycompat27 import subprocess
+
+# Try to import krb, it's OK if it fails
+try:
+    import krbV
+except ImportError:
+    pass
 
 
-# Setup our logger
-# Null logger to avoid spurious messages, add a handler in app code
 class NullHandler(logging.Handler):
+    """Null logger to avoid spurious messages, add a handler in app code"""
     def emit(self, record):
         pass
 
@@ -851,7 +852,7 @@ class Commands(object):
         try:
             ctx = krbV.default_context()
             ccache = ctx.default_ccache()
-            princ = ccache.principal()
+            princ = ccache.principal()  # noqa
             return True
         except krbV.Krb5Error:
             return False
@@ -1019,7 +1020,7 @@ class Commands(object):
         # get the name
         cmd = ['rpm', '-qp', '--nosignature', '--qf', '%{NAME}', srpm]
         # Run the command
-        self.log.debug('Running: %s' % ' '.join(cmd))
+        self.log.debug('Running: %s', ' '.join(cmd))
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
@@ -1860,8 +1861,7 @@ class Commands(object):
                     self.log.info('Note: You can skip NVR construction & NVR'
                                   ' check with --skip-nvr-check. See help for'
                                   ' more info.')
-                    raise rpkgError('Cannot continue without properly'
-                                    ' constructed NVR.')
+                    raise rpkgError('Cannot continue without properly constructed NVR.')
                 else:
                     self.log.info('NVR checking will be skipped so I do not'
                                   ' care that I am not able to construct NVR.'
@@ -1893,13 +1893,12 @@ class Commands(object):
                 chain.append([url])
             # This next list comp is ugly, but it's how we properly get a :
             # put in between each build set
-            cmd.extend(' : '.join([' '.join(sets) for sets in chain]).split())
+            cmd.extend(' : '.join([' '.join(build_sets) for build_sets in chain]).split())
             self.log.info('Chain building %s + %s for %s', build_reference, chain[:-1], self.target)
             self.log.debug('Building chain %s for %s with options %s and a priority of %s',
                            chain, self.target, opts, priority)
             self.log.debug(' '.join(cmd))
-            task_id = self.kojisession.chainBuild(chain, self.target, opts,
-                                                  priority=priority)
+            task_id = self.kojisession.chainBuild(chain, self.target, opts, priority=priority)
         # Now handle the normal build
         else:
             cmd.append(url)
@@ -1907,8 +1906,7 @@ class Commands(object):
             self.log.debug('Building %s for %s with options %s and a priority of %s',
                            url, self.target, opts, priority)
             self.log.debug(' '.join(cmd))
-            task_id = self.kojisession.build(url, self.target, opts,
-                                             priority=priority)
+            task_id = self.kojisession.build(url, self.target, opts, priority=priority)
         self.log.info('Created task: %s', task_id)
         self.log.info('Task info: %s/taskinfo?taskID=%s', self.kojiweburl, task_id)
         return task_id
@@ -2491,7 +2489,8 @@ class Commands(object):
                 for image in image_names:
                     print("  docker pull %s" % image)
             else:
-                raise RuntimeError("Build '%s' wasn't processed correctly. Please, report this." % build_id)
+                raise RuntimeError(
+                    "Build '%s' wasn't processed correctly. Please, report this." % build_id)
         else:
             raise RuntimeError("Build has failed.")
 

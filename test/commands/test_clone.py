@@ -12,6 +12,7 @@ CLONE_CONFIG = '''
     sendemail.to %(module)s-owner@fedoraproject.org
 '''
 
+
 class CommandCloneTestCase(CommandTestCase):
     def test_clone_anonymous(self):
         self.make_new_git(self.module)

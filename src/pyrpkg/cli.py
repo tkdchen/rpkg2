@@ -27,6 +27,7 @@ import utils
 
 OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
 
+
 class cliClient(object):
     """This is a client class for rpkg clients."""
 
@@ -450,12 +451,12 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                         'By default the prep and configure stages will be '
                         'done as well, unless the short-circuit option is '
                         'used.')
-        compile_parser.add_argument(
-            '--short-circuit', action='store_true',
-            help='short-circuit compile')
-        compile_parser.add_argument(
-            '--nocheck', action = 'store_true',
-            help = 'nocheck compile')
+        compile_parser.add_argument('--short-circuit',
+                                    action='store_true',
+                                    help='short-circuit compile')
+        compile_parser.add_argument('--nocheck',
+                                    action='store_true',
+                                    help='nocheck compile')
         compile_parser.set_defaults(command=self.compile)
 
     def register_diff(self):
@@ -529,13 +530,15 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                         'All leading sections will be processed as well, '
                         'unless the short-circuit option is used.')
         install_parser.add_argument(
-            '--short-circuit', action='store_true', default=False,
+            '--short-circuit',
+            action='store_true',
+            default=False,
             help='short-circuit install')
         install_parser.add_argument(
-            '--nocheck', action = 'store_true',
-            help = 'nocheck install')
-        install_parser.set_defaults(command=self.install,
-                                    default = False)
+            '--nocheck',
+            action='store_true',
+            help='nocheck install')
+        install_parser.set_defaults(command=self.install, default=False)
 
     def register_lint(self):
         """Register the lint target"""
@@ -688,8 +691,7 @@ defined, packages will be built sequentially.""" % {'name': self.name})
 
         push_parser = self.subparsers.add_parser(
             'push', help='Push changes to remote repository')
-        push_parser.add_argument('--force', '-f', help='Force push',
-        action='store_true')
+        push_parser.add_argument('--force', '-f', help='Force push', action='store_true')
         push_parser.set_defaults(command=self.push)
 
     def register_scratch_build(self):
@@ -863,20 +865,21 @@ see API KEY section of copr-cli(1) man page.
                                 help='Scratch build',
                                 action="store_true")
 
-        self.container_build_parser.add_argument('--target',
-                                             help='Override the default target',
-                                             default=None)
-        self.container_build_parser.add_argument('--build-with',
-                                            help='Build container with '
-                                            'specified builder type. Default '
-                                            'is koji',
-                                            dest="build_with",
-                                            choices=("koji", "osbs"),
-                                            default="koji")
-        self.container_build_parser.add_argument('--nowait',
-                                            action='store_true',
-                                            default=False,
-                                            help="Don't wait on build")
+        self.container_build_parser.add_argument(
+            '--target',
+            help='Override the default target',
+            default=None)
+        self.container_build_parser.add_argument(
+            '--build-with',
+            help='Build container with specified builder type. Default is koji',
+            dest="build_with",
+            choices=("koji", "osbs"),
+            default="koji")
+        self.container_build_parser.add_argument(
+            '--nowait',
+            action='store_true',
+            default=False,
+            help="Don't wait on build")
 
         self.container_build_parser.set_defaults(command=self.container_build)
 
@@ -954,17 +957,16 @@ see API KEY section of copr-cli(1) man page.
             return
 
         # Pass info off to our koji task watcher
-        return self._watch_koji_tasks(self.cmd.kojisession,
-                                      [task_id])
+        return self._watch_koji_tasks(self.cmd.kojisession, [task_id])
 
     def chainbuild(self):
         if self.cmd.module_name in self.args.package:
-            raise Exception('%s must not be in the chain' %
-                            self.cmd.module_name)
+            raise Exception('%s must not be in the chain' % self.cmd.module_name)
+
         # make sure we didn't get an empty chain
         if self.args.package == [':']:
-            raise Exception('Must provide at least one dependency '
-                            'build')
+            raise Exception('Must provide at least one dependency build')
+
         # Break the chain up into sections
         sets = False
         urls = []
@@ -975,25 +977,23 @@ see API KEY section of copr-cli(1) man page.
                 # We've hit the end of a set, add the set as a unit to the
                 # url list and reset the build_set.
                 urls.append(build_set)
-                self.log.debug('Created a build set: %s' % ' '.join(build_set))
+                self.log.debug('Created a build set: %s', ' '.join(build_set))
                 build_set = []
                 sets = True
             else:
                 # Figure out the scm url to build from package name
-                hash = self.cmd.get_latest_commit(component,
-                                                  self.cmd.branch_merge)
-                url = self.cmd.anongiturl % {'module':
-                                             component} + '#%s' % hash
+                hash = self.cmd.get_latest_commit(component, self.cmd.branch_merge)
+                url = self.cmd.anongiturl % {'module': component} + '#%s' % hash
                 # If there are no ':' in the chain list, treat each object as
                 # an individual chain
                 if ':' in self.args.package:
                     build_set.append(url)
                 else:
                     urls.append([url])
-                    self.log.debug('Created a build set: %s' % url)
+                    self.log.debug('Created a build set: %s', url)
         # Take care of the last build set if we have one
         if build_set:
-            self.log.debug('Created a build set: %s' % ' '.join(build_set))
+            self.log.debug('Created a build set: %s', ' '.join(build_set))
             urls.append(build_set)
         # See if we ended in a : making our last build it's own group
         if self.args.package[-1] == ':':
@@ -1093,18 +1093,18 @@ see API KEY section of copr-cli(1) man page.
         err_args = {"plugin.section": section_name, "root.section": self.name}
 
         if self.config.has_option(section_name, "kojiconfig"):
-            kojiconfig=self.config.get(section_name, "kojiconfig")
+            kojiconfig = self.config.get(section_name, "kojiconfig")
         else:
             err_args["option"] = "kojiconfig"
             self.log.debug(err_msg % err_args)
-            kojiconfig=self.config.get(self.name, "kojiconfig")
+            kojiconfig = self.config.get(self.name, "kojiconfig")
 
         if self.config.has_option(section_name, "build_client"):
-            build_client=self.config.get(section_name, "build_client")
+            build_client = self.config.get(section_name, "build_client")
         else:
             err_args["option"] = "kojiconfig"
             self.log.debug(err_msg % err_args)
-            build_client=self.config.get(self.name, "build_client")
+            build_client = self.config.get(self.name, "build_client")
 
         self.cmd.container_build_koji(target_override, opts=opts,
                                       kojiconfig=kojiconfig,
@@ -1474,14 +1474,17 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
         else:
             self.user = pwd.getpwuid(os.getuid())[0]
 
+
 # Add a class stolen from /usr/bin/koji to watch tasks
 # this was cut/pasted from koji, and then modified for local use.
 # The formatting is koji style, not the stile of this file.  Do not use these
 # functions as a style guide.
 # This is fragile and hopefully will be replaced by a real kojiclient lib.
+
+
 class TaskWatcher(object):
 
-    def __init__(self,task_id,session,log,level=0,quiet=False):
+    def __init__(self, task_id, session, log, level=0, quiet=False):
         self.id = task_id
         self.session = session
         self.info = None
@@ -1489,7 +1492,7 @@ class TaskWatcher(object):
         self.quiet = quiet
         self.log = log
 
-    #XXX - a bunch of this stuff needs to adapt to different tasks
+    # XXX - a bunch of this stuff needs to adapt to different tasks
 
     def str(self):
         if self.info:
@@ -1507,7 +1510,7 @@ class TaskWatcher(object):
             return ''
         error = None
         try:
-            result = self.session.getTaskResult(self.id)
+            self.session.getTaskResult(self.id)
         except (xmlrpc_client.Fault, koji.GenericError) as e:
             error = e
         if error is None:
@@ -1529,24 +1532,23 @@ class TaskWatcher(object):
             raise Exception("No such task id: %i" % self.id)
         state = self.info['state']
         if last:
-            #compare and note status changes
+            # compare and note status changes
             laststate = last['state']
             if laststate != state:
-                self.log.info("%s: %s -> %s" % (self.str(),
-                                           self.display_state(last),
-                                           self.display_state(self.info)))
+                self.log.info("%s: %s -> %s",
+                              self.str(), self.display_state(last), self.display_state(self.info))
                 return True
             return False
         else:
             # First time we're seeing this task, so just show the current state
-            self.log.info("%s: %s" % (self.str(), self.display_state(self.info)))
+            self.log.info("%s: %s", self.str(), self.display_state(self.info))
             return False
 
     def is_done(self):
         if self.info is None:
             return False
         state = koji.TASK_STATES[self.info['state']]
-        return (state in ['CLOSED','CANCELED','FAILED'])
+        return (state in ['CLOSED', 'CANCELED', 'FAILED'])
 
     def is_success(self):
         if self.info is None:

@@ -10,19 +10,14 @@
 import hashlib
 import os
 import shutil
-import sys
 import tempfile
 import unittest
 
 import mock
 import pycurl
 
-old_path = list(sys.path)
-src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../src')
-sys.path.insert(0, src_path)
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.errors import DownloadError, InvalidHashType, UploadError
-sys.path = old_path
 
 
 class CGILookasideCacheTestCase(unittest.TestCase):

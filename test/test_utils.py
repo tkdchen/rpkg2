@@ -1,15 +1,9 @@
-import os
-import sys
 import unittest
 import warnings
 
 import mock
 
-old_path = list(sys.path)
-src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../src')
-sys.path.insert(0, src_path)
 from pyrpkg.utils import cached_property, warn_deprecated, log_result
-sys.path = old_path
 
 
 class CachedPropertyTestCase(unittest.TestCase):
@@ -162,8 +156,10 @@ class DeprecationUtilsTestCase(unittest.TestCase):
 class LogResultTestCase(unittest.TestCase):
     def setUp(self):
         self.logs = []
+
         def info(msg):
             self.logs.append(msg)
+
         self.log_func = info
 
     def test_dict_result(self):

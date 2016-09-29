@@ -14,17 +14,22 @@ This module contains a bunch of utilities used elsewhere in pyrpkg.
 
 
 import warnings
-warnings.simplefilter('always', DeprecationWarning)
 
 import os
 import six
 
 if six.PY3:
-    u = lambda s: s
+    def u(s):
+        return s
+
     getcwd = os.getcwd
 else:
-    u = lambda s: s.decode('utf-8')
+    def u(s):
+        return s.decode('utf-8')
+
     getcwd = os.getcwdu
+
+warnings.simplefilter('always', DeprecationWarning)
 
 
 class cached_property(property):

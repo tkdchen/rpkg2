@@ -290,8 +290,7 @@ class LoadBranchMergeTest(CommandTestCase):
         try:
             self.cmd.load_branch_merge()
         except rpkgError as e:
-            self.assertEqual('Unable to find remote branch.  Use --dist',
-                              str(e))
+            self.assertEqual('Unable to find remote branch.  Use --dist', str(e))
         else:
             self.fail("It's expected to raise rpkgError, but not.")
 

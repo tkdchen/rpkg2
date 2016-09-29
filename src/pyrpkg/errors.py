@@ -19,6 +19,7 @@ class rpkgAuthError(rpkgError):
     """Raised in case of authentication errors"""
     faultCode = 1002
 
+
 class UnknownTargetError(Exception):
     faultCode = 1004
 

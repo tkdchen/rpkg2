@@ -26,7 +26,7 @@ class CommandPatchTestCase(CommandTestCase):
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         line, offset = cmd._byte_offset_to_line_number(self.text_ascii, 10)
-        #10 byte offset mean line 1 and character 11
+        # 10 byte offset mean line 1 and character 11
         self.assertEqual(line, 1)
         self.assertEqual(offset, 11)
 
@@ -52,6 +52,6 @@ class CommandPatchTestCase(CommandTestCase):
                               self.target, self.quiet)
         text = self.text_utf8.decode('UTF-8', 'ignore')
         line, offset = cmd._byte_offset_to_line_number(text, 9)
-        #9 byte offset mean line 3 and second character
+        # 9 byte offset mean line 3 and second character
         self.assertEqual(line, 3)
         self.assertEqual(offset, 2)

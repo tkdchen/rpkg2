@@ -35,8 +35,8 @@ class CommandAddTagTestCase(CommandTestCase):
 
         # `git tag` will call $EDITOR to ask the user to write a message
         os.environ['GIT_EDITOR'] = ('/usr/bin/python -c "import sys; '
-                                'open(sys.argv[1], \'w\').write(\'%s\')"'
-                                % message)
+                                    'open(sys.argv[1], \'w\').write(\'%s\')"'
+                                    % message)
 
         cmd.add_tag(tag)
 
