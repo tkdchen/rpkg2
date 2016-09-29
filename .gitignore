@@ -7,6 +7,6 @@ py-compile
 /*.tar.gz
 /*.rpm
 dist/
-src/rpkg.egg-info/
+rpkg.egg-info/
 /sources
 .coverage

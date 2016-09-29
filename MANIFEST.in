@@ -1,6 +1,7 @@
 include COPYING
 include COPYING-koji
 include LGPL
-include src/rpkg.bash
-include src/rpkg.conf
-include src/rpkg_man_page.py
+include doc/rpkg_man_page.py
+include bin/rpkg
+recursive-include tests *
+recursive-include etc *

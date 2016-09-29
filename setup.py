@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -12,11 +12,10 @@ setup(
                  "package sources in a git repository"),
     license="GPLv2+",
     url="https://fedorahosted.org/rpkg",
-    package_dir={'': 'src'},
-    packages=['pyrpkg'],
-    scripts=['src/rpkg'],
-    data_files=[('/etc/bash_completion.d', ['src/rpkg.bash']),
-                ('/etc/rpkg', ['src/rpkg.conf'])],
+    packages=find_packages(),
+    scripts=['bin/rpkg'],
+    data_files=[('/etc/bash_completion.d', ['etc/bash_completion.d/rpkg.bash']),
+                ('/etc/rpkg', ['etc/rpkg/rpkg.conf'])],
     install_requires=['six', 'pycurl'],  # + koji, but it's not in PyPI
     tests_require=['nose', 'mock'],
     test_suite='nose.collector',
