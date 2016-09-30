@@ -149,7 +149,7 @@ class CGILookasideCache(object):
         path_dict.update(kwargs)
         path = self.download_path % path_dict
         url = '%s/%s' % (self.download_url, path)
-        self.log.debug("Full url: %s" % url)
+        self.log.debug("Full url: %s", url)
 
         with open(outfile, 'wb') as f:
             c = pycurl.Curl()
@@ -214,7 +214,7 @@ class CGILookasideCache(object):
                 if os.path.exists(self.ca_cert):
                     c.setopt(pycurl.CAINFO, self.ca_cert)
                 else:
-                    self.log.warning("Missing certificate: %s" % self.ca_cert)
+                    self.log.warning("Missing certificate: %s", self.ca_cert)
 
             try:
                 c.perform()
@@ -255,10 +255,10 @@ class CGILookasideCache(object):
         filename = os.path.basename(filepath)
 
         if self.remote_file_exists(name, filename, hash):
-            self.log.info("File already uploaded: %s" % filepath)
+            self.log.info("File already uploaded: %s", filepath)
             return
 
-        self.log.info("Uploading: %s" % filepath)
+        self.log.info("Uploading: %s", filepath)
         post_data = [('name', name),
                      ('%ssum' % self.hashtype, hash),
                      ('file', (pycurl.FORM_FILE, filepath))]
@@ -275,14 +275,13 @@ class CGILookasideCache(object):
                 if os.path.exists(self.client_cert):
                     c.setopt(pycurl.SSLCERT, self.client_cert)
                 else:
-                    self.log.warning("Missing certificate: %s"
-                                     % self.client_cert)
+                    self.log.warning("Missing certificate: %s", self.client_cert)
 
             if self.ca_cert is not None:
                 if os.path.exists(self.ca_cert):
                     c.setopt(pycurl.CAINFO, self.ca_cert)
                 else:
-                    self.log.warning("Missing certificate: %s" % self.ca_cert)
+                    self.log.warning("Missing certificate: %s", self.ca_cert)
 
             try:
                 c.perform()

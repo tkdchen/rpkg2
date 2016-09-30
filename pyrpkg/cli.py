@@ -971,7 +971,7 @@ see API KEY section of copr-cli(1) man page.
         sets = False
         urls = []
         build_set = []
-        self.log.debug('Processing chain %s' % ' '.join(self.args.package))
+        self.log.debug('Processing chain %s', ' '.join(self.args.package))
         for component in self.args.package:
             if component == ':':
                 # We've hit the end of a set, add the set as a unit to the
@@ -1177,7 +1177,7 @@ see API KEY section of copr-cli(1) man page.
         try:
             self.cmd.sources()
         except Exception as e:
-            self.log.error('Could not download sources: %s' % e)
+            self.log.error('Could not download sources: %s', e)
             sys.exit(1)
 
         mockargs = []
@@ -1198,14 +1198,14 @@ see API KEY section of copr-cli(1) man page.
             self.cmd.mockbuild(mockargs, self.args.root,
                                hashtype=self.args.hash)
         except Exception as e:
-            self.log.error('Could not run mockbuild: %s' % e)
+            self.log.error('Could not run mockbuild: %s', e)
             sys.exit(1)
 
     def mock_config(self):
         try:
             print(self.cmd.mock_config(self.args.target, self.args.arch))
         except Exception as e:
-            self.log.error('Could not generate the mock config: %s' % e)
+            self.log.error('Could not generate the mock config: %s', e)
             sys.exit(1)
 
     def new(self):
@@ -1311,8 +1311,8 @@ see API KEY section of copr-cli(1) man page.
                 open += 1
             elif status == koji.TASK_STATES['FREE']:
                 free += 1
-        self.log.info("  %d free  %d open  %d done  %d failed" %
-                      (free, open, done, failed))
+        self.log.info("  %d free  %d open  %d done  %d failed",
+                      free, open, done, failed)
 
     def _display_task_results(self, tasks):
         for task in [task for task in tasks.values() if task.level == 0]:
@@ -1320,14 +1320,14 @@ see API KEY section of copr-cli(1) man page.
             task_label = task.str()
 
             if state == koji.TASK_STATES['CLOSED']:
-                self.log.info('%s completed successfully' % task_label)
+                self.log.info('%s completed successfully', task_label)
             elif state == koji.TASK_STATES['FAILED']:
-                self.log.info('%s failed' % task_label)
+                self.log.info('%s failed', task_label)
             elif state == koji.TASK_STATES['CANCELED']:
-                self.log.info('%s was canceled' % task_label)
+                self.log.info('%s was canceled', task_label)
             else:
                 # shouldn't happen
-                self.log.info('%s has not completed' % task_label)
+                self.log.info('%s has not completed', task_label)
 
     def _watch_koji_tasks(self, session, tasklist):
         if not tasklist:

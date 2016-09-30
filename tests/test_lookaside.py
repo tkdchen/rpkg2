@@ -379,7 +379,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         def mock_setopt(opt, value):
             curlopts[opt] = value
 
-        def mock_warn(msg):
+        def mock_warn(msg, *args, **kwargs):
             warn_messages.append(msg)
 
         curlopts = {}
@@ -530,7 +530,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         def mock_setopt(opt, value):
             curlopts[opt] = value
 
-        def mock_warn(msg):
+        def mock_warn(msg, *args, **kwargs):
             warn_messages.append(msg)
 
         curlopts = {}
