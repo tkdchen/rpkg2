@@ -716,7 +716,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         """Register the sources target"""
 
         sources_parser = self.subparsers.add_parser(
-            'sources', help='Download source files')
+            'sources', help='Download source files',
+            description='Download source files')
         sources_parser.add_argument(
             '--outdir', default=os.curdir,
             help='Directory to download files into (defaults to pwd)')
@@ -726,7 +727,8 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         """Register the srpm target"""
 
         srpm_parser = self.subparsers.add_parser(
-            'srpm', help='Create a source rpm')
+            'srpm', help='Create a source rpm',
+            description='Create a source rpm')
         # optionally define old style hashsums
         srpm_parser.add_argument(
             '--md5', action='store_const', const='md5', default=None,
