@@ -27,8 +27,11 @@ import sys
 import tempfile
 import koji.ssl.SSLCommon
 
-from osbs.api import OSBS
-from osbs.conf import Configuration
+try:
+    from osbs.api import OSBS
+    from osbs.conf import Configuration
+except ImportError:
+    pass
 from six.moves import configparser
 from six.moves import urllib
 
