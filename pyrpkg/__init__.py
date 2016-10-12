@@ -360,8 +360,7 @@ class Commands(object):
             except TypeError as e:
                 raise rpkgError('Repo in inconsistent state: %s' % e)
             try:
-                merge = self.repo.git.config('--get',
-                                             'branch.%s.merge' % localbranch)
+                merge = self.repo.git.config('--get', 'branch.%s.merge' % localbranch)
             except git.GitCommandError as e:
                 raise rpkgError('Unable to find remote branch.  Use --dist')
             # Trim off the refs/heads so that we're just working with
@@ -1751,6 +1750,13 @@ class Commands(object):
         return
 
     def check_repo(self, is_dirty=True, all_pushed=True):
+        """Check various status of current repository
+
+        :param bool is_dirty: Default to True. To check whether there is uncommitted changes.
+        :param bool all_pushed: Default to True. To check whether all changes are pushed.
+        :raises rpkgError: if any unexpected status is detected. For example,
+            if changes are not committed yet.
+        """
         if is_dirty:
             if self.repo.is_dirty():
                 raise rpkgError('%s has uncommitted changes.  Use git status '
