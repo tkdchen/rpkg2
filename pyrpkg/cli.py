@@ -637,8 +637,7 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                         'and .gitignore files will be updated with the new '
                         'uploaded file(s).')
         self.new_sources_parser.add_argument('files', nargs='+')
-        self.new_sources_parser.set_defaults(
-            command=self.new_sources, replace=True)
+        self.new_sources_parser.set_defaults(command=self.new_sources, replace=True)
 
     def register_patch(self):
         """Register the patch target"""
@@ -826,7 +825,7 @@ see API KEY section of copr-cli(1) man page.
             description='This command will add a new source archive to the '
                         'lookaside cache. The sources and .gitignore file '
                         'will be updated with the new file(s).')
-        upload_parser.set_defaults(command=self.new_sources, replace=False)
+        upload_parser.set_defaults(command=self.upload, replace=False)
 
     def register_verify_files(self):
         """Register the verify-files target"""
@@ -1222,6 +1221,9 @@ see API KEY section of copr-cli(1) man page.
         self.cmd.upload(self.args.files, replace=self.args.replace)
         self.log.info("Source upload succeeded. Don't forget to commit the "
                       "sources file")
+
+    def upload(self):
+        self.new_sources()
 
     def patch(self):
         self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
