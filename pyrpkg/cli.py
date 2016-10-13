@@ -13,19 +13,28 @@
 # LGPLv2.1.  See comments before those functions.
 
 import argparse
-import sys
-import os
 import logging
-import time
+import os
+import pwd
 import random
 import string
-from six.moves import xmlrpc_client
-import pwd
-import koji
+import sys
+import time
+import warnings
 
-import utils
+import koji
+import pyrpkg.utils as utils
+
+from six.moves import xmlrpc_client
 
 OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
+
+
+def warning_deprecated_dist(value):
+    """Warning deprecated of option dist"""
+    warnings.warn('--dist is deprecated and will be removed in future version. '
+                  'Use --release instead.', DeprecationWarning)
+    return value
 
 
 class cliClient(object):
@@ -111,7 +120,7 @@ class cliClient(object):
                                        items['kojiconfig'],
                                        items['build_client'],
                                        user=self.args.user,
-                                       dist=self.args.dist,
+                                       dist=self.args.dist or self.args.release,
                                        target=target,
                                        quiet=self.args.q,
                                        distgit_namespaced=dg_namespaced
@@ -156,9 +165,22 @@ class cliClient(object):
         self.parser.add_argument('--config', '-C',
                                  default=None,
                                  help='Specify a config file to use')
+        group = self.parser.add_mutually_exclusive_group()
+        group.add_argument('--release',
+                           dest='release',
+                           default=None,
+                           help='Override the discovered release from current branch, '
+                                'which is used to determine the build target and value of '
+                                'dist macro. Generally, release is the name of a branch '
+                                'created in your package repository. --release is an alias '
+                                'of --dist, hence --release should be instead.')
         # Allow forcing the dist value
-        self.parser.add_argument('--dist', default=None,
-                                 help='Override the discovered distribution')
+        group.add_argument('--dist',
+                           default=None,
+                           type=warning_deprecated_dist,
+                           help='Deprecated. Use --release instead. You can use --dist '
+                                'for a while for backward-compatibility. It will be disabled'
+                                ' in future version.')
         # Allow forcing the package name
         self.parser.add_argument('--module-name',
                                  help=('Override the module name. Otherwise'
@@ -1473,6 +1495,7 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
 
         # Parse the args
         self.args = self.parser.parse_args()
+
         if self.args.user:
             self.user = self.args.user
         else:
