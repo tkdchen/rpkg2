@@ -25,8 +25,6 @@ import six
 import sys
 import tempfile
 
-from ConfigParser import ConfigParser
-
 import gssapi
 
 from osbs.api import OSBS
@@ -2548,7 +2546,7 @@ class Commands(object):
 
     def container_build_setup(self, get_autorebuild=None,
                               set_autorebuild=None):
-        cfp = ConfigParser.SafeConfigParser()
+        cfp = configparser.SafeConfigParser()
         if os.path.exists(self.osbs_config_filename):
             cfp.read(self.osbs_config_filename)
 
