@@ -1080,6 +1080,8 @@ see API KEY section of copr-cli(1) man page.
             self.push()
 
     def compile(self):
+        self.sources()
+
         arch = None
         short = False
         nocheck = False
@@ -1184,6 +1186,7 @@ see API KEY section of copr-cli(1) man page.
         self.log.info("Commit if happy or revert with: git reset --hard HEAD")
 
     def install(self):
+        self.sources()
         self.cmd.install(arch=self.args.arch,
                          short=self.args.short_circuit,
                          builddir=self.args.builddir,
@@ -1193,6 +1196,7 @@ see API KEY section of copr-cli(1) man page.
         self.cmd.lint(self.args.info, self.args.rpmlintconf)
 
     def local(self):
+        self.sources()
         self.cmd.local(arch=self.args.arch, hashtype=self.args.hash,
                        builddir=self.args.builddir)
 
@@ -1251,6 +1255,7 @@ see API KEY section of copr-cli(1) man page.
         self.cmd.patch(self.args.suffix, rediff=self.args.rediff)
 
     def prep(self):
+        self.sources()
         self.cmd.prep(arch=self.args.arch, builddir=self.args.builddir)
 
     def pull(self):
@@ -1267,10 +1272,20 @@ see API KEY section of copr-cli(1) man page.
         return self.build()
 
     def sources(self):
-        self.cmd.sources(self.args.outdir)
+        """Download files listed in sources
+
+        For command compile, prep, install, local and srpm, files are needed to
+        be downloaded before doing what the command does. Hence, for these
+        cases, sources is not called from command line. Instead, from rpkg
+        inside.
+        """
+        # When sources is not called from command line, option outdir is not
+        # available.
+        outdir = getattr(self.args, 'outdir', None)
+        self.cmd.sources(outdir)
 
     def srpm(self):
-        self.cmd.sources()
+        self.sources()
         self.cmd.srpm(hashtype=self.args.hash)
 
     def switch_branch(self):

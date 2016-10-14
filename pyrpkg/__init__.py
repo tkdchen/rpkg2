@@ -1968,8 +1968,6 @@ class Commands(object):
         Logs the output and returns nothing
         """
 
-        # Get the sources
-        self.sources()
         # setup the rpm command
         cmd = ['rpmbuild']
         if builddir:
@@ -2026,8 +2024,6 @@ class Commands(object):
         Logs the output and returns nothing
         """
 
-        # Get the sources
-        self.sources()
         # setup the rpm command
         cmd = ['rpmbuild']
         if builddir:
@@ -2100,7 +2096,6 @@ class Commands(object):
 
         # This could really use a list of arches to build for and loop over
         # Get the sources
-        self.sources()
         # build up the rpm command
         cmd = ['rpmbuild']
         if builddir:
@@ -2330,8 +2325,6 @@ class Commands(object):
         Logs the output and returns nothing
         """
 
-        # Get the sources
-        self.sources()
         # setup the rpm command
         cmd = ['rpmbuild']
         if builddir:
