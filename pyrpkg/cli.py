@@ -597,7 +597,9 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                                "/etc/mock directory, a temporary config "
                                "directory for mock is created and populated "
                                "with a config file created with mock-config.")
-        mockbuild_parser.add_argument('--root', help='Override mock root')
+        mockbuild_parser.add_argument(
+            '--root', '--mock-config', metavar='CONFIG',
+            dest='root', help='Override mock configuration (like mock -r)')
         # Allow the user to just pass "--md5" which will set md5 as the
         # hash, otherwise use the default of sha256
         mockbuild_parser.add_argument(
