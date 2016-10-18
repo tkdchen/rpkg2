@@ -1037,22 +1037,20 @@ see API KEY section of copr-cli(1) man page.
         try:
             self.cmd.commit(self.args.message, self.args.file,
                             self.args.files, self.args.signoff)
+            if self.args.tag:
+                tagname = self.cmd.nvr
+                self.cmd.add_tag(tagname, True, self.args.message,
+                                 self.args.file)
         except Exception:
             if self.args.tag:
                 self.log.error('Could not commit, will not tag!')
             if self.args.push:
                 self.log.error('Could not commit, will not push!')
             raise
-
-        try:
-            if self.args.tag:
-                tagname = self.cmd.nvr
-                self.cmd.add_tag(tagname, True, self.args.message,
-                                 self.args.file)
-        except Exception:
-            if self.args.push:
-                self.log.error('Could not tag, will not push!')
-            raise
+        finally:
+            if self.args.clog and os.path.isfile(self.args.file):
+                os.remove(self.args.file)
+                del self.args.file
 
         if self.args.push:
             self.push()
