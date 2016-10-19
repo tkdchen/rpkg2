@@ -1403,7 +1403,7 @@ see API KEY section of copr-cli(1) man page.
                                              quiet=self.args.q)
             while True:
                 all_done = True
-                for task_id, task in tasks.items():
+                for task_id, task in list(tasks.items()):
                     changed = task.update()
                     if not task.is_done():
                         all_done = False
