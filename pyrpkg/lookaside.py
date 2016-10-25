@@ -216,6 +216,9 @@ class CGILookasideCache(object):
                 else:
                     self.log.warning("Missing certificate: %s", self.ca_cert)
 
+            c.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_GSSNEGOTIATE)
+            c.setopt(pycurl.USERPWD, ':')
+
             try:
                 c.perform()
                 status = c.getinfo(pycurl.RESPONSE_CODE)
@@ -282,6 +285,9 @@ class CGILookasideCache(object):
                     c.setopt(pycurl.CAINFO, self.ca_cert)
                 else:
                     self.log.warning("Missing certificate: %s", self.ca_cert)
+
+            c.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_GSSNEGOTIATE)
+            c.setopt(pycurl.USERPWD, ':')
 
             try:
                 c.perform()
