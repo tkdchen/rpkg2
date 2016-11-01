@@ -27,6 +27,8 @@ import tempfile
 
 from ConfigParser import ConfigParser
 
+import gssapi
+
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from six.moves import configparser
@@ -44,12 +46,6 @@ if sys.version_info[0:2] >= (2, 5):
 else:
     # We need a subprocess that has check_call
     from kitchen.pycompat27 import subprocess
-
-# Try to import krb, it's OK if it fails
-try:
-    import krbV
-except ImportError:
-    pass
 
 
 class NullHandler(logging.Handler):
@@ -845,16 +841,23 @@ class Commands(object):
 
     # Define some helper functions, they start with _
     def _has_krb_creds(self):
-        # This function is lifted from /usr/bin/koji
-        if 'krbV' not in sys.modules:
+        """Test if there is usable initialized Kerberos credential
+
+        :return: True if credential is initialized and not expired. Otherwise, False is returned.
+        :rtype: bool
+        """
+        try:
+            cred = gssapi.creds.Credentials(usage='initiate')
+        except gssapi.exceptions.GSSError:
+            # GSSError is raised if credential cache is not initialized or has bad format.
             return False
         try:
-            ctx = krbV.default_context()
-            ccache = ctx.default_ccache()
-            princ = ccache.principal()  # noqa
-            return True
-        except krbV.Krb5Error:
+            # We don't care about the value of attribute lifetime. Reading
+            # lifetime is only for testing if credential is usable.
+            cred.lifetime
+        except gssapi.exceptions.ExpiredCredentialsError:
             return False
+        return True
 
     def _run_command(self, cmd, shell=False, env=None, pipe=[], cwd=None):
         """Run the given command.
