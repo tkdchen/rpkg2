@@ -1322,8 +1322,7 @@ class Commands(object):
         # First lets see if we got a message or we're on a real tty:
         if not sys.stdin.isatty():
             if not message and not file:
-                raise rpkgError('Must have a commit message or be on a real '
-                                'tty.')
+                raise rpkgError('Must have a commit message or be on a real tty.')
 
         # construct the git command
         # We do this via subprocess because the git module is terrible.
@@ -1337,8 +1336,7 @@ class Commands(object):
         elif file:
             # If we get a relative file name, prepend our path to it.
             if self.path and not file.startswith('/'):
-                cmd.extend(['-F', os.path.abspath(os.path.join(self.path,
-                                                               file))])
+                cmd.extend(['-F', os.path.abspath(os.path.join(self.path, file))])
             else:
                 cmd.extend(['-F', os.path.abspath(file)])
         if not files:
@@ -1923,44 +1921,33 @@ class Commands(object):
     def clog(self, raw=False):
         """Write the latest spec changelog entry to a clog file"""
 
-        # This is a little ugly.  We want to find where %changelog starts,
-        # then only deal with the content up to the first empty newline.
-        # Then remove any lines that start with $ or %, and then replace
-        # %% with %
+        spec_file = os.path.join(self.path, self.spec)
+        cmd = ['rpm', '--qf', '%{CHANGELOGTEXT}\n', '--specfile', spec_file]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if proc.returncode > 0:
+            raise rpkgError(stderr.strip())
 
-        cloglines = []
-        first = True
-        spec = open(os.path.join(self.path, self.spec), 'r').readlines()
-        for line in spec:
-            if line.lower().startswith('%changelog'):
-                # Grab all the lines below changelog
-                for line2 in spec[spec.index(line):]:
-                    if line2.startswith('\n'):
-                        break
-                    if line2.startswith('$'):
-                        continue
-                    if line2.startswith('%'):
-                        continue
-                    if line2.startswith('*'):
-                        if first:
-                            # skip the email n/v/r line.  Redundant
-                            continue
-                        # Otherwise what follows is the next entry
-                        break
-                    if first:
-                        if not raw:
-                            cloglines.append(line2.lstrip('- ').replace('%%',
-                                                                        '%'))
-                            cloglines.append("\n")
-                        else:
-                            cloglines.append(line2.replace('%%', '%'))
-                        first = False
-                    else:
-                        cloglines.append(line2.replace('%%', '%'))
+        clog_lines = []
+        buf = six.StringIO(stdout)
+        for line in buf:
+            if line == '\n' or line.startswith('$'):
+                continue
+            if line == '(none)\n':
+                # (none) may appear as the last line in changelog got from SPEC
+                # file. In some cases, e.g. there is only one changelog entry
+                # in SPEC, no (none) line presents. Thus, when for loop ends, all
+                # lines of changelog are handled.
+                break
+            if raw:
+                clog_lines.append(line)
+            else:
+                clog_lines.append(line.replace('- ', '', 1))
+        buf.close()
 
         # Now open the clog file and write out the lines
-        clogfile = open(os.path.join(self.path, 'clog'), 'w')
-        clogfile.writelines(cloglines)
+        with open(os.path.join(self.path, 'clog'), 'w') as clog:
+            clog.writelines(clog_lines)
 
     def compile(self, arch=None, short=False, builddir=None, nocheck=False):
         """Run rpmbuild -bc on a module

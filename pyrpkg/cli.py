@@ -430,6 +430,15 @@ defined, packages will be built sequentially.""" % {'name': self.name})
                         ' changelog message unless one is given to the '
                         'command. A push can be done at the same time.')
         commit_parser.add_argument(
+            '-m', '--message', default=None,
+            help='Use the given <msg> as the commit message summary')
+        commit_parser.add_argument(
+            '--with-changelog',
+            action='store_true',
+            default=None,
+            help='Get the last changelog from SPEC as commit message content. '
+                 'This option must be used with -m together.')
+        commit_parser.add_argument(
             '-c', '--clog', default=False, action='store_true',
             help='Generate the commit message from the Changelog section')
         commit_parser.add_argument(
@@ -438,9 +447,6 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         commit_parser.add_argument(
             '-t', '--tag', default=False, action='store_true',
             help='Create a tag for this commit')
-        commit_parser.add_argument(
-            '-m', '--message', default=None,
-            help='Use the given <msg> as the commit message')
         commit_parser.add_argument(
             '-F', '--file', default=None,
             help='Take the commit message from the given file')
@@ -1054,17 +1060,37 @@ see API KEY section of copr-cli(1) man page.
                            target=self.args.clone_target)
 
     def commit(self):
-        if self.args.clog:
+        if self.args.with_changelog and not self.args.message:
+            raise rpkgError('--with-changelog must be used with -m together.')
+
+        if self.args.message and self.args.with_changelog:
+            # Combose commit message with a summary and content into a file.
+            self.cmd.clog(True)
+            clog_file = os.path.abspath(os.path.join(self.args.path, 'clog'))
+            commit_msg_file = os.path.abspath(os.path.join(self.args.path, 'commit-message'))
+            with open(commit_msg_file, 'w') as commit_msg:
+                commit_msg.write(self.args.message)
+                commit_msg.write('\n\n')
+                with open(clog_file, 'r') as clog:
+                    commit_msg.write(clog.read())
+            self.args.file = commit_msg_file
+            os.remove(clog_file)
+            # This assignment is a magic because commit message is in the file
+            # commit-message already.
+            self.args.message = None
+        elif self.args.clog:
             self.cmd.clog(self.args.raw)
-            self.args.file = os.path.abspath(os.path.join(self.args.path,
-                                                          'clog'))
+            self.args.file = os.path.abspath(os.path.join(self.args.path, 'clog'))
+
+        # It is okay without specifying either -m or --clog. Changes will be
+        # committed with command ``git commit``, then git will invoke default
+        # configured editor for you and let you enter the commit message.
+
         try:
-            self.cmd.commit(self.args.message, self.args.file,
-                            self.args.files, self.args.signoff)
+            self.cmd.commit(self.args.message, self.args.file, self.args.files, self.args.signoff)
             if self.args.tag:
                 tagname = self.cmd.nvr
-                self.cmd.add_tag(tagname, True, self.args.message,
-                                 self.args.file)
+                self.cmd.add_tag(tagname, True, self.args.message, self.args.file)
         except Exception:
             if self.args.tag:
                 self.log.error('Could not commit, will not tag!')
@@ -1072,7 +1098,7 @@ see API KEY section of copr-cli(1) man page.
                 self.log.error('Could not commit, will not push!')
             raise
         finally:
-            if self.args.clog and os.path.isfile(self.args.file):
+            if self.args.clog or self.args.with_changelog and os.path.isfile(self.args.file):
                 os.remove(self.args.file)
                 del self.args.file
 
