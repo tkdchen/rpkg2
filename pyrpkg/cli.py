@@ -25,6 +25,7 @@ import warnings
 import koji
 import pyrpkg.utils as utils
 
+from pyrpkg import rpkgError
 from six.moves import xmlrpc_client
 
 OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
@@ -83,8 +84,7 @@ class cliClient(object):
                 pass
         if not name:
             # We don't have logger available yet
-            sys.stderr.write('Could not determine CLI name\n')
-            sys.exit(1)
+            raise rpkgError('Could not determine CLI name')
         return name
 
     # Define some properties here, for lazy loading
@@ -1204,8 +1204,7 @@ see API KEY section of copr-cli(1) man page.
         try:
             self.cmd.sources()
         except Exception as e:
-            self.log.error('Could not download sources: %s', e)
-            sys.exit(1)
+            raise rpkgError('Could not download sources: %s', e)
 
         mockargs = []
 
@@ -1225,15 +1224,10 @@ see API KEY section of copr-cli(1) man page.
             self.cmd.mockbuild(mockargs, self.args.root,
                                hashtype=self.args.hash)
         except Exception as e:
-            self.log.error('Could not run mockbuild: %s', e)
-            sys.exit(1)
+            raise rpkgError(e)
 
     def mock_config(self):
-        try:
-            print(self.cmd.mock_config(self.args.target, self.args.arch))
-        except Exception as e:
-            self.log.error('Could not generate the mock config: %s', e)
-            sys.exit(1)
+        print(self.cmd.mock_config(self.args.target, self.args.arch))
 
     def new(self):
         print(self.cmd.new())
