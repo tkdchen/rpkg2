@@ -72,7 +72,7 @@ class LoadNameVerRelTest(CommandTestCase):
         self.assertEqual('docpkg', self.cmd._module_name_spec)
         self.assertEqual('0', self.cmd._epoch)
         self.assertEqual('1.2', self.cmd._ver)
-        self.assertEqual('2', self.cmd._rel)
+        self.assertEqual('2.el6', self.cmd._rel)
 
     def test_load_spec_where_path_contains_space(self):
         """Ensure load_nameverrel works with a repo whose path contains space
@@ -104,7 +104,7 @@ class LoadNameVerRelTest(CommandTestCase):
         self.assertEqual('docpkg', cmd._module_name_spec)
         self.assertEqual('0', cmd._epoch)
         self.assertEqual('1.2', cmd._ver)
-        self.assertEqual('2', cmd._rel)
+        self.assertEqual('2.el6', cmd._rel)
 
     @patch('pyrpkg.Commands.load_rpmdefines', new=mock_load_rpmdefines)
     @patch('pyrpkg.Commands.load_spec',

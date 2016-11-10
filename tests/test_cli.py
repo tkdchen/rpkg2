@@ -152,3 +152,86 @@ class TestCommit(CliTestCase):
 
             diff_commits = repo.git.rev_list('origin/master...master')
             self.assertEqual('', diff_commits)
+
+
+class TestSrpm(CliTestCase):
+
+    def test_srpm(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'srpm']):
+            cli = self.new_cli()
+            cli.srpm()
+
+            self.assertTrue(os.path.exists(os.path.join(self.cloned_repo_path,
+                                                        'docpkg-1.2-2.el6.src.rpm')))
+
+
+class TestCompile(CliTestCase):
+
+    def test_compile(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'compile']):
+            cli = self.new_cli()
+            cli.compile()
+
+
+class TestPrep(CliTestCase):
+
+    def test_compile(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'prep']):
+            cli = self.new_cli()
+            cli.prep()
+
+
+class TestInstall(CliTestCase):
+
+    def test_compile(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'install']):
+            cli = self.new_cli()
+            cli.install()
+
+
+class TestLocal(CliTestCase):
+
+    def test_local(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'local']):
+            cli = self.new_cli()
+            cli.local()
+
+            self.assertFilesExists((
+                'docpkg-1.2-2.el6.src.rpm',
+                'x86_64/docpkg-1.2-2.el6.x86_64.rpm',
+            ))
+
+    def test_local_with_arch(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'local', '--arch', 'i686']):
+            cli = self.new_cli()
+            cli.local()
+
+            self.assertFilesExists((
+                'docpkg-1.2-2.el6.src.rpm',
+                'i686/docpkg-1.2-2.el6.i686.rpm',
+            ))
+
+    def test_local_with_builddir(self):
+        custom_builddir = os.path.join(self.cloned_repo_path, 'this-builddir')
+
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'local', '--builddir', custom_builddir]):
+            cli = self.new_cli()
+            cli.local()
+
+            self.assertFilesExists(('this-builddir/README.rst',))
+
+
+class TestVerifyFiles(CliTestCase):
+
+    def test_verify_files(self):
+        with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
+                                    '--release', 'rhel-6', 'verify-files']):
+            cli = self.new_cli()
+            cli.verify_files()

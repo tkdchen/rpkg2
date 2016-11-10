@@ -24,20 +24,21 @@ spec_file = '''
 Summary: Dummy summary
 Name: docpkg
 Version: 1.2
-Release: 2
+Release: 2%{dist}
 License: GPL
 Group: Applications/Productivity
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 %description
 This is a dummy description.
 %prep
+%check
 %build
+touch README.rst
 %clean
 rm -rf $$RPM_BUILD_ROOT
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir $RPM_BUILD_ROOT
 %files
+%doc README.rst
 %changelog
 * Thu Apr 21 2006 Chenxiong Qi <cqi@redhat.com> - 1.2-2
 - Initial version
@@ -51,7 +52,19 @@ def run(cmd, **kwargs):
             ' '.join(cmd), returncode))
 
 
-class CommandTestCase(unittest.TestCase):
+class Assertions(object):
+
+    def assertFilesExists(self, filenames):
+        """Assert existence of files within package repository
+
+        :param filenames: a sequence of file names within package repository to be checked.
+        :type filenames: list or tuple
+        """
+        for filename in filenames:
+            self.assertTrue(os.path.exists(os.path.join(self.cloned_repo_path, filename)))
+
+
+class CommandTestCase(Assertions, unittest.TestCase):
 
     def setUp(self):
         # create a base repo
