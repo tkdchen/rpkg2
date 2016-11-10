@@ -358,7 +358,7 @@ class Commands(object):
             try:
                 merge = self.repo.git.config('--get', 'branch.%s.merge' % localbranch)
             except git.GitCommandError as e:
-                raise rpkgError('Unable to find remote branch.  Use --dist')
+                raise rpkgError('Unable to find remote branch.  Use --release')
             # Trim off the refs/heads so that we're just working with
             # the branch name
             merge = merge.replace('refs/heads/', '')
@@ -694,7 +694,7 @@ class Commands(object):
             osver = re.search(r'rhel-\d.*$', self.branch_merge).group()
         except AttributeError:
             raise rpkgError('Could not find the base OS ver from branch name'
-                            ' %s. Consider using --dist option' %
+                            ' %s. Consider using --release option' %
                             self.branch_merge)
         self._distvar, self._distval = osver.split('-')
         self._distval = self._distval.replace('.', '_')
