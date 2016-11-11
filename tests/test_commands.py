@@ -156,12 +156,12 @@ class LoadBranchMergeTest(CommandTestCase):
         try:
             self.cmd.load_branch_merge()
         except rpkgError as e:
-            self.assertEqual('Unable to find remote branch.  Use --dist', str(e))
+            self.assertEqual('Unable to find remote branch.  Use --release', str(e))
         else:
             self.fail("It's expected to raise rpkgError, but not.")
 
-    def test_load_branch_merge_using_dist_option(self):
-        """Ensure load_branch_merge uses dist specified via --dist
+    def test_load_branch_merge_using_release_option(self):
+        """Ensure load_branch_merge uses release specified via --release
 
         Switch to eng-rhel-6 branch, that is valid for load_branch_merge and to
         see if load_branch_merge still uses dist rather than such a valid

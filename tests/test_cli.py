@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import rpm
 import os
 
 from six.moves import configparser
@@ -195,6 +196,19 @@ class TestInstall(CliTestCase):
 
 class TestLocal(CliTestCase):
 
+    def _subdir_has_arch_prefix(self):
+        """Check if RPMs will be put into an arch subdirectory or not
+
+        This is a wordaround to ensure these tests can run in Fedora Copr.
+        """
+        macro = '%{_build_name_fmt}'
+        value = rpm.expandMacro(macro)
+        if value == macro:
+            # Cannot determine the macro because the macro name is
+            # returned. So, as a default, it has.
+            return True
+        return value.startswith('%{ARCH}/')
+
     def test_local(self):
         with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
                                     '--release', 'rhel-6', 'local']):
@@ -203,7 +217,8 @@ class TestLocal(CliTestCase):
 
             self.assertFilesExists((
                 'docpkg-1.2-2.el6.src.rpm',
-                'x86_64/docpkg-1.2-2.el6.x86_64.rpm',
+                '{0}docpkg-1.2-2.el6.x86_64.rpm'.format(
+                    'x86_64/' if self._subdir_has_arch_prefix() else ''),
             ))
 
     def test_local_with_arch(self):
@@ -214,7 +229,8 @@ class TestLocal(CliTestCase):
 
             self.assertFilesExists((
                 'docpkg-1.2-2.el6.src.rpm',
-                'i686/docpkg-1.2-2.el6.i686.rpm',
+                '{0}docpkg-1.2-2.el6.i686.rpm'.format(
+                    'i686/' if self._subdir_has_arch_prefix() else ''),
             ))
 
     def test_local_with_builddir(self):

@@ -96,7 +96,6 @@ class CommandTestCase(Assertions, unittest.TestCase):
         git_cmds = [
             ['git', 'config', 'user.email', 'cqi@redhat.com'],
             ['git', 'config', 'user.name', 'Chenxiong Qi'],
-            ['git', 'config', 'push.default', 'simple'],
             ['git', 'branch', '--track', 'eng-rhel-6', 'origin/eng-rhel-6'],
             ['git', 'branch', '--track', 'eng-rhel-6.5', 'origin/eng-rhel-6.5'],
             ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],
