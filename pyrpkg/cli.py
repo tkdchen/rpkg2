@@ -1633,37 +1633,3 @@ class TaskWatcher(object):
             return 'FAILED: %s' % self.get_failure()
         else:
             return koji.TASK_STATES[info['state']].lower()
-
-
-if __name__ == '__main__':
-    client = cliClient()
-    client.do_imports()
-    client.parse_cmdline()
-
-    if not client.args.path:
-        try:
-            client.args.path = os.getcwd()
-        except:
-            print('Could not get current path, have you deleted it?')
-            sys.exit(1)
-
-    # setup the logger -- This logger will take things of INFO or DEBUG and
-    # log it to stdout.  Anything above that (WARN, ERROR, CRITICAL) will go
-    # to stderr.  Normal operation will show anything INFO and above.
-    # Quiet hides INFO, while Verbose exposes DEBUG.  In all cases WARN or
-    # higher are exposed (via stderr).
-    log = client.site.log
-    client.setupLogging(log)
-
-    if client.args.v:
-        log.setLevel(logging.DEBUG)
-    elif client.args.q:
-        log.setLevel(logging.WARNING)
-    else:
-        log.setLevel(logging.INFO)
-
-    # Run the necessary command
-    try:
-        client.args.command()
-    except KeyboardInterrupt:
-        pass
