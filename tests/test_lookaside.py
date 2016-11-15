@@ -38,7 +38,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         self.assertEqual(result, '437b930db84b8079c2dd804a71936b5f')
 
         result = lc.hash_file(self.filename)
-        self.assertEqual(result, '983d43ddff6da90f6a5d3b6172446a1ffe228b803fe64fdd5dcfab5646078a896851fe82f623c9d6e5654b3d2f363a04ec17cfb62b607437a9c7c132d511e522')  # nopep8
+        self.assertEqual(result, '983d43ddff6da90f6a5d3b6172446a1ffe228b803fe64fdd5dcfab5646078a896851fe82f623c9d6e5654b3d2f363a04ec17cfb62b607437a9c7c132d511e522')  # noqa
 
     def test_hash_file_invalid_hash_type(self):
         lc = CGILookasideCache('sha512', '_', '_')
@@ -231,10 +231,10 @@ class CGILookasideCacheTestCase(unittest.TestCase):
 
         written_lines = []
         expected_lines = [
-            '\r##################                                                       25.0%',  # nopep8
-            '\r####################################                                     50.0%',  # nopep8
-            '\r######################################################                   75.0%',  # nopep8
-            '\r######################################################################## 100.0%',  # nopep8
+            '\r##################                                                       25.0%',  # noqa
+            '\r####################################                                     50.0%',  # noqa
+            '\r######################################################                   75.0%',  # noqa
+            '\r######################################################################## 100.0%',  # noqa
             ]
 
         mock_stdout.write.side_effect = mock_write
@@ -265,10 +265,10 @@ class CGILookasideCacheTestCase(unittest.TestCase):
 
         written_lines = []
         expected_lines = [
-            '\r##################                                                       25.0%',  # nopep8
-            '\r####################################                                     50.0%',  # nopep8
-            '\r######################################################                   75.0%',  # nopep8
-            '\r######################################################################## 100.0%',  # nopep8
+            '\r##################                                                       25.0%',  # noqa
+            '\r####################################                                     50.0%',  # noqa
+            '\r######################################################                   75.0%',  # noqa
+            '\r######################################################################## 100.0%',  # noqa
             ]
 
         mock_stdout.write.side_effect = mock_write
