@@ -88,6 +88,10 @@ class CommandTestCase(unittest.TestCase):
         # Drop the clone
         shutil.rmtree(cloneroot)
 
+    def config_repo(self, repo_path):
+        subprocess.check_call(['git', 'config', 'user.name', 'tester'], cwd=repo_path)
+        subprocess.check_call(['git', 'config', 'user.email', 'tester@example.com'], cwd=repo_path)
+
     def get_tags(self, gitdir):
         result = []
 

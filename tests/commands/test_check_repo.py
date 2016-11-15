@@ -29,6 +29,7 @@ class CheckRepoCase(CommandTestCase):
             self.build_client, self.user, self.dist,
             self.target, self.quiet
         )
+        self.config_repo(self.clonedir)
 
     def tearDown(self):
         super(CheckRepoCase, self).tearDown()

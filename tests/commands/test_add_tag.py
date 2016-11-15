@@ -32,6 +32,7 @@ class CommandAddTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         # `git tag` will call $EDITOR to ask the user to write a message
         os.environ['GIT_EDITOR'] = ('/usr/bin/python -c "import sys; '
@@ -58,6 +59,7 @@ class CommandAddTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         cmd.add_tag(tag, message=message)
 
@@ -79,6 +81,7 @@ class CommandAddTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         message_file = os.path.join(moduledir, 'tag_message')
 
@@ -105,6 +108,7 @@ class CommandAddTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         cmd.add_tag(tag, message=message)
 
@@ -130,6 +134,7 @@ class CommandAddTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         cmd.add_tag(tag, message=message)
 
@@ -155,6 +160,7 @@ class CommandAddTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         for tag, message in tags:
             cmd.add_tag(tag, message=message)

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import rpm
 import os
 
+from os.path import exists
+from os.path import join
 from six.moves import configparser
 
 import git
@@ -196,18 +197,17 @@ class TestInstall(CliTestCase):
 
 class TestLocal(CliTestCase):
 
-    def _subdir_has_arch_prefix(self):
-        """Check if RPMs will be put into an arch subdirectory or not
+    def translate_arch(self, arch):
+        """Translate local arch to arch the rpmbuild uses
 
-        This is a wordaround to ensure these tests can run in Fedora Copr.
+        This is another workaround for running tests in Copr, where when
+        building RPM in a i386 target, local arch is i386, but arch in RPM is
+        "translated" to i686.
         """
-        macro = '%{_build_name_fmt}'
-        value = rpm.expandMacro(macro)
-        if value == macro:
-            # Cannot determine the macro because the macro name is
-            # returned. So, as a default, it has.
-            return True
-        return value.startswith('%{ARCH}/')
+        translation = {
+            'i386': 'i686',
+            }
+        return translation.get(arch, arch)
 
     def test_local(self):
         with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
@@ -215,11 +215,14 @@ class TestLocal(CliTestCase):
             cli = self.new_cli()
             cli.local()
 
-            self.assertFilesExists((
-                'docpkg-1.2-2.el6.src.rpm',
-                '{0}docpkg-1.2-2.el6.x86_64.rpm'.format(
-                    'x86_64/' if self._subdir_has_arch_prefix() else ''),
-            ))
+            self.assertTrue(exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.src.rpm')))
+            # This covers some special cases, e.g. building in copr, that is
+            # RPMs are not put in arch subdirectory even if %{_build_name_fmt}
+            # is %{ARCH}/%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm
+            arch = self.translate_arch(cli.cmd.localarch)
+            self.assertTrue(
+                exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.{0}.rpm'.format(arch))) or
+                exists(join(self.cloned_repo_path, '{0}/docpkg-1.2-2.el6.{0}.rpm'.format(arch))))
 
     def test_local_with_arch(self):
         with patch('sys.argv', new=['rpkg', '--path', self.cloned_repo_path,
@@ -227,11 +230,10 @@ class TestLocal(CliTestCase):
             cli = self.new_cli()
             cli.local()
 
-            self.assertFilesExists((
-                'docpkg-1.2-2.el6.src.rpm',
-                '{0}docpkg-1.2-2.el6.i686.rpm'.format(
-                    'i686/' if self._subdir_has_arch_prefix() else ''),
-            ))
+            self.assertTrue(exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.src.rpm')))
+            self.assertTrue(
+                exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.i686.rpm')) or
+                exists(join(self.cloned_repo_path, 'i686/docpkg-1.2-2.el6.i686.rpm')))
 
     def test_local_with_builddir(self):
         custom_builddir = os.path.join(self.cloned_repo_path, 'this-builddir')

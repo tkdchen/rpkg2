@@ -20,6 +20,7 @@ class CommandDeleteTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         # First, add a tag
         cmd.add_tag(tag, message=message)
@@ -45,6 +46,7 @@ class CommandDeleteTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         # Try deleting an inexistent tag
         def raises():

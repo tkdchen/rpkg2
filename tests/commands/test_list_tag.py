@@ -17,6 +17,7 @@ class CommandListTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         with self.hijack_stdout() as out:
             cmd.list_tag()
@@ -39,6 +40,7 @@ class CommandListTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         for tag, message in tags:
             cmd.add_tag(tag, message=message)
@@ -66,6 +68,7 @@ class CommandListTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         for tag, message in tags:
             cmd.add_tag(tag, message=message)
@@ -93,6 +96,7 @@ class CommandListTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         for tag, message in tags:
             cmd.add_tag(tag, message=message)
@@ -120,6 +124,7 @@ class CommandListTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         for tag, message in tags:
             cmd.add_tag(tag, message=message)
@@ -147,6 +152,7 @@ class CommandListTagTestCase(CommandTestCase):
 
         moduledir = os.path.join(self.path, self.module)
         cmd.path = moduledir
+        self.config_repo(cmd.path)
 
         for tag, message in tags:
             cmd.add_tag(tag, message=message)
