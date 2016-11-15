@@ -682,7 +682,7 @@ class Commands(object):
         self.log.debug('Creating repo object from %s', self.path)
         try:
             self._repo = git.Repo(self.path)
-        except git.InvalidGitRepositoryError:
+        except (git.InvalidGitRepositoryError, git.NoSuchPathError):
             raise rpkgError('%s is not a valid repo' % self.path)
 
     @property
@@ -2406,7 +2406,7 @@ class Commands(object):
         # Create a list for unused patches
         unused = []
         # Get the content of spec into memory for fast searching
-        with open(self.spec, 'r') as f:
+        with open(os.path.join(self.path, self.spec), 'r') as f:
             data = f.read()
         try:
             spec = data.decode('UTF-8')

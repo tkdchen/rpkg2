@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 import shutil
+import sys
 
 from pyrpkg import Commands
 
@@ -29,7 +30,7 @@ License: GPL
 Group: Applications/Productivity
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 %description
-This is a dummy description.
+Dummy docpkg for tests
 %prep
 %check
 %build
@@ -37,19 +38,14 @@ touch README.rst
 %clean
 rm -rf $$RPM_BUILD_ROOT
 %install
+rm -rf $$RPM_BUILD_ROOT
 %files
+%defattr(-,root,root,-)
 %doc README.rst
 %changelog
-* Thu Apr 21 2006 Chenxiong Qi <cqi@redhat.com> - 1.2-2
+* Thu Apr 21 2016 Tester <tester@example.com> - 1.2-2
 - Initial version
 '''
-
-
-def run(cmd, **kwargs):
-    returncode = subprocess.call(cmd, **kwargs)
-    if returncode != 0:
-        raise RuntimeError('Command fails. Command: %s. Return code %d' % (
-            ' '.join(cmd), returncode))
 
 
 class Assertions(object):
@@ -64,13 +60,39 @@ class Assertions(object):
             self.assertTrue(os.path.exists(os.path.join(self.cloned_repo_path, filename)))
 
 
-class CommandTestCase(Assertions, unittest.TestCase):
+class Utils(object):
+
+    def run_cmd(self, cmd, **kwargs):
+        returncode = subprocess.call(cmd, **kwargs)
+        if returncode != 0:
+            raise RuntimeError('Command fails. Command: %s. Return code %d' % (
+                ' '.join(cmd), returncode))
+
+    def redirect_cmd_output(self, cmd, shell=False, env=None, pipe=[], cwd=None):
+        if shell:
+            cmd = ' '.join(cmd)
+        proc = subprocess.Popen(cmd, shell=shell, cwd=cwd,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        sys.stdout.write(stdout)
+        sys.stderr.write(stderr)
+
+    def read_file(self, filename):
+        with open(filename, 'r') as f:
+            return f.read()
+
+    def write_file(self, filename, content=''):
+        with open(filename, 'w') as f:
+            f.write(content)
+
+
+class CommandTestCase(Assertions, Utils, unittest.TestCase):
 
     def setUp(self):
         # create a base repo
         self.repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-')
 
-        self.spec_file = 'package.spec'
+        self.spec_file = 'docpkg.spec'
 
         # Add spec file to this repo and commit
         spec_file_path = os.path.join(self.repo_path, self.spec_file)
@@ -86,13 +108,15 @@ class CommandTestCase(Assertions, unittest.TestCase):
             ['git', 'branch', 'eng-rhel-6'],
             ['git', 'branch', 'eng-rhel-6.5'],
             ['git', 'branch', 'eng-rhel-7'],
+            ['git', 'branch', 'rhel-6.8'],
+            ['git', 'branch', 'rhel-7'],
             ]
         for cmd in git_cmds:
-            run(cmd, cwd=self.repo_path)
+            self.run_cmd(cmd, cwd=self.repo_path)
 
         # Clone the repo
         self.cloned_repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-cloned-')
-        run(['git', 'clone', self.repo_path, self.cloned_repo_path])
+        self.run_cmd(['git', 'clone', self.repo_path, self.cloned_repo_path])
         git_cmds = [
             ['git', 'config', 'user.email', 'cqi@redhat.com'],
             ['git', 'config', 'user.name', 'Chenxiong Qi'],
@@ -101,7 +125,7 @@ class CommandTestCase(Assertions, unittest.TestCase):
             ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],
             ]
         for cmd in git_cmds:
-            run(cmd, cwd=self.cloned_repo_path)
+            self.run_cmd(cmd, cwd=self.cloned_repo_path)
 
     def tearDown(self):
         shutil.rmtree(self.repo_path)

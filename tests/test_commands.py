@@ -2,8 +2,10 @@
 
 import os
 import shutil
+import tempfile
 
 import git
+import rpm
 from mock import patch
 
 from pyrpkg import rpkgError
@@ -343,3 +345,162 @@ $what_is_this
         expected_lines = ['- add %changelog section\n',
                           '- add new spec\n']
         self.assertEqual(expected_lines, clog_lines)
+
+
+class TestProperties(CommandTestCase):
+
+    def setUp(self):
+        super(TestProperties, self).setUp()
+        self.invalid_repo = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.invalid_repo)
+        super(TestProperties, self).tearDown()
+
+    def test_target(self):
+        cmd = self.make_commands()
+        self.checkout_branch(cmd.repo, 'eng-rhel-6')
+        self.assertEqual('eng-rhel-6-candidate', cmd.target)
+
+    def test_spec(self):
+        cmd = self.make_commands()
+        self.assertEqual('docpkg.spec', cmd.spec)
+
+    def test_nvr(self):
+        cmd = self.make_commands(dist='eng-rhel-6')
+
+        module_name = os.path.basename(self.repo_path)
+        self.assertEqual('{0}-1.2-2.el6'.format(module_name), cmd.nvr)
+
+    def test_nvr_cannot_get_module_name_from_push_url(self):
+        cmd = self.make_commands(path=self.repo_path, dist='eng-rhel-6')
+        self.assertEqual('docpkg-1.2-2.el6', cmd.nvr)
+
+    def test_localarch(self):
+        expected_localarch = rpm.expandMacro('%{_arch}')
+        cmd = self.make_commands()
+        self.assertEqual(expected_localarch, cmd.localarch)
+
+    def test_commithash(self):
+        cmd = self.make_commands(path=self.cloned_repo_path)
+        repo = git.Repo(self.cloned_repo_path)
+        expected_commit_hash = str(repo.iter_commits().next())
+        self.assertEqual(expected_commit_hash, cmd.commithash)
+
+    def test_dist(self):
+        repo = git.Repo(self.cloned_repo_path)
+        self.checkout_branch(repo, 'eng-rhel-7')
+
+        cmd = self.make_commands(path=self.cloned_repo_path)
+        self.assertEqual('el7', cmd.disttag)
+        self.assertEqual('rhel', cmd.distvar)
+        self.assertEqual('7', cmd.distval)
+        self.assertEqual('0', cmd.epoch)
+
+    def test_repo(self):
+        cmd = self.make_commands(path=self.cloned_repo_path)
+        cmd.load_repo()
+        self.assertEqual(self.cloned_repo_path, os.path.dirname(cmd._repo.git_dir))
+
+        cmd = self.make_commands(path=self.invalid_repo)
+        self.assertRaises(rpkgError, cmd.load_repo)
+
+        cmd = self.make_commands(path='some-dir')
+        self.assertRaises(rpkgError, cmd.load_repo)
+
+    def test_mockconfig(self):
+        cmd = self.make_commands(path=self.cloned_repo_path)
+        self.checkout_branch(cmd.repo, 'eng-rhel-7')
+        expected_localarch = rpm.expandMacro('%{_arch}')
+        self.assertEqual('eng-rhel-7-candidate-{0}'.format(expected_localarch), cmd.mockconfig)
+
+    def test_get_ns_module_name(self):
+        cmd = self.make_commands(path=self.cloned_repo_path)
+
+        tests = (
+            ('http://localhost/rpms/docpkg.git', 'docpkg'),
+            ('http://localhost/docker/docpkg.git', 'docpkg'),
+            ('http://localhost/docpkg.git', 'docpkg'),
+            ('http://localhost/rpms/docpkg', 'docpkg'),
+            )
+        for push_url, expected_ns_module_name in tests:
+            cmd._push_url = push_url
+            cmd.load_ns_module_name()
+            self.assertEqual(expected_ns_module_name, cmd._ns_module_name)
+
+        cmd.distgit_namespaced = True
+        tests = (
+            ('http://localhost/rpms/docpkg.git', 'rpms/docpkg'),
+            ('http://localhost/docker/docpkg.git', 'docker/docpkg'),
+            ('http://localhost/docpkg.git', 'rpms/docpkg'),
+            ('http://localhost/rpms/docpkg', 'rpms/docpkg'),
+            )
+        for push_url, expected_ns_module_name in tests:
+            cmd._push_url = push_url
+            cmd.load_ns_module_name()
+            self.assertEqual(expected_ns_module_name, cmd._ns_module_name)
+
+
+class TestNamespaced(CommandTestCase):
+
+    def test_get_namespace_giturl(self):
+        cmd = self.make_commands()
+        cmd.gitbaseurl = 'ssh://%(user)s@localhost/%(module)s'
+        cmd.distgit_namespaced = False
+
+        self.assertEqual(cmd.gitbaseurl % {'user': cmd.user, 'module': 'docpkg'},
+                         cmd._get_namespace_giturl('docpkg'))
+        self.assertEqual(cmd.gitbaseurl % {'user': cmd.user, 'module': 'docker/docpkg'},
+                         cmd._get_namespace_giturl('docker/docpkg'))
+        self.assertEqual(cmd.gitbaseurl % {'user': cmd.user, 'module': 'rpms/docpkg'},
+                         cmd._get_namespace_giturl('rpms/docpkg'))
+
+    def test_get_namespace_giturl_namespaced_is_enabled(self):
+        cmd = self.make_commands()
+        cmd.gitbaseurl = 'ssh://%(user)s@localhost/%(module)s'
+        cmd.distgit_namespaced = True
+
+        self.assertEqual(cmd.gitbaseurl % {'user': cmd.user, 'module': 'rpms/docpkg'},
+                         cmd._get_namespace_giturl('docpkg'))
+        self.assertEqual(cmd.gitbaseurl % {'user': cmd.user, 'module': 'docker/docpkg'},
+                         cmd._get_namespace_giturl('docker/docpkg'))
+        self.assertEqual(cmd.gitbaseurl % {'user': cmd.user, 'module': 'rpms/docpkg'},
+                         cmd._get_namespace_giturl('rpms/docpkg'))
+
+    def test_get_namespace_anongiturl(self):
+        cmd = self.make_commands()
+        cmd.anongiturl = 'git://localhost/%(module)s'
+        cmd.distgit_namespaced = False
+
+        self.assertEqual(cmd.anongiturl % {'module': 'docpkg'},
+                         cmd._get_namespace_anongiturl('docpkg'))
+        self.assertEqual(cmd.anongiturl % {'module': 'docker/docpkg'},
+                         cmd._get_namespace_anongiturl('docker/docpkg'))
+        self.assertEqual(cmd.anongiturl % {'module': 'rpms/docpkg'},
+                         cmd._get_namespace_anongiturl('rpms/docpkg'))
+
+    def test_get_namespace_anongiturl_namespaced_is_enabled(self):
+        cmd = self.make_commands()
+        cmd.anongiturl = 'git://localhost/%(module)s'
+        cmd.distgit_namespaced = True
+
+        self.assertEqual(cmd.anongiturl % {'module': 'rpms/docpkg'},
+                         cmd._get_namespace_anongiturl('docpkg'))
+        self.assertEqual(cmd.anongiturl % {'module': 'docker/docpkg'},
+                         cmd._get_namespace_anongiturl('docker/docpkg'))
+        self.assertEqual(cmd.anongiturl % {'module': 'rpms/docpkg'},
+                         cmd._get_namespace_anongiturl('rpms/docpkg'))
+
+
+class TestGetLatestCommit(CommandTestCase):
+
+    def test_get_latest_commit(self):
+        cmd = self.make_commands(path=self.cloned_repo_path)
+        # Repos used for running tests locates in local filesyste, refer to
+        # self.repo_path and self.cloned_repo_path.
+        cmd.anongiturl = '/tmp/%(module)s'
+        cmd.distgit_namespaced = False
+
+        self.assertEqual(str(git.Repo(self.repo_path).iter_commits().next()),
+                         cmd.get_latest_commit(os.path.basename(self.repo_path),
+                                               'eng-rhel-6'))
