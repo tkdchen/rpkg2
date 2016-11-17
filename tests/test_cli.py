@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import hashlib
 import logging
 import os
+import shutil
 import sys
+import tempfile
 
 from os.path import exists
 from os.path import join
@@ -733,3 +736,136 @@ class TestNew(CliTestCase):
 
             output = sys.stdout.getvalue()
             self.assertTrue('+New change' in output)
+
+
+class LookasideCacheMock(object):
+
+    def init_lookaside_cache(self):
+        self.lookasidecache_storage = tempfile.mkdtemp('rpkg-tests-lookasidecache-storage-')
+
+    def destroy_lookaside_cache(self):
+        shutil.rmtree(self.lookasidecache_storage)
+
+    def lookasidecache_upload(self, module_name, filepath, hash):
+        filename = os.path.basename(filepath)
+        storage_filename = os.path.join(self.lookasidecache_storage, filename)
+        with open(storage_filename, 'w') as fout:
+            with open(filepath, 'r') as fin:
+                fout.write(fin.read())
+
+    def lookasidecache_download(self, name, filename, hash, outfile, hashtype=None, **kwargs):
+        with open(outfile, 'w') as f:
+            f.write('binary data')
+
+
+class TestUpload(LookasideCacheMock, CliTestCase):
+
+    def setUp(self):
+        super(TestUpload, self).setUp()
+
+        self.init_lookaside_cache()
+        self.sources_file = os.path.join(self.cloned_repo_path, 'sources')
+        self.gitignore_file = os.path.join(self.cloned_repo_path, '.gitignore')
+        self.readme_patch = os.path.join(self.cloned_repo_path, 'readme.patch')
+        self.write_file(self.readme_patch, '+Hello world')
+
+    def tearDown(self):
+        self.destroy_lookaside_cache()
+        super(TestUpload, self).tearDown()
+
+    def hash_file(self, filename):
+        md5 = hashlib.md5()
+        with open(filename, 'r') as f:
+            md5.update(f.read())
+        return md5.hexdigest()
+
+    def test_upload(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'upload', self.readme_patch]
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.upload', new=self.lookasidecache_upload):
+                cli.upload()
+
+        expected_sources_content = '{0}  readme.patch'.format(self.hash_file(self.readme_patch))
+        self.assertEqual(expected_sources_content, self.read_file(self.sources_file).strip())
+        self.assertTrue('readme.patch' in self.read_file(self.gitignore_file).strip())
+
+        git_status = cli.cmd.repo.git.status()
+        self.assertTrue('Changes not staged for commit:' not in git_status)
+        self.assertTrue('Changes to be committed:' in git_status)
+
+    def test_append_to_sources(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'upload', self.readme_patch]
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.upload', new=self.lookasidecache_upload):
+                cli.upload()
+
+        readme_rst = os.path.join(self.cloned_repo_path, 'README.rst')
+        self.make_changes(filename=readme_rst, content='# dockpkg', commit=True)
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'upload', readme_rst]
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.upload', new=self.lookasidecache_upload):
+                cli.upload()
+
+        expected_sources_content = [
+            '{0}  {1}'.format(self.hash_file(self.readme_patch),
+                              os.path.basename(self.readme_patch)),
+            '{0}  {1}'.format(self.hash_file(readme_rst),
+                              os.path.basename(readme_rst)),
+            ]
+        self.assertEqual(expected_sources_content,
+                         self.read_file(self.sources_file).strip().split('\n'))
+
+
+class TestSources(LookasideCacheMock, CliTestCase):
+
+    def setUp(self):
+        super(TestSources, self).setUp()
+        self.init_lookaside_cache()
+
+        # Uploading a file aims to run the loop in sources command.
+        self.readme_patch = os.path.join(self.cloned_repo_path, 'readme.patch')
+        self.write_file(self.readme_patch, content='+Welcome to README')
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'upload', self.readme_patch]
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.upload', new=self.lookasidecache_upload):
+                cli.upload()
+
+    def tearDown(self):
+        # Tests may put a file readme.patch in current directory, so, let's remove it.
+        if os.path.exists('readme.patch'):
+            os.remove('readme.patch')
+        self.destroy_lookaside_cache()
+        super(TestSources, self).tearDown()
+
+    def test_sources(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'sources']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.download',
+                       new=self.lookasidecache_download):
+                cli.sources()
+
+        # NOTE: without --outdir, whatever to run sources command in package
+        # repository, sources file is downloaded into current working
+        # directory. Is this a bug, or need to improve?
+        self.assertTrue(os.path.exists('readme.patch'))
+
+    def test_sources_to_outdir(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'sources', '--outdir', self.cloned_repo_path]
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.download',
+                       new=self.lookasidecache_download):
+                cli.sources()
+
+        self.assertFilesExists(['readme.patch'])

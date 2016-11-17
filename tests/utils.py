@@ -56,6 +56,7 @@ class Assertions(object):
         :param filenames: a sequence of file names within package repository to be checked.
         :type filenames: list or tuple
         """
+        assert isinstance(filenames, (tuple, list))
         for filename in filenames:
             self.assertTrue(os.path.exists(os.path.join(self.cloned_repo_path, filename)))
 
@@ -102,6 +103,7 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
         git_cmds = [
             ['git', 'init'],
             ['git', 'add', spec_file_path],
+            ['touch', 'sources'],
             ['git', 'config', 'user.email', 'cqi@redhat.com'],
             ['git', 'config', 'user.name', 'Chenxiong Qi'],
             ['git', 'commit', '-m', '"initial commit"'],
