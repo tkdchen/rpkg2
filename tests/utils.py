@@ -50,15 +50,31 @@ rm -rf $$RPM_BUILD_ROOT
 
 class Assertions(object):
 
-    def assertFilesExists(self, filenames):
+    def get_exists_method(self, search_dir=None):
+        if search_dir is None:
+            def exists(filename):
+                return os.path.exists(filename)
+        else:
+            def exists(filename):
+                return os.path.exists(os.path.join(search_dir, filename))
+        return exists
+
+    def assertFilesExist(self, filenames, search_dir=None):
         """Assert existence of files within package repository
 
         :param filenames: a sequence of file names within package repository to be checked.
         :type filenames: list or tuple
         """
         assert isinstance(filenames, (tuple, list))
+        exists = self.get_exists_method(search_dir)
         for filename in filenames:
-            self.assertTrue(os.path.exists(os.path.join(self.cloned_repo_path, filename)))
+            self.assertTrue(exists(filename), 'Failure because {0} does not exist'.format(filename))
+
+    def assertFilesNotExist(self, filenames, search_dir=None):
+        assert isinstance(filenames, (tuple, list))
+        exists = self.get_exists_method(search_dir)
+        for filename in filenames:
+            self.assertFalse(exists(filename), 'Failure because {0} exists.'.format(filename))
 
 
 class Utils(object):
@@ -102,8 +118,8 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
 
         git_cmds = [
             ['git', 'init'],
-            ['git', 'add', spec_file_path],
-            ['touch', 'sources'],
+            ['touch', 'sources', 'CHANGELOG.rst'],
+            ['git', 'add', spec_file_path, 'sources', 'CHANGELOG.rst'],
             ['git', 'config', 'user.email', 'cqi@redhat.com'],
             ['git', 'config', 'user.name', 'Chenxiong Qi'],
             ['git', 'commit', '-m', '"initial commit"'],

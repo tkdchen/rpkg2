@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import gzip
 import hashlib
 import logging
 import os
+import rpmfluff
 import shutil
 import sys
 import tempfile
@@ -421,7 +423,7 @@ class TestLocal(CliTestCase):
             cli = self.new_cli()
             cli.local()
 
-        self.assertFilesExists(('this-builddir/README.rst',))
+        self.assertFilesExist(('this-builddir/README.rst',), search_dir=self.cloned_repo_path)
 
 
 class TestVerifyFiles(CliTestCase):
@@ -614,7 +616,7 @@ class TestClean(CliTestCase):
             cli = self.new_cli()
             cli.clean()
 
-        self.assertFilesExists(['new-file.txt'])
+        self.assertFilesExist(['new-file.txt'], search_dir=self.cloned_repo_path)
 
     def test_clean(self):
         self.make_changes(untracked=True)
@@ -631,7 +633,7 @@ class TestClean(CliTestCase):
         self.assertFalse(os.path.exists(dirname))
 
         # Ensure no tracked files and directories are removed.
-        self.assertFilesExists(['docpkg.spec', '.git'])
+        self.assertFilesExist(['docpkg.spec', '.git'], search_dir=self.cloned_repo_path)
 
 
 class TestLint(CliTestCase):
@@ -757,6 +759,19 @@ class LookasideCacheMock(object):
         with open(outfile, 'w') as f:
             f.write('binary data')
 
+    def hash_file(self, filename):
+        md5 = hashlib.md5()
+        with open(filename, 'r') as f:
+            md5.update(f.read())
+        return md5.hexdigest()
+
+    def assertFilesUploaded(self, filenames):
+        assert isinstance(filenames, (tuple, list))
+        for filename in filenames:
+            self.assertTrue(
+                os.path.exists(os.path.join(self.lookasidecache_storage, filename)),
+                '{0} is not uploaded. It is not in fake lookaside storage.'.format(filename))
+
 
 class TestUpload(LookasideCacheMock, CliTestCase):
 
@@ -772,12 +787,6 @@ class TestUpload(LookasideCacheMock, CliTestCase):
     def tearDown(self):
         self.destroy_lookaside_cache()
         super(TestUpload, self).tearDown()
-
-    def hash_file(self, filename):
-        md5 = hashlib.md5()
-        with open(filename, 'r') as f:
-            md5.update(f.read())
-        return md5.hexdigest()
 
     def test_upload(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'upload', self.readme_patch]
@@ -868,4 +877,96 @@ class TestSources(LookasideCacheMock, CliTestCase):
                        new=self.lookasidecache_download):
                 cli.sources()
 
-        self.assertFilesExists(['readme.patch'])
+        self.assertFilesExist(['readme.patch'], search_dir=self.cloned_repo_path)
+
+
+class TestFailureImportSrpm(CliTestCase):
+
+    def test_import_nonexistent_srpm(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'import', 'nonexistent-srpm']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            try:
+                cli.import_srpm()
+            except rpkgError as e:
+                self.assertEqual('File not found.', str(e))
+            else:
+                self.fail('import_srpm should fail if srpm does not exist.')
+
+    def test_repo_is_dirty(self):
+        srpm_file = os.path.join(os.path.dirname(__file__), 'fixtures', 'docpkg-0.2-1.src.rpm')
+        self.make_changes()
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'import', srpm_file]
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            try:
+                cli.import_srpm()
+            except rpkgError as e:
+                self.assertEqual('There are uncommitted changes in your repo', str(e))
+            else:
+                self.fail('import_srpm should fail if package repository is dirty.')
+
+
+class TestImportSrpm(LookasideCacheMock, CliTestCase):
+
+    def setUp(self):
+        super(TestImportSrpm, self).setUp()
+        self.init_lookaside_cache()
+
+        # Gzip file that will be added into the SRPM
+        self.docpkg_gz = os.path.join(self.cloned_repo_path, 'docpkg.gz')
+        gzf = gzip.open(self.docpkg_gz, 'w')
+        gzf.write('file content of docpkg')
+        gzf.close()
+
+        # Build the SRPM
+        self.build = rpmfluff.SimpleRpmBuild(name='docpkg', version='0.2', release='1')
+        self.build.add_changelog_entry('- New release 0.2-1', version='0.2', release='1',
+                                       nameStr='tester <tester@example.com>')
+        self.build.add_simple_payload_file()
+        self.build.add_source(rpmfluff.SourceFile('docpkg.gz',
+                                                  gzip.open(self.docpkg_gz, 'r').read()))
+        self.build.make()
+        self.srpm_file = self.build.get_built_srpm()
+
+        self.chaos_repo = tempfile.mkdtemp(prefix='rpkg-tests-chaos-repo-')
+        self.run_cmd(['git', 'init'], cwd=self.chaos_repo)
+
+    def tearDown(self):
+        os.remove(self.docpkg_gz)
+        shutil.rmtree(self.build.get_base_dir())
+        shutil.rmtree(self.chaos_repo)
+        self.destroy_lookaside_cache()
+        super(TestImportSrpm, self).tearDown()
+
+    def assert_import_srpm(self, target_repo):
+        cli_cmd = ['rpkg', '--path', target_repo, '--module-name', 'docpkg',
+                   'import', '--skip-diffs', self.srpm_file]
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.lookaside.CGILookasideCache.upload', self.lookasidecache_upload):
+                cli.import_srpm()
+
+        docpkg_gz = os.path.basename(self.docpkg_gz)
+        diff_cached = cli.cmd.repo.git.diff('--cached')
+        self.assertTrue('+- - New release 0.2-1' in diff_cached)
+        self.assertTrue('+hello world' in diff_cached)
+        self.assertFilesExist(['.gitignore',
+                               'sources',
+                               'docpkg.spec',
+                               'hello-world.txt',
+                               docpkg_gz], search_dir=target_repo)
+        self.assertFilesNotExist(['CHANGELOG.rst'], search_dir=target_repo)
+        with open(os.path.join(target_repo, 'sources'), 'r') as f:
+            self.assertEqual(
+                '{0}  {1}'.format(self.hash_file(os.path.join(target_repo, docpkg_gz)), docpkg_gz),
+                f.read().strip())
+        with open(os.path.join(target_repo, '.gitignore'), 'r') as f:
+            self.assertEqual('/{0}'.format(docpkg_gz), f.read().strip())
+        self.assertFilesUploaded([docpkg_gz])
+
+    def test_import(self):
+        self.assert_import_srpm(self.chaos_repo)
+        self.assert_import_srpm(self.cloned_repo_path)
