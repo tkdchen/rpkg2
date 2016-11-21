@@ -931,7 +931,16 @@ class TestImportSrpm(LookasideCacheMock, CliTestCase):
         self.srpm_file = self.build.get_built_srpm()
 
         self.chaos_repo = tempfile.mkdtemp(prefix='rpkg-tests-chaos-repo-')
-        self.run_cmd(['git', 'init'], cwd=self.chaos_repo)
+        cmds = (
+            ['git', 'init'],
+            ['touch', 'README.rst'],
+            ['git', 'add', 'README.rst'],
+            ['git', 'config', 'user.name', 'tester'],
+            ['git', 'config', 'user.email', 'tester@example.com'],
+            ['git', 'commit', '-m', '"Add README"'],
+        )
+        for cmd in cmds:
+            self.run_cmd(cmd, cwd=self.chaos_repo)
 
     def tearDown(self):
         os.remove(self.docpkg_gz)
