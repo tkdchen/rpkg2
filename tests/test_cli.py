@@ -54,13 +54,6 @@ class CliTestCase(CommandTestCase):
 
         return client
 
-    def touch(self, filename, content=None):
-        """Touch a file with optional content"""
-
-        _content = content if content else ''
-        with open(filename, 'w') as f:
-            f.write(_content)
-
     def make_changes(self, repo=None, untracked=None, commit=None, filename=None, content=''):
         repo_path = repo or self.cloned_repo_path
         _filename = filename or 'new-file.txt'
@@ -548,7 +541,7 @@ class TestUnusedPatches(CliTestCase):
             os.path.join(self.cloned_repo_path, '0001-add-new-feature.patch'),
             os.path.join(self.cloned_repo_path, '0002-hotfix.patch'),
         )
-        map(self.touch, self.patches)
+        map(self.write_file, self.patches)
         git.Repo(self.cloned_repo_path).index.add(self.patches)
 
     @patch('sys.stdout', new=StringIO())
