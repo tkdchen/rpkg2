@@ -120,8 +120,8 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
             ['git', 'init'],
             ['touch', 'sources', 'CHANGELOG.rst'],
             ['git', 'add', spec_file_path, 'sources', 'CHANGELOG.rst'],
-            ['git', 'config', 'user.email', 'cqi@redhat.com'],
-            ['git', 'config', 'user.name', 'Chenxiong Qi'],
+            ['git', 'config', 'user.email', 'tester@example.com'],
+            ['git', 'config', 'user.name', 'tester'],
             ['git', 'commit', '-m', '"initial commit"'],
             ['git', 'branch', 'eng-rhel-6'],
             ['git', 'branch', 'eng-rhel-6.5'],
@@ -136,8 +136,8 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
         self.cloned_repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-cloned-')
         self.run_cmd(['git', 'clone', self.repo_path, self.cloned_repo_path])
         git_cmds = [
-            ['git', 'config', 'user.email', 'cqi@redhat.com'],
-            ['git', 'config', 'user.name', 'Chenxiong Qi'],
+            ['git', 'config', 'user.email', 'tester@example.com'],
+            ['git', 'config', 'user.name', 'tester'],
             ['git', 'branch', '--track', 'eng-rhel-6', 'origin/eng-rhel-6'],
             ['git', 'branch', '--track', 'eng-rhel-6.5', 'origin/eng-rhel-6.5'],
             ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],

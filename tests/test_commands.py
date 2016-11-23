@@ -315,12 +315,12 @@ License: GPL
 %description
 package demo for testing
 %changelog
-* Mon Nov 07 2016 cqi@redhat.com
+* Mon Nov 07 2016 tester@example.com
 - add %%changelog section
 - add new spec
 $what_is_this
 
-* Mon Nov 06 2016 cqi@redhat.com
+* Mon Nov 06 2016 tester@example.com
 - initial
 ''')
 
