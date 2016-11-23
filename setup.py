@@ -16,7 +16,7 @@ setup(
     scripts=['bin/rpkg'],
     data_files=[('/etc/bash_completion.d', ['etc/bash_completion.d/rpkg.bash']),
                 ('/etc/rpkg', ['etc/rpkg/rpkg.conf'])],
-    install_requires=['six', 'pycurl'],  # + koji, but it's not in PyPI
+    install_requires=['six', 'pycurl', 'cccolutils'],  # + koji, but it's not in PyPI
     tests_require=['nose', 'mock', 'GitPython'],
     test_suite='nose.collector',
     classifiers=(

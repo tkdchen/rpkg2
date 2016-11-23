@@ -9,6 +9,7 @@
 # option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
 # the full text of the license.
 
+import cccolutils
 import errno
 import fnmatch
 import git
@@ -87,7 +88,7 @@ class Commands(object):
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client, user=None,
                  dist=None, target=None, quiet=False,
-                 distgit_namespaced=False):
+                 distgit_namespaced=False, realms=None):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -183,6 +184,8 @@ class Commands(object):
         self.clone_config = None
         # Git namespacing for more than just rpm build artifacts
         self.distgit_namespaced = distgit_namespaced
+        # Kerberos realms used for username detection
+        self.realms = realms
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
@@ -777,8 +780,26 @@ class Commands(object):
         """This property ensures the user attribute"""
 
         if not self._user:
-            self.load_user()
+            if not self._load_krb_user():
+                self.load_user()
         return self._user
+
+    def _load_krb_user(self):
+        """This attempts to get the username from active tickets"""
+
+        if not self.realms:
+            return False
+
+        if not isinstance(self.realms, list):
+            self.realms = [self.realms]
+
+        for realm in realms:
+            username = cccolutils.get_user_for_realm(realm)
+            if username:
+                self._user = username
+                return True
+        # We could not find a username for any of the realms, let's fall back
+        return False
 
     def load_user(self):
         """This sets the user attribute"""
