@@ -685,7 +685,7 @@ class Commands(object):
         self.log.debug('Creating repo object from %s', self.path)
         try:
             self._repo = git.Repo(self.path)
-        except git.InvalidGitRepositoryError:
+        except (git.InvalidGitRepositoryError, git.NoSuchPathError):
             raise rpkgError('%s is not a valid repo' % self.path)
 
     @property
@@ -1519,14 +1519,13 @@ class Commands(object):
         Returns a list of files to upload.
 
         """
-
+        # bail if we're dirty
+        if self.repo.is_dirty():
+            raise rpkgError('There are uncommitted changes in your repo')
         # see if the srpm even exists
         srpm = os.path.abspath(srpm)
         if not os.path.exists(srpm):
             raise rpkgError('File not found.')
-        # bail if we're dirty
-        if self.repo.is_dirty():
-            raise rpkgError('There are uncommitted changes in your repo')
         # Get the details of the srpm
         name, files, uploadfiles = self._srpmdetails(srpm)
 
@@ -1580,7 +1579,7 @@ class Commands(object):
         self.repo.index.add(files)
         # Return to the caller and let them take it from there.
         os.chdir(oldpath)
-        return(uploadfiles)
+        return [os.path.join(self.path, file) for file in uploadfiles]
 
     def list_tag(self, tagname='*'):
         """List all tags in the repository which match a given tagname.
@@ -2427,7 +2426,7 @@ class Commands(object):
         # Create a list for unused patches
         unused = []
         # Get the content of spec into memory for fast searching
-        with open(self.spec, 'r') as f:
+        with open(os.path.join(self.path, self.spec), 'r') as f:
             data = f.read()
         try:
             spec = data.decode('UTF-8')
