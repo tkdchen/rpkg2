@@ -58,7 +58,7 @@ class ChangeLog:
             range = "%s.." % (self.version)
         else:
             range = "%s-%s.." % (self.name, self.version)
-        proc = subprocess.Popen(['git', 'log', '--pretty=oneline', range],
+        proc = subprocess.Popen(['git', 'log', '--no-merges', '--pretty=oneline', range],
                                 universal_newlines=True,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE).communicate()
