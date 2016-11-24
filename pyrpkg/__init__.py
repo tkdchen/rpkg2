@@ -793,7 +793,7 @@ class Commands(object):
         if not isinstance(self.realms, list):
             self.realms = [self.realms]
 
-        for realm in realms:
+        for realm in self.realms:
             username = cccolutils.get_user_for_realm(realm)
             if username:
                 self._user = username
