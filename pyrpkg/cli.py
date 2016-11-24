@@ -109,6 +109,11 @@ class cliClient(object):
 
         dg_namespaced = items.get("distgit_namespaced", False)
 
+        # Read comma separated list of kerberos realms
+        realms = [realm
+                  for realm in items.get("kerberos_realms", '').split(',')
+                  if realm]
+
         # Create the cmd object
         self._cmd = self.site.Commands(self.args.path,
                                        items['lookaside'],
@@ -123,7 +128,8 @@ class cliClient(object):
                                        dist=self.args.dist or self.args.release,
                                        target=target,
                                        quiet=self.args.q,
-                                       distgit_namespaced=dg_namespaced
+                                       distgit_namespaced=dg_namespaced,
+                                       realms=realms
                                        )
 
         self._cmd.module_name = self.args.module_name
