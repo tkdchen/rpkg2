@@ -88,7 +88,10 @@ class Utils(object):
     def redirect_cmd_output(self, cmd, shell=False, env=None, pipe=[], cwd=None):
         if shell:
             cmd = ' '.join(cmd)
-        proc = subprocess.Popen(cmd, shell=shell, cwd=cwd,
+        proc_env = os.environ.copy()
+        proc_env.update(env or {})
+        proc_env['LANG'] = 'en_US.UTF-8'
+        proc = subprocess.Popen(cmd, shell=shell, cwd=cwd, env=proc_env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = proc.communicate()
         sys.stdout.write(stdout)
