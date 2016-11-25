@@ -223,6 +223,14 @@ class Commands(object):
         self._path = value
 
     @property
+    def kojisession(self):
+        """This property ensures the kojisession attribute"""
+
+        if not self._kojisession:
+            self.load_kojisession()
+        return self._kojisession
+
+    @property
     def anon_kojisession(self):
         """This property ensures the anon kojisession attribute"""
 
@@ -230,33 +238,30 @@ class Commands(object):
             self.load_kojisession(anon=True)
         return self._anon_kojisession
 
-    def load_kojisession(self, anon=False):
-        """Initiate a koji session.
-
-        The koji session can be logged in or anonymous
-        """
+    def read_koji_config(self):
+        """Read Koji config from Koji configuration files"""
 
         # Stealing a bunch of code from /usr/bin/koji here, too bad it isn't
         # in a more usable library form
         defaults = {
-            'server': None,
-            'topurl': 'http://localhost/kojiroot',
-            'weburl': 'http://localhost/koji',
-            'cert': '~/.koji/client.crt',
-            'ca': '~/.koji/clientca.crt',
-            'serverca': '~/.koji/serverca.crt',
-            'authtype': None,
-            'krbservice': None,
-            'timeout': None,
-            'keepalive': True,
-            'max_retries': None,
-            'retry_interval': None,
             'anon_retry': True,
-            'offline_retry': None,
-            'offline_retry_interval': None,
-            'use_fast_upload': None,
+            'authtype': None,
+            'ca': '~/.koji/clientca.crt',
+            'cert': '~/.koji/client.crt',
             'debug': None,
-            'debug_xmlrpc': None
+            'debug_xmlrpc': None,
+            'keepalive': True,
+            'krbservice': None,
+            'max_retries': None,
+            'offline_retry_interval': None,
+            'offline_retry': None,
+            'retry_interval': None,
+            'serverca': '~/.koji/serverca.crt',
+            'server': None,
+            'timeout': None,
+            'topurl': 'http://localhost/kojiroot',
+            'use_fast_upload': None,
+            'weburl': 'http://localhost/koji',
             }
 
         # Process the configs in order, global, user, then any option passed
@@ -265,83 +270,126 @@ class Commands(object):
                  os.path.expanduser('~/.koji/config')]
         config.read(confs)
 
-        if config.has_section(os.path.basename(self.build_client)):
-            for name, value in config.items(os.path.basename(
-                    self.build_client)):
-                if name in defaults:
-                    if name in ('keepalive', 'anon_retry', 'offline_retry',
-                                'use_fast_upload',
-                                'debug', 'debug_xmlrpc'):
-                        defaults[name] = config.getboolean(
-                            os.path.basename(self.build_client), name)
-                    elif name in ('timeout', 'max_retries', 'retry_interval',
-                                  'offline_retry_interval'):
-                        defaults[name] = config.getint(
-                            os.path.basename(self.build_client), name)
-                    else:
-                        defaults[name] = value
+        build_client_name = os.path.basename(self.build_client)
+
+        config_val_methods = {
+            'anon_retry': config.getboolean,
+            'debug': config.getboolean,
+            'debug_xmlrpc': config.getboolean,
+            'keepalive': config.getboolean,
+            'offline_retry': config.getboolean,
+            'use_fast_upload': config.getboolean,
+            'max_retries': config.getint,
+            'offline_retry_interval': config.getint,
+            'retry_interval': config.getint,
+            'timeout': config.getint,
+            }
+
+        if config.has_section(build_client_name):
+            for name, value in config.items(build_client_name):
+                if name not in defaults:
+                    continue
+                get_method = config_val_methods.get(name)
+                defaults[name] = get_method(build_client_name, name) if get_method else value
+
         if not defaults['server']:
             raise rpkgError('No server defined in: %s' % ', '.join(confs))
+
         # Expand out the directory options
         for name in ('cert', 'ca', 'serverca'):
-            if defaults[name]:
-                defaults[name] = os.path.expanduser(defaults[name])
-        self.log.debug('Initiating a %s session to %s',
-                       os.path.basename(self.build_client), defaults['server'])
+            path = defaults[name]
+            if path:
+                defaults[name] = os.path.expanduser(path)
+
+        return defaults
+
+    def create_koji_session_opts(self, koji_config):
+        """Create session options from Koji config"""
+
+        opt_names = (
+            'anon_retry',
+            'debug',
+            'debug_xmlrpc',
+            'keepalive',
+            'krbservice',
+            'max_retries',
+            'offline_retry',
+            'offline_retry_interval',
+            'retry_interval',
+            'timeout',
+            'use_fast_upload',
+            )
+
         session_opts = {}
-        for name in ('krbservice', 'timeout', 'keepalive',
-                     'max_retries', 'retry_interval', 'anon_retry',
-                     'offline_retry', 'offline_retry_interval',
-                     'debug', 'debug_xmlrpc',
-                     'use_fast_upload'):
-            if defaults[name] is not None:
-                session_opts[name] = defaults[name]
-        try:
-            if anon:
-                self._anon_kojisession = koji.ClientSession(defaults['server'],
-                                                            session_opts)
-            else:
-                self._kojisession = koji.ClientSession(defaults['server'],
-                                                       session_opts)
-        except:
-            raise rpkgError('Could not initiate %s session' %
-                            os.path.basename(self.build_client))
+        for name in opt_names:
+            if koji_config[name] is not None:
+                session_opts[name] = koji_config[name]
+        return session_opts
+
+    def login_koji_session(self, koji_config, session):
+        """Login Koji session"""
+
+        authtype = koji_config['authtype']
+
+        # Default to ssl if not otherwise specified and we have the cert
+        if authtype == 'ssl' or os.path.isfile(koji_config['cert']) and authtype is None:
+            try:
+                session.ssl_login(koji_config['cert'],
+                                  koji_config['ca'],
+                                  koji_config['serverca'],
+                                  proxyuser=self.runas)
+            except koji.ssl.SSLCommon.SSL.Error as error:
+                for (_, _, ssl_reason) in error.message:
+                    # Use heuristic. Some OpenSSL libs doesn't store error
+                    # codes
+                    if 'certificate revoked' in ssl_reason or 'certificate expired' in ssl_reason:
+                        self.log.info("Certificate is revoked or expired.")
+                raise rpkgAuthError('Could not auth with koji. Login failed: %s' % error)
+
+        # Or try password auth
+        elif authtype == 'password' or self.password and authtype is None:
+            if self.runas:
+                raise rpkgError('--runas cannot be used with password auth')
+            session.opts['user'] = self.user
+            session.opts['password'] = self.password
+            session.login()
+
+        # Or try kerberos
+        elif authtype == 'kerberos' or self._has_krb_creds() and authtype is None:
+            session.krb_login(proxyuser=self.runas)
+
+        if not session.logged_in:
+            raise rpkgError('Could not login to %s' % koji_config['server'])
+
+    def load_kojisession(self, anon=False):
+        """Initiate a koji session.
+
+        The koji session can be logged in or anonymous
+        """
+        koji_config = self.read_koji_config()
+
         # save the weburl and topurl for later use as well
-        self._kojiweburl = defaults['weburl']
-        self._topurl = defaults['topurl']
+        self._kojiweburl = koji_config['weburl']
+        self._topurl = koji_config['topurl']
+
+        self.log.debug('Initiating a %s session to %s',
+                       os.path.basename(self.build_client), koji_config['server'])
+
+        # Build session options used to create instance of ClientSession
+        session_opts = self.create_koji_session_opts(koji_config)
+
+        try:
+            session = koji.ClientSession(koji_config['server'], session_opts)
+        except:
+            raise rpkgError('Could not initiate %s session' % os.path.basename(self.build_client))
+        else:
+            if anon:
+                self._anon_kojisession = session
+            else:
+                self._kojisession = session
+
         if not anon:
-            # Default to ssl if not otherwise specified and we have the cert
-            if defaults['authtype'] == 'ssl' or \
-                    os.path.isfile(defaults['cert']) and \
-                    defaults['authtype'] is None:
-                try:
-                    self._kojisession.ssl_login(defaults['cert'],
-                                                defaults['ca'],
-                                                defaults['serverca'],
-                                                proxyuser=self.runas)
-                except koji.ssl.SSLCommon.SSL.Error as error:
-                    for (_, _, ssl_reason) in error.message:
-                        # Use heuristic. Some OpenSSL libs doesn't store error
-                        # codes
-                        if 'certificate revoked' in ssl_reason or \
-                           'certificate expired' in ssl_reason:
-                            self.log.info("Certificate is revoked or expired.")
-                    raise rpkgAuthError('Could not auth with koji. Login '
-                                        'failed: %s' % error)
-            # Or try password auth
-            elif defaults['authtype'] == 'password' or self.password \
-                    and defaults['authtype'] is None:
-                if self.runas:
-                    raise rpkgError('--runas cannot be used with password auth')
-                self._kojisession.opts['user'] = self.user
-                self._kojisession.opts['password'] = self.password
-                self._kojisession.login()
-            # Or try kerberos
-            elif defaults['authtype'] == 'kerberos' or self._has_krb_creds() \
-                    and defaults['authtype'] is None:
-                self._kojisession.krb_login(proxyuser=self.runas)
-            if not self._kojisession.logged_in:
-                raise rpkgError('Could not login to %s' % defaults['server'])
+            self.login_koji_session(koji_config, self._kojisession)
 
     @property
     def branch_merge(self):
@@ -476,14 +524,6 @@ class Commands(object):
         if not self._epoch:
             self.load_nameverrel()
         return self._epoch
-
-    @property
-    def kojisession(self):
-        """This property ensures the kojisession attribute"""
-
-        if not self._kojisession:
-            self.load_kojisession()
-        return self._kojisession
 
     @property
     def kojiweburl(self):
