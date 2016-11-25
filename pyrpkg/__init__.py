@@ -1865,7 +1865,13 @@ class Commands(object):
             # We don't have a url, so build from the latest commit
             # Check to see if the tree is dirty and if all local commits
             # are pushed
-            self.check_repo()
+            try:
+                self.check_repo()
+            except rpkgError as e:
+                msg = '{0}\n{1}'.format(
+                    str(e),
+                    'Try option --srpm to make scratch build from local changes.')
+                raise rpkgError(msg)
             url = self._get_namespace_anongiturl(self.ns_module_name) + \
                 '?#%s' % self.commithash
         # Check to see if the target is valid
