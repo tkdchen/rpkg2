@@ -1820,9 +1820,14 @@ class Commands(object):
                                 'to see details' % self.path)
         if all_pushed:
             branch = self.repo.active_branch
-            remote = self.repo.git.config('--get', 'branch.%s.remote' % branch)
-            merge = self.repo.git.config('--get', 'branch.%s.merge' % branch).replace('refs/heads',
-                                                                                      remote)
+            try:
+                remote = self.repo.git.config('--get', 'branch.%s.remote' % branch)
+                merge = self.repo.git.config('--get', 'branch.%s.merge' % branch).replace(
+                    'refs/heads', remote)
+            except git.GitCommandError:
+                raise rpkgError('Branch {0} does not track remote branch.\n'
+                                'Use the following command to fix that:\n'
+                                '    git branch -u origin/REMOTE_BRANCH_NAME'.format(branch))
             if self.repo.git.rev_list('%s...%s' % (merge, branch)):
                 raise rpkgError('There are unpushed changes in your repo')
 
