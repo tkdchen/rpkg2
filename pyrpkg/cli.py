@@ -1234,7 +1234,7 @@ see API KEY section of copr-cli(1) man page.
 
     def mockbuild(self):
         try:
-            self.cmd.sources()
+            self.sources()
         except Exception as e:
             raise rpkgError('Could not download sources: %s', e)
 
