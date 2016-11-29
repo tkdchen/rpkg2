@@ -1,8 +1,12 @@
+import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 
+from mock import patch
+from six.moves import StringIO
 from pyrpkg.errors import rpkgError
 
 from . import CommandTestCase
@@ -72,3 +76,21 @@ class CheckRepoCase(CommandTestCase):
 
     def test_repo_has_everything_pushed(self):
         self.cmd.check_repo(is_dirty=False, all_pushed=True)
+
+    def test_check_repo_has_namespace(self):
+
+        def assert_warning(push_url, expected_msg):
+            with patch('sys.stderr', new=StringIO()):
+                with patch('pyrpkg.Commands.push_url', new=push_url):
+                    self.cmd.log.addHandler(logging.StreamHandler())
+                    self.cmd.log.setLevel(logging.WARNING)
+
+                    self.cmd.check_repo(is_dirty=False, all_pushed=False)
+                    output = sys.stderr.getvalue()
+                    self.assertTrue(expected_msg in output)
+
+        assert_warning('https://localhost/package',
+                       'Your git configuration does not use a namespace.')
+        assert_warning('https://localhost/rpms/package', '')
+        assert_warning('https://localhost/docker/package', '')
+        assert_warning('https://localhost/module/rpms/package', '')

@@ -603,12 +603,6 @@ class Commands(object):
     def ns_module_name(self, ns_module_name):
         self._ns_module_name = ns_module_name
 
-    def _print_old_checkout_warning(self, module):
-        self.log.warning('Your git configuration does not use a namespace.')
-        self.log.warning('Consider updating your git configuration by running:')
-        self.log.warning('  git remote set-url %s %s',
-                         self.branch_remote, self._get_namespace_giturl(module))
-
     def load_ns_module_name(self):
         """Loads a package module."""
 
@@ -619,7 +613,6 @@ class Commands(object):
                 if self.distgit_namespaced:
                     path_parts = [p for p in parts.path.split("/") if p]
                     if len(path_parts) == 1:
-                        self._print_old_checkout_warning(path_parts[0])
                         path_parts.insert(0, "rpms")
                     ns_module_name = "/".join(path_parts[-2:])
                 else:
@@ -1677,6 +1670,7 @@ class Commands(object):
         Optionally override .git setting to always rebase
 
         """
+        self.check_repo(is_dirty=False, all_pushed=False)
 
         cmd = ['git', 'pull']
         if self.quiet:
@@ -1706,6 +1700,7 @@ class Commands(object):
 
     def push(self, force=False):
         """Push changes to the remote repository"""
+        self.check_repo(is_dirty=False, all_pushed=False)
 
         # see if our branch is tracking anything
         try:
@@ -1757,10 +1752,7 @@ class Commands(object):
         # the first remote it finds.  When multiple remotes are in play
         # this needs to get smarter
 
-        # See if the repo is dirty first
-        if self.repo.is_dirty():
-            raise rpkgError('%s has uncommitted changes.  Use git status '
-                            'to see details' % self.path)
+        self.check_repo(all_pushed=False)
 
         # Get our list of branches
         (locals, remotes) = self._list_branches(fetch)
@@ -1793,10 +1785,13 @@ class Commands(object):
                                                                 err.stderr))
         return
 
-    def check_repo(self, is_dirty=True, all_pushed=True):
+    def check_repo(self, is_dirty=True, has_namespace=True, all_pushed=True):
         """Check various status of current repository
 
         :param bool is_dirty: Default to True. To check whether there is uncommitted changes.
+        :param bool has_namespace: Default to True. To check whether this repo
+            is checked out with namespace, e.g. rpms/, docker/. If the repo is
+            an old checkout, warn user with message how to fix it.
         :param bool all_pushed: Default to True. To check whether all changes are pushed.
         :raises rpkgError: if any unexpected status is detected. For example,
             if changes are not committed yet.
@@ -1805,6 +1800,23 @@ class Commands(object):
             if self.repo.is_dirty():
                 raise rpkgError('%s has uncommitted changes.  Use git status '
                                 'to see details' % self.path)
+        if has_namespace:
+            try:
+                repo_name = self.push_url
+            except rpkgError:
+                # Ignore error if cannot get remote push URL from this repo.
+                # That is we just skip has_namespace check when that error
+                # happens.
+                pass
+            else:
+                parts = urllib.parse.urlparse(repo_name)
+                parts = [p for p in parts.path.split('/') if p]
+                not_contain_namespace = len(parts) == 1
+                if not_contain_namespace:
+                    self.log.warning('Your git configuration does not use a namespace.')
+                    self.log.warning('Consider updating your git configuration by running:')
+                    self.log.warning('  git remote set-url %s %s',
+                                     self.branch_remote, self._get_namespace_giturl(parts[0]))
         if all_pushed:
             branch = self.repo.active_branch
             try:
@@ -2033,7 +2045,7 @@ class Commands(object):
 
     def giturl(self):
         """Return the git url that would be used for building"""
-
+        self.check_repo(is_dirty=False, all_pushed=False)
         url = self._get_namespace_anongiturl(self.ns_module_name) + \
             '?#%s' % self.commithash
         return url
