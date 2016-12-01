@@ -38,20 +38,6 @@ from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, log_result
 
-try:
-    # Use gssapi to detect the Kerberos credential by default, even krbV is
-    # still available too.
-    import gssapi
-except ImportError:
-    gssapi = None
-
-try:
-    # This is for backwards compatibility in old version OS where gssapi is not
-    # available.
-    import krbV
-except ImportError:
-    krbV = None
-
 if sys.version_info[0:2] >= (2, 5):
     import subprocess
 else:
@@ -912,49 +898,10 @@ class Commands(object):
         return None
 
     # Define some helper functions, they start with _
-    def _has_krb_creds_by_gssapi(self):
-        """Test if there is usable initialized Kerberos credential
-
-        :return: True if credential is initialized and not expired. Otherwise, False is returned.
-        :rtype: bool
-        """
-        try:
-            cred = gssapi.creds.Credentials(usage='initiate')
-        except gssapi.exceptions.GSSError:
-            # GSSError is raised if credential cache is not initialized or has bad format.
-            return False
-        try:
-            # We don't care about the value of attribute lifetime. Reading
-            # lifetime is only for testing if credential is usable.
-            cred.lifetime
-        except gssapi.exceptions.ExpiredCredentialsError:
-            return False
-        return True
-
-    def _has_krb_creds_by_krbv(self):
-        """Test if there is usable initialized Kerberos credential
-
-        :return: True if credential is initialized and not expired. Otherwise, False is returned.
-        :rtype: bool
-        """
-        try:
-            ctx = krbV.default_context()
-            ccache = ctx.default_ccache()
-            princ = ccache.principal()  # noqa
-            return True
-        except krbV.Krb5Error:
-            return False
 
     def _has_krb_creds_default(self):
         """Kerberos authentication is disabled if neither gssapi nor krbV is available"""
-        return False
-
-    if gssapi:
-        _has_krb_creds = _has_krb_creds_by_gssapi
-    elif krbV:
-        _has_krb_creds = _has_krb_creds_by_krbv
-    else:
-        _has_krb_creds = _has_krb_creds_default
+        return cccolutils.has_creds()
 
     def _run_command(self, cmd, shell=False, env=None, pipe=[], cwd=None):
         """Run the given command.
