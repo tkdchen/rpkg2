@@ -21,6 +21,7 @@ import os
 import sys
 
 import pycurl
+import six
 
 from .errors import DownloadError, InvalidHashType, UploadError
 
@@ -149,6 +150,8 @@ class CGILookasideCache(object):
         path_dict.update(kwargs)
         path = self.download_path % path_dict
         url = '%s/%s' % (self.download_url, path)
+        if isinstance(url, six.text_type):
+            url = url.encode('utf-8')
         self.log.debug("Full url: %s", url)
 
         with open(outfile, 'wb') as f:
