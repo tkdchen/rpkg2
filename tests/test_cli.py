@@ -374,6 +374,7 @@ class TestLocal(CliTestCase):
         """
         translation = {
             'i386': 'i686',
+            'arm': 'armv7hl',
             }
         return translation.get(arch, arch)
 
