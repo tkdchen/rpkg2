@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import logging
 import os
+import platform
 import rpmfluff
 import shutil
 import sys
@@ -365,18 +366,6 @@ Building for target i686''', stdout)
 
 class TestLocal(CliTestCase):
 
-    def translate_arch(self, arch):
-        """Translate local arch to arch the rpmbuild uses
-
-        This is another workaround for running tests in Copr, where when
-        building RPM in a i386 target, local arch is i386, but arch in RPM is
-        "translated" to i686.
-        """
-        translation = {
-            'i386': 'i686',
-            }
-        return translation.get(arch, arch)
-
     def test_local(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'local']
 
@@ -385,10 +374,10 @@ class TestLocal(CliTestCase):
             cli.local()
 
         self.assertTrue(exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.src.rpm')))
-        # This covers some special cases, e.g. building in copr, that is
-        # RPMs are not put in arch subdirectory even if %{_build_name_fmt}
+        # This covers some special cases, e.g. building in copr and Koji, that
+        # is RPMs are not put in arch subdirectory even if %{_build_name_fmt}
         # is %{ARCH}/%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm
-        arch = self.translate_arch(cli.cmd.localarch)
+        arch = platform.machine()
         self.assertTrue(
             exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.{0}.rpm'.format(arch))) or
             exists(join(self.cloned_repo_path, '{0}/docpkg-1.2-2.el6.{0}.rpm'.format(arch))))
