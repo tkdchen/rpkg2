@@ -304,6 +304,7 @@ class Commands(object):
             'retry_interval',
             'timeout',
             'use_fast_upload',
+            'krb_rdns',
             )
 
         session_opts = {}
