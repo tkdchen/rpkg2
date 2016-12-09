@@ -892,7 +892,7 @@ class Commands(object):
 
     # Define some helper functions, they start with _
 
-    def _has_krb_creds_default(self):
+    def _has_krb_creds(self):
         """Kerberos authentication is disabled if neither gssapi nor krbV is available"""
         return cccolutils.has_creds()
 
