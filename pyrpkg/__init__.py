@@ -2019,11 +2019,10 @@ class Commands(object):
 
         # setup the rpm command
         cmd = ['rpmbuild']
+        cmd.extend(self.rpmdefines)
         if builddir:
             # Tack on a new builddir to the end of the defines
-            self.rpmdefines.append("--define '_builddir %s'" %
-                                   os.path.abspath(builddir))
-        cmd.extend(self.rpmdefines)
+            cmd.append("--define '_builddir %s'" % os.path.abspath(builddir))
         if arch:
             cmd.extend(['--target', arch])
         if short:
@@ -2075,11 +2074,10 @@ class Commands(object):
 
         # setup the rpm command
         cmd = ['rpmbuild']
+        cmd.extend(self.rpmdefines)
         if builddir:
             # Tack on a new builddir to the end of the defines
-            self.rpmdefines.append("--define '_builddir %s'" %
-                                   os.path.abspath(builddir))
-        cmd.extend(self.rpmdefines)
+            cmd.append("--define '_builddir %s'" % os.path.abspath(builddir))
         if arch:
             cmd.extend(['--target', arch])
         if short:
@@ -2147,11 +2145,10 @@ class Commands(object):
         # Get the sources
         # build up the rpm command
         cmd = ['rpmbuild']
+        cmd.extend(self.rpmdefines)
         if builddir:
             # Tack on a new builddir to the end of the defines
-            self.rpmdefines.append("--define '_builddir %s'" %
-                                   os.path.abspath(builddir))
-        cmd.extend(self.rpmdefines)
+            cmd.append("--define '_builddir %s'" % os.path.abspath(builddir))
         # Figure out the hash type to use
         if not hashtype:
             # Try to determine the dist
@@ -2376,11 +2373,10 @@ class Commands(object):
 
         # setup the rpm command
         cmd = ['rpmbuild']
+        cmd.extend(self.rpmdefines)
         if builddir:
             # Tack on a new builddir to the end of the defines
-            self.rpmdefines.append("--define '_builddir %s'" %
-                                   os.path.abspath(builddir))
-        cmd.extend(self.rpmdefines)
+            cmd.append("--define '_builddir %s'" % os.path.abspath(builddir))
         if arch:
             cmd.extend(['--target', arch])
         if self.quiet:
@@ -2478,11 +2474,10 @@ class Commands(object):
 
         # setup the rpm command
         cmd = ['rpmbuild']
+        cmd.extend(self.rpmdefines)
         if builddir:
             # Tack on a new builddir to the end of the defines
-            self.rpmdefines.append("--define '_builddir %s'" %
-                                   os.path.abspath(builddir))
-        cmd.extend(self.rpmdefines)
+            cmd.append("--define '_builddir %s'" % os.path.abspath(builddir))
         if self.quiet:
             cmd.append('--quiet')
         cmd.extend(['-bl', os.path.join(self.path, self.spec)])

@@ -9,8 +9,6 @@ import shutil
 import sys
 import tempfile
 
-from os.path import exists
-from os.path import join
 from six.moves import configparser
 from six.moves import StringIO
 
@@ -244,190 +242,167 @@ class TestSrpm(CliTestCase):
 
 class TestCompile(CliTestCase):
 
-    def compile(self, cli_cmd):
+    @patch('pyrpkg.Commands._run_command')
+    def test_compile(self, _run_command):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'compile']
+
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('pyrpkg.Commands._run_command', new=self.redirect_cmd_output):
-                cli.compile()
+            cli.compile()
 
-    @patch('sys.stdout', new=StringIO())
-    def test_compile(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'compile']
-        self.compile(cli_cmd)
-        stdout = sys.stdout.getvalue()
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + ['-bc', spec]
 
-        self.assertTrue('Executing(%prep):' in stdout)
-        self.assertTrue('Executing(%build):' in stdout)
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
-    @patch('sys.stdout', new=StringIO())
-    def test_compile_short_circuit(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6',
-                   'compile', '--short-circuit']
-        self.compile(cli_cmd)
-        stdout = sys.stdout.getvalue()
+    @patch('pyrpkg.Commands._run_command')
+    def test_compile_with_options(self, _run_command):
+        builddir = os.path.join(self.cloned_repo_path, 'builddir')
 
-        self.assertTrue('Executing(%prep):' not in stdout)
-        self.assertTrue('Executing(%build):' in stdout)
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q', 'compile',
+                   '--builddir', builddir, '--short-circuit', '--arch', 'i686', '--nocheck']
 
-    @patch('sys.stdout', new=StringIO())
-    def test_compile_quiet(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q', 'compile']
-        self.compile(cli_cmd)
-        stdout = sys.stdout.getvalue()
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.compile()
 
-        self.assertEqual('', stdout)
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + \
+            ["--define '_builddir %s'" % builddir, '--target', 'i686', '--short-circuit',
+             '--nocheck', '--quiet', '-bc', spec]
 
-    @patch('sys.stdout', new=StringIO())
-    def test_compile_arch(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q',
-                   'compile', '--arch', 'i686']
-        self.compile(cli_cmd)
-        stdout = sys.stdout.getvalue()
-
-        self.assertTrue('''Building target platforms: i686
-Building for target i686''', stdout)
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
 
 class TestPrep(CliTestCase):
 
-    def prep(self, cli_cmd):
+    @patch('pyrpkg.Commands._run_command')
+    def test_prep(self, _run_command):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'prep']
+
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('pyrpkg.Commands._run_command', new=self.redirect_cmd_output):
-                cli.prep()
+            cli.prep()
 
-    @patch('sys.stdout', new=StringIO())
-    def test_prep(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'prep']
-        self.prep(cli_cmd)
-        stdout = sys.stdout.getvalue()
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + ['--nodeps', '-bp', spec]
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
-        self.assertTrue('Executing(%prep):' in stdout)
+    @patch('pyrpkg.Commands._run_command')
+    def test_prep_with_options(self, _run_command):
+        builddir = os.path.join(self.cloned_repo_path, 'builddir')
 
-    @patch('sys.stdout', new=StringIO())
-    def test_prep_arch(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q',
-                   'compile', '--arch', 'i686']
-        self.prep(cli_cmd)
-        stdout = sys.stdout.getvalue()
+                   'compile', '--arch', 'i686', '--builddir', builddir]
 
-        self.assertTrue('''Building target platforms: i686
-Building for target i686''', stdout)
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.prep()
+
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + \
+            ["--define '_builddir %s'" % builddir, '--target', 'i686', '--quiet', '--nodeps',
+             '-bp', spec]
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
 
 class TestInstall(CliTestCase):
 
-    def install(self, cli_cmd):
+    @patch('pyrpkg.Commands._run_command')
+    def test_install(self, _run_command):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'install']
+
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('pyrpkg.Commands._run_command', new=self.redirect_cmd_output):
-                cli.install()
+            cli.install()
 
-    @patch('sys.stdout', new=StringIO())
-    def test_install(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'install']
-        self.install(cli_cmd)
-        stdout = sys.stdout.getvalue()
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + ['-bi', spec]
 
-        self.assertTrue('Executing(%prep):' in stdout)
-        self.assertTrue('Executing(%build):' in stdout)
-        self.assertTrue('Executing(%install):' in stdout)
-        self.assertTrue('Executing(%check):' in stdout)
-        self.assertTrue('Executing(%doc):' in stdout)
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
-    @patch('sys.stdout', new=StringIO())
-    def test_install_nocheck(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6',
-                   'install', '--nocheck']
-        self.install(cli_cmd)
-        stdout = sys.stdout.getvalue()
+    @patch('pyrpkg.Commands._run_command')
+    def test_install_with_options(self, _run_command):
+        builddir = os.path.join(self.cloned_repo_path, 'builddir')
 
-        self.assertTrue('Executing(%check):' not in stdout)
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q',
+                   'install', '--nocheck', '--arch', 'i686', '--builddir', builddir]
 
-    @patch('sys.stdout', new=StringIO())
-    def test_install_quiet(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q', 'install']
-        self.install(cli_cmd)
-        stdout = sys.stdout.getvalue()
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.install()
 
-        self.assertEqual('', stdout)
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + \
+            ["--define '_builddir %s'" % builddir, '--target', 'i686', '--nocheck', '--quiet',
+             '-bi', spec]
 
-    @patch('sys.stdout', new=StringIO())
-    def test_install_arch(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release',
-                   'rhel-6', 'install', '--arch', 'i686']
-        self.install(cli_cmd)
-        stdout = sys.stdout.getvalue()
-
-        self.assertTrue('''Building target platforms: i686
-Building for target i686''', stdout)
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
 
 class TestLocal(CliTestCase):
 
-    def translate_arch(self, arch):
-        """Translate local arch to arch the rpmbuild uses
-
-        This is another workaround for running tests in Copr, where when
-        building RPM in a i386 target, local arch is i386, but arch in RPM is
-        "translated" to i686.
-        """
-        translation = {
-            'i386': 'i686',
-            'arm': 'armv7hl',
-            }
-        return translation.get(arch, arch)
-
-    def test_local(self):
+    @patch('pyrpkg.Commands._run_command')
+    def test_local(self, _run_command):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'local']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.local()
 
-        self.assertTrue(exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.src.rpm')))
-        # This covers some special cases, e.g. building in copr, that is
-        # RPMs are not put in arch subdirectory even if %{_build_name_fmt}
-        # is %{ARCH}/%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm
-        arch = self.translate_arch(cli.cmd.localarch)
-        self.assertTrue(
-            exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.{0}.rpm'.format(arch))) or
-            exists(join(self.cloned_repo_path, '{0}/docpkg-1.2-2.el6.{0}.rpm'.format(arch))))
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + ['-ba', spec]
+        tee = ['tee', '.build-%s-%s.log' % (cli.cmd.ver, cli.cmd.rel)]
+        _run_command.assert_called_once_with(rpmbuild, pipe=tee, shell=True)
 
-    def test_local_with_arch(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6',
-                   'local', '--arch', 'i686']
+    @patch('pyrpkg.Commands._run_command')
+    def test_local_with_options(self, _run_command):
+        builddir = os.path.join(self.cloned_repo_path, 'this-builddir')
 
-        with patch('sys.argv', new=cli_cmd):
-            cli = self.new_cli()
-            cli.local()
-
-        self.assertTrue(exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.src.rpm')))
-        self.assertTrue(
-            exists(join(self.cloned_repo_path, 'docpkg-1.2-2.el6.i686.rpm')) or
-            exists(join(self.cloned_repo_path, 'i686/docpkg-1.2-2.el6.i686.rpm')))
-
-    def test_local_with_builddir(self):
-        custom_builddir = os.path.join(self.cloned_repo_path, 'this-builddir')
-
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6',
-                   'local', '--builddir', custom_builddir]
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q', 'local',
+                   '--builddir', builddir, '--arch', 'i686']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.local()
 
-        self.assertFilesExist(('this-builddir/README.rst',), search_dir=self.cloned_repo_path)
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + \
+            ["--define '_builddir %s'" % builddir, '--target', 'i686', '--quiet', '-ba', spec]
+        tee = ['tee', '.build-%s-%s.log' % (cli.cmd.ver, cli.cmd.rel)]
+
+        _run_command.assert_called_once_with(rpmbuild, pipe=tee, shell=True)
 
 
 class TestVerifyFiles(CliTestCase):
 
-    def test_verify_files(self):
+    @patch('pyrpkg.Commands._run_command')
+    def test_verify_files(self, _run_command):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'verify-files']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.verify_files()
+
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + ['-bl', spec]
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
+
+    @patch('pyrpkg.Commands._run_command')
+    def test_verify_files_with_options(self, _run_command):
+        builddir = os.path.join(self.cloned_repo_path, 'this-builddir')
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q',
+                   'verify-files', '--builddir', builddir]
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.verify_files()
+
+        spec = os.path.join(cli.cmd.path, cli.cmd.spec)
+        rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + \
+            ["--define '_builddir %s'" % builddir, '--quiet', '-bl', spec]
+        _run_command.assert_called_once_with(rpmbuild, shell=True)
 
 
 class TestVerrel(CliTestCase):
@@ -632,59 +607,32 @@ class TestClean(CliTestCase):
 
 class TestLint(CliTestCase):
 
-    @patch('sys.stdout', new=StringIO())
-    def test_lint(self):
+    @patch('pyrpkg.Commands._run_command')
+    def test_lint(self, _run_command):
         self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-7')
 
         cli_cmd = ['rpkg', '--module-name', 'docpkg', '--path', self.cloned_repo_path, 'lint']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('pyrpkg.Commands._run_command', new=self.redirect_cmd_output):
-                cli.lint()
+            cli.lint()
 
-        summary = sys.stdout.getvalue().strip().split('\n')[-1]
-        self.assertEqual(
-            '0 packages and 1 specfiles checked; 0 errors, 0 warnings.', summary)
+        rpmlint = ['rpmlint', os.path.join(cli.cmd.path, cli.cmd.spec)]
+        _run_command.assert_called_once_with(rpmlint, shell=True)
 
-    @patch('sys.stdout', new=StringIO())
-    def test_lint_warning_detected(self):
+    @patch('pyrpkg.Commands._run_command')
+    def test_lint_warning_with_info(self, _run_command):
         self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-7')
-
-        spec_file = os.path.join(self.cloned_repo_path, self.spec_file)
-        spec_content = self.read_file(spec_file).replace('%install', '')
-        self.write_file(spec_file, spec_content)
-
-        cli_cmd = ['rpkg', '--module-name', 'docpkg', '--path', self.cloned_repo_path, 'lint']
-
-        with patch('sys.argv', new=cli_cmd):
-            cli = self.new_cli()
-            with patch('pyrpkg.Commands._run_command', new=self.redirect_cmd_output):
-                cli.lint()
-
-        output = sys.stdout.getvalue()
-        self.assertTrue('W: no-%install-section' in output)
-
-    @patch('sys.stdout', new=StringIO())
-    def test_lint_warining_with_info(self):
-        self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-7')
-
-        spec_file = os.path.join(self.cloned_repo_path, self.spec_file)
-        spec_content = self.read_file(spec_file).replace('%install', '')
-        self.write_file(spec_file, spec_content)
 
         cli_cmd = ['rpkg', '--module-name', 'docpkg', '--path', self.cloned_repo_path,
                    'lint', '--info']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('pyrpkg.Commands._run_command', new=self.redirect_cmd_output):
-                cli.lint()
+            cli.lint()
 
-        warning_explanation = 'The spec file does not contain an %install section.'
-        output = sys.stdout.getvalue()
-        self.assertTrue('W: no-%install-section' in output)
-        self.assertTrue(warning_explanation in output)
+        rpmlint = ['rpmlint', '-i', os.path.join(cli.cmd.path, cli.cmd.spec)]
+        _run_command.assert_called_once_with(rpmlint, shell=True)
 
 
 class TestGitUrl(CliTestCase):
