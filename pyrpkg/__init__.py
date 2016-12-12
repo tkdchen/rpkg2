@@ -248,6 +248,7 @@ class Commands(object):
             'topurl': 'http://localhost/kojiroot',
             'use_fast_upload': None,
             'weburl': 'http://localhost/koji',
+            'krb_rdns': False,
             }
 
         # Process the configs in order, global, user, then any option passed
@@ -269,6 +270,7 @@ class Commands(object):
             'offline_retry_interval': config.getint,
             'retry_interval': config.getint,
             'timeout': config.getint,
+            'krb_rdns': config.getboolean,
             }
 
         if config.has_section(build_client_name):
