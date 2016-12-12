@@ -248,7 +248,7 @@ class Commands(object):
             'topurl': 'http://localhost/kojiroot',
             'use_fast_upload': None,
             'weburl': 'http://localhost/koji',
-            'krb_rdns': False,
+            'krb_rdns': None,
             }
 
         # Process the configs in order, global, user, then any option passed
