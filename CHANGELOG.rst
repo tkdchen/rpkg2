@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+Next
+----
+
+- Fix uploading sources with old PyCURL on EL 7 - BZ#1241059 (lsedlar)
+
+
 v1.47-1 (2016-12-02)
 --------------------
 

@@ -260,6 +260,13 @@ class CGILookasideCache(object):
         """
         filename = os.path.basename(filepath)
 
+        # RHEL 7 ships pycurl that does not accept unicode. When given unicode
+        # type it would explode with "unsupported second type in tuple". Let's
+        # convert to str just to be sure.
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1241059
+        if six.PY2 and isinstance(name, unicode):
+            name = name.encode('utf-8')
+
         if self.remote_file_exists(name, filename, hash):
             self.log.info("File already uploaded: %s", filepath)
             return
