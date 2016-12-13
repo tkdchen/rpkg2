@@ -26,7 +26,7 @@ import koji
 import pyrpkg.utils as utils
 
 from pyrpkg import rpkgError
-from six.moves import xmlrpc_client
+from six.moves import xmlrpc_client, configparser
 
 OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
 
@@ -107,7 +107,13 @@ class cliClient(object):
         # load items from the config file
         items = dict(self.config.items(self.name, raw=True))
 
-        dg_namespaced = items.get("distgit_namespaced", False)
+        try:
+            dg_namespaced = self.config.getboolean(self.name,
+                                                   "distgit_namespaced")
+        except ValueError:
+            raise rpkgError('distgit_namespaced option must be a boolean')
+        except configparser.NoOptionError:
+            dg_namespaced = False
 
         # Read comma separated list of kerberos realms
         realms = [realm
