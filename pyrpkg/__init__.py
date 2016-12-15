@@ -25,6 +25,7 @@ import shutil
 import six
 import sys
 import tempfile
+import koji.ssl.SSLCommon
 
 from osbs.api import OSBS
 from osbs.conf import Configuration
