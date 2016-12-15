@@ -1,15 +1,16 @@
 ChangeLog
 =========
 
-Next
-----
+v1.47 (2016-12-15)
+------------------
 
-- Fix uploading sources with old PyCURL on EL 7 - BZ#1241059 (lsedlar)
-
-
-v1.47-1 (2016-12-02)
---------------------
-
+- Add missing import koji.ssl.SSLCommon - BZ#1404102 (cqi)
+- Fix upload with old PyCURL - BZ#1241059 (lsedlar)
+- Default krb_rdns to None (lsedlar)
+- Add missing krb_rdns in default Koji config (cqi)
+- Coerce the distgit_namespaced config option to a boolean - #74 (merlin)
+- We need krb_rdns (puiterwijk)
+- Fix wrong _has_krb_creds name (cqi)
 - Warning if repo is an old checkout - #148 (cqi)
 - Pass byte string to pycurl setopt (cqi)
 - Refine Kerberos with cccolutils (cqi)
