@@ -1060,41 +1060,17 @@ class Commands(object):
     def _srpmdetails(self, srpm):
         """Return a tuple of package name, package files, and upload files."""
 
-        # get the name
-        cmd = ['rpm', '-qp', '--nosignature', '--qf', '%{NAME}', srpm]
-        # Run the command
-        self.log.debug('Running: %s', ' '.join(cmd))
         try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            output, error = proc.communicate()
-        except OSError as e:
-            raise rpkgError(e)
-        name = output
-        if error:
-            raise rpkgError('Error querying srpm: %s' % error)
+            hdr = koji.get_rpm_header(srpm)
+            name = hdr[rpm.RPMTAG_NAME]
+            contents = hdr[rpm.RPMTAG_FILENAMES]
+        except Exception as e:
+            raise rpkgError('Error querying srpm: {0}'.format(str(e)))
 
         # now get the files and upload files
         files = []
         uploadfiles = []
-        cmd = ['rpm', '-qpl', srpm]
-        self.log.debug('Running: %s', ' '.join(cmd))
-        env = dict(os.environ)
-        env["LANG"] = "C"
-        try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    env=env)
-            output, error = proc.communicate()
-        except OSError as e:
-            raise rpkgError(e)
-        # work around signed SRPMs, for these rpm -qpl might print a warning
-        # like:
-        # warning: foo-0.0.src.rpm Header V3 RSA/SHA256 Signature, key ID
-        # fd431d51: NOKEY
-        if error and not error.startswith("warning:") and "NOKEY" not in error:
-            raise rpkgError('Error querying srpm: %s' % error)
-        contents = output.strip().split('\n')
+
         # Cycle through the stuff and sort correctly by its extension
         for file in contents:
             if file.rsplit('.')[-1] in self.UPLOADEXTS:
@@ -1102,7 +1078,7 @@ class Commands(object):
             else:
                 files.append(file)
 
-        return((name, files, uploadfiles))
+        return (name, files, uploadfiles)
 
     def _get_namespace_giturl(self, module):
         """Get the namespaced git url, if DistGit namespaces enabled
