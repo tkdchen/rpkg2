@@ -24,6 +24,7 @@ import pycurl
 import six
 
 from .errors import DownloadError, InvalidHashType, UploadError
+from six.moves import http_client
 
 
 class CGILookasideCache(object):
@@ -121,6 +122,15 @@ class CGILookasideCache(object):
         """
         sum = self.hash_file(filename, hashtype)
         return sum == hash
+
+    def raise_upload_error(self, http_status):
+        messages = {
+            http_client.UNAUTHORIZED: 'Request is unauthorized.',
+            http_client.INTERNAL_SERVER_ERROR: 'Error occurs inside the server.',
+            }
+        default = 'Fail to upload files. Server returns status {0}'.format(http_status)
+        message = messages.get(http_status, default)
+        raise UploadError(message, http_status=http_status)
 
     def download(self, name, filename, hash, outfile, hashtype=None, **kwargs):
         """Download a source file
@@ -235,7 +245,7 @@ class CGILookasideCache(object):
             output = buf.getvalue().strip()
 
         if status != 200:
-            raise UploadError(output)
+            self.raise_upload_error(status)
 
         # Lookaside CGI script returns these strings depending on whether
         # or not the file exists:
@@ -316,7 +326,7 @@ class CGILookasideCache(object):
         sys.stdout.flush()
 
         if status != 200:
-            raise UploadError(output)
+            self.raise_upload_error(status)
 
         if output:
             self.log.debug(output)

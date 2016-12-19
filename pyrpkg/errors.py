@@ -50,4 +50,13 @@ class DownloadError(rpkgError):
 
 class UploadError(rpkgError):
     """Raised when something went wrong during an upload"""
-    pass
+
+    def __init__(self, message, http_status=None):
+        self.message = message
+        self.http_status = http_status
+
+    def __str__(self):
+        return str(self.message)
+
+    def __unicode__(self):
+        return unicode(self.message)

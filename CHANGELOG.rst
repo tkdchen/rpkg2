@@ -4,6 +4,7 @@ ChangeLog
 v1.47 (2016-12-15)
 ------------------
 
+- Better message when fail to authenticate via Kerberos - #180 (cqi)
 - Refactor Commands._srpmdetails
 - Add missing import koji.ssl.SSLCommon - BZ#1404102 (cqi)
 - Fix upload with old PyCURL - BZ#1241059 (lsedlar)

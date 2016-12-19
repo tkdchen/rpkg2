@@ -346,7 +346,19 @@ class Commands(object):
 
         # Or try kerberos
         elif authtype == 'kerberos' or self._has_krb_creds() and authtype is None:
-            session.krb_login(proxyuser=self.runas)
+            self.log.debug('Logging into {0} with Kerberos authentication.'.format(
+                koji_config['server']))
+
+            if self._load_krb_user():
+                try:
+                    session.krb_login(proxyuser=self.runas)
+                except koji.krbV.Krb5Error as e:
+                    self.log.error('Kerberos authentication fails: %s', e.args[1])
+            else:
+                self.log.warning('Kerberos authentication is used, but you do not have a '
+                                 'valid credential.')
+                self.log.warning('Please use kinit to get credential with a principal that has '
+                                 'realm {0}'.format(', '.join(list(self.realms))))
 
         if not session.logged_in:
             raise rpkgError('Could not login to %s' % koji_config['server'])
@@ -803,7 +815,8 @@ class Commands(object):
         """This property ensures the user attribute"""
 
         if not self._user:
-            if not self._load_krb_user():
+            self._user = self._load_krb_user()
+            if not self._user:
                 self.load_user()
         return self._user
 
@@ -811,7 +824,7 @@ class Commands(object):
         """This attempts to get the username from active tickets"""
 
         if not self.realms:
-            return False
+            return None
 
         if not isinstance(self.realms, list):
             self.realms = [self.realms]
@@ -819,10 +832,9 @@ class Commands(object):
         for realm in self.realms:
             username = cccolutils.get_user_for_realm(realm)
             if username:
-                self._user = username
-                return True
+                return username
         # We could not find a username for any of the realms, let's fall back
-        return False
+        return None
 
     def load_user(self):
         """This sets the user attribute"""
