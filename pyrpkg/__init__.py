@@ -1822,6 +1822,14 @@ class Commands(object):
             if self.repo.git.rev_list('%s...%s' % (merge, branch)):
                 raise rpkgError('There are unpushed changes in your repo')
 
+    def check_inheritance(self, build_target, dest_tag):
+        """Check if build tag inherits from dest tag"""
+        ancestors = self.kojisession.getFullInheritance(build_target['build_tag'])
+        ancestors = [ancestor['parent_id'] for ancestor in ancestors]
+        if dest_tag['id'] not in [build_target['build_tag']] + ancestors:
+            raise rpkgError('Packages in destination tag %(dest_tag_name)s are not inherited by'
+                            ' build tag %(build_tag_name)s' % build_target)
+
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):
         """Initiate a build of the module.  Available options are:
@@ -1876,17 +1884,10 @@ class Commands(object):
                             % build_target['dest_tag_name'])
         if dest_tag['locked'] and not scratch:
             raise rpkgError('Destination tag %s is locked' % dest_tag['name'])
-        # If we're chain building, make sure inheritance works
         if chain:
             cmd.append('chain-build')
-            ancestors = self.kojisession.getFullInheritance(
-                build_target['build_tag'])
-            ancestors = [ancestor['parent_id'] for ancestor in ancestors]
-            if dest_tag['id'] not in [build_target['build_tag']] + ancestors:
-                raise rpkgError('Packages in destination tag '
-                                '%(dest_tag_name)s are not inherited by'
-                                'build tag %(build_tag_name)s' %
-                                build_target)
+            # We're chain building, make sure inheritance works
+            self.check_inheritance(build_target, dest_tag)
         else:
             cmd.append('build')
         # define our dictionary for options

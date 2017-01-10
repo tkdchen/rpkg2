@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+NEXT
+----
+
+- Move tag inheritance check into a separate method (cqi)
+
 v1.48 (2016-12-22)
 ------------------
 

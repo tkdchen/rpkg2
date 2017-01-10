@@ -7,6 +7,7 @@ import tempfile
 import git
 import rpm
 from mock import patch
+from mock import Mock
 
 from pyrpkg import rpkgError
 
@@ -504,3 +505,39 @@ class TestGetLatestCommit(CommandTestCase):
         self.assertEqual(str(git.Repo(self.repo_path).iter_commits().next()),
                          cmd.get_latest_commit(os.path.basename(self.repo_path),
                                                'eng-rhel-6'))
+
+
+def load_kojisession(self):
+    self._kojisession = Mock()
+    self._kojisession.getFullInheritance.return_value = [
+        {'child_id': 342, 'currdepth': 1, 'filter': [], 'intransitive': False,
+         'maxdepth': None, 'name': 'f25-override', 'nextdepth': None, 'noconfig': False,
+         'parent_id': 341, 'pkg_filter': '', 'priority': 0},
+        {'child_id': 341, 'currdepth': 2, 'filter': [], 'intransitive': False,
+         'maxdepth': None, 'name': 'f25-updates', 'nextdepth': None, 'noconfig': False,
+         'parent_id': 336, 'pkg_filter': '', 'priority': 0},
+        {'child_id': 336, 'currdepth': 3, 'filter': [], 'intransitive': False,
+         'maxdepth': None, 'name': 'f25', 'nextdepth': None, 'noconfig': False,
+         'parent_id': 335, 'pkg_filter': '', 'priority': 0},
+        ]
+
+
+class TestTagInheritanceTag(CommandTestCase):
+
+    @patch('pyrpkg.Commands.load_kojisession', new=load_kojisession)
+    def test_error_if_not_inherit(self):
+        build_target = {
+            'build_tag': 342, 'build_tag_name': 'f25-build',
+            'dest_tag': 337, 'dest_tag_name': 'f25-updates-candidate',
+            'id': 167, 'name': 'f25-candidate',
+            }
+        dest_tag = {
+            'arches': None, 'extra': {},
+            'id': 337, 'locked': False,
+            'maven_include_all': False, 'maven_support': False,
+            'name': 'f25-updates-candidate',
+            'perm': None, 'perm_id': None,
+            }
+
+        cmd = self.make_commands()
+        self.assertRaises(rpkgError, cmd.check_inheritance, build_target, dest_tag)
