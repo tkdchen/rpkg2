@@ -306,7 +306,7 @@ class ClogTest(CommandTestCase):
     def setUp(self):
         super(ClogTest, self).setUp()
 
-        with open(os.path.join(self.repo_path, self.spec_file), 'w') as specfile:
+        with open(os.path.join(self.cloned_repo_path, self.spec_file), 'w') as specfile:
             specfile.write('''
 Summary: package demo
 Name: pkgtool
@@ -325,12 +325,14 @@ $what_is_this
 - initial
 ''')
 
-        self.cmd = self.make_commands(self.repo_path)
+        self.clog_file = os.path.join(self.cloned_repo_path, 'clog')
+        self.cmd = self.make_commands()
+        self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
 
     def test_clog(self):
         self.cmd.clog()
 
-        with open(os.path.join(self.repo_path, 'clog'), 'r') as clog:
+        with open(self.clog_file, 'r') as clog:
             clog_lines = clog.readlines()
 
         expected_lines = ['add %changelog section\n',
@@ -340,7 +342,7 @@ $what_is_this
     def test_raw_clog(self):
         self.cmd.clog(raw=True)
 
-        with open(os.path.join(self.repo_path, 'clog'), 'r') as clog:
+        with open(self.clog_file, 'r') as clog:
             clog_lines = clog.readlines()
 
         expected_lines = ['- add %changelog section\n',

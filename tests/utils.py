@@ -27,6 +27,8 @@ Name: docpkg
 Version: 1.2
 Release: 2%{dist}
 License: GPL
+#Source0:
+#Patch0:
 Group: Applications/Productivity
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 %description

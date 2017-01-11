@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+NEXT
+----
+
+- Fix rpm command to get changelog from SPEC - rhbz#1412224 (cqi)
+
 v1.49 (2017-02-22)
 ------------------
 

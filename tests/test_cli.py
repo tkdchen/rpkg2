@@ -72,6 +72,7 @@ class TestClog(CliTestCase):
 
     def setUp(self):
         super(TestClog, self).setUp()
+        self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-6')
 
     def cli_clog(self):
         """Run clog command"""
@@ -86,8 +87,7 @@ class TestClog(CliTestCase):
 
         clog_file = os.path.join(self.cloned_repo_path, 'clog')
         self.assertTrue(os.path.exists(clog_file))
-        with open(clog_file, 'r') as f:
-            clog = f.read().strip()
+        clog = self.read_file(clog_file).strip()
         self.assertEqual('Initial version', clog)
 
     def test_raw_clog(self):
@@ -98,15 +98,25 @@ class TestClog(CliTestCase):
 
         clog_file = os.path.join(self.cloned_repo_path, 'clog')
         self.assertTrue(os.path.exists(clog_file))
-        with open(clog_file, 'r') as f:
-            clog = f.read().strip()
+        clog = self.read_file(clog_file).strip()
         self.assertEqual('- Initial version', clog)
+
+    def test_reference_source_files_in_spec_should_not_break_clog(self):
+        """SPEC containing Source0 or Patch0 should not break clog
+
+        This case is reported in bug 1412224
+        """
+        spec_file = os.path.join(self.cloned_repo_path, self.spec_file)
+        spec = self.read_file(spec_file)
+        self.write_file(spec_file, spec.replace('#Source0:', 'Source0: extrafile.txt'))
+        self.test_raw_clog()
 
 
 class TestCommit(CliTestCase):
 
     def setUp(self):
         super(TestCommit, self).setUp()
+        self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-6')
         self.make_changes()
 
     def get_last_commit_message(self):

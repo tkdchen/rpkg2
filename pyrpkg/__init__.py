@@ -1981,8 +1981,10 @@ class Commands(object):
         """Write the latest spec changelog entry to a clog file"""
 
         spec_file = os.path.join(self.path, self.spec)
-        cmd = ['rpm', '-q', '--qf', '%{CHANGELOGTEXT}\n', '--specfile', spec_file]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = ['rpm'] + self.rpmdefines + ['-q', '--qf', '"%{CHANGELOGTEXT}\n"',
+                                           '--specfile', '"%s"' % spec_file]
+        proc = subprocess.Popen(' '.join(cmd), shell=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = proc.communicate()
         if proc.returncode > 0:
             raise rpkgError(stderr.strip())
