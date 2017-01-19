@@ -5,6 +5,7 @@ NEXT
 ----
 
 - Move tag inheritance check into a separate method (cqi)
+- More upload PyCURL fixes for EL 7 (merlinthp)
 
 v1.48 (2016-12-22)
 ------------------
@@ -19,7 +20,7 @@ v1.47 (2016-12-15)
 - Fix upload with old PyCURL - BZ#1241059 (lsedlar)
 - Default krb_rdns to None (lsedlar)
 - Add missing krb_rdns in default Koji config (cqi)
-- Coerce the distgit_namespaced config option to a boolean - #74 (merlin)
+- Coerce the distgit_namespaced config option to a boolean - #74 (merlinthp)
 - We need krb_rdns (puiterwijk)
 - Fix wrong _has_krb_creds name (cqi)
 - Warning if repo is an old checkout - #148 (cqi)
