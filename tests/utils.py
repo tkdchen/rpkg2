@@ -18,8 +18,8 @@ gitbaseurl = 'ssh://%(user)s@dist-git-qa.server/rpms/%(module)s'
 anongiturl = 'git://dist-git-qa.server/rpms/%(module)s'
 lookasidehash = 'md5'
 branchre = 'rhel'
-kojiconfig = '/etc/koji.conf.d/brewstage.conf'
-build_client = 'brew-stage'
+kojiconfig = '/path/to/koji.conf'
+build_client = 'koji'
 
 spec_file = '''
 Summary: Dummy summary
