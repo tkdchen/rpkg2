@@ -18,9 +18,9 @@ import datetime
 # We could substitute the "" in .TH with the rpkg version if we knew it
 man_header = """\
 .\\" man page for rpkg
-.TH rpkg 1 "%(today)s" "" "rpm\-packager"
+.TH rpkg 1 "%(today)s" "" "rpm\\-packager"
 .SH "NAME"
-rpkg \- RPM Packaging utility
+rpkg \\- RPM Packaging utility
 .SH "SYNOPSIS"
 .B "rpkg"
 [
@@ -39,7 +39,7 @@ rpkg \- RPM Packaging utility
 .br
 .B "rpkg"
 .I "command"
-.B "\-\-help"
+.B "\\-\\-help"
 .SH "DESCRIPTION"
 .B "rpkg"
 is a script to interact with the RPM Packaging system.
@@ -73,7 +73,7 @@ def strip_usage(s):
 def man_constants():
     """Global constants for man file templates"""
     today = datetime.date.today()
-    today_manstr = today.strftime('%Y\-%m\-%d')
+    today_manstr = today.strftime(r'%Y\-%m\-%d')
     return {'today': today_manstr}
 
 
