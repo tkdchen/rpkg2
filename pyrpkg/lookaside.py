@@ -172,6 +172,8 @@ class CGILookasideCache(object):
             c.setopt(pycurl.PROGRESSFUNCTION, self.print_progress)
             c.setopt(pycurl.OPT_FILETIME, True)
             c.setopt(pycurl.WRITEDATA, f)
+            c.setopt(pycurl.LOW_SPEED_LIMIT, 1000)
+            c.setopt(pycurl.LOW_SPEED_TIME, 300)
 
             try:
                 c.perform()
