@@ -1,11 +1,11 @@
 ChangeLog
 =========
 
-NEXT
-----
+v1.49 (2017-02-22)
+------------------
 
+- More upload PyCURL fixes for EL 7 (merlin)
 - Move tag inheritance check into a separate method (cqi)
-- More upload PyCURL fixes for EL 7 (merlinthp)
 
 v1.48 (2016-12-22)
 ------------------
