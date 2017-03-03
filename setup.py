@@ -11,7 +11,7 @@ setup(
     description=("A python library and runtime script for managing RPM"
                  "package sources in a git repository"),
     license="GPLv2+",
-    url="https://fedorahosted.org/rpkg",
+    url="https://pagure.io/rpkg",
     packages=find_packages(),
     scripts=['bin/rpkg'],
     data_files=[('/etc/bash_completion.d', ['etc/bash_completion.d/rpkg.bash']),

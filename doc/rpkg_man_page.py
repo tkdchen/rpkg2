@@ -47,8 +47,8 @@ is a script to interact with the RPM Packaging system.
 
 man_footer = """\
 .SH "SEE ALSO"
-.UR "https://fedorahosted.org/rpkg/"
-.BR "https://fedorahosted.org/rpkg/"
+.UR "https://pagure.io/rpkg/"
+.BR "https://pagure.io/rpkg/"
 """
 
 
