@@ -197,9 +197,8 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
     def create_branch(self, repo, branch_name):
         repo.git.branch(branch_name)
 
-    def make_a_dummy_commit(self, repo):
-        filename = os.path.join(repo.working_dir, 'document.txt')
-        with open(filename, 'a+') as f:
-            f.write('Hello rpkg')
-        repo.index.add([filename])
-        repo.index.commit('update document')
+    def make_a_dummy_commit(self, repo, filename=None, file_content=None, commit_message=None):
+        _filename = os.path.join(repo.working_dir, filename or 'document.txt')
+        self.write_file(_filename, file_content or 'Hello rpkg')
+        repo.index.add([_filename])
+        repo.index.commit(commit_message or 'update document')
