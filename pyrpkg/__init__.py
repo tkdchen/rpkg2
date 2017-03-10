@@ -590,7 +590,7 @@ class Commands(object):
                 # FIXME
                 # if self.distgit_namespaced:
                 #     self._module_name = "/".join(parts.path.split("/")[-2:])
-                module_name = posixpath.basename(parts.path)
+                module_name = posixpath.basename(parts.path.strip('/'))
 
                 if module_name.endswith('.git'):
                     module_name = module_name[:-len('.git')]

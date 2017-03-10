@@ -543,3 +543,25 @@ class TestTagInheritanceTag(CommandTestCase):
 
         cmd = self.make_commands()
         self.assertRaises(rpkgError, cmd.check_inheritance, build_target, dest_tag)
+
+
+class TestLoadModuleNameFromSpecialPushURL(CommandTestCase):
+    """Test load module name from a special push url that ends in /
+
+    For issue: https://pagure.io/rpkg/issue/192
+    """
+
+    def setUp(self):
+        super(TestLoadModuleNameFromSpecialPushURL, self).setUp()
+
+        self.case_repo = tempfile.mkdtemp(prefix='case-test-load-module-name-')
+        cmd = ['git', 'clone', '{0}/'.format(self.repo_path), self.case_repo]
+        self.run_cmd(cmd)
+
+    def tearDown(self):
+        shutil.rmtree(self.case_repo)
+        super(TestLoadModuleNameFromSpecialPushURL, self).tearDown()
+
+    def test_load_module_name(self):
+        cmd = self.make_commands(path=self.case_repo)
+        self.assertEqual(os.path.basename(self.repo_path), cmd.module_name)
