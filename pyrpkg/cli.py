@@ -1268,7 +1268,8 @@ see API KEY section of copr-cli(1) man page.
         print(self.cmd.mock_config(self.args.target, self.args.arch))
 
     def new(self):
-        print(self.cmd.new())
+        new_diff = self.cmd.new()
+        print(new_diff.encode('utf-8'))
 
     def new_sources(self):
         # Check to see if the files passed exist
