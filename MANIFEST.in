@@ -2,6 +2,7 @@ include COPYING
 include COPYING-koji
 include LGPL
 include CHANGELOG.rst
+include README.rst
 include doc/rpkg_man_page.py
 include bin/rpkg
 recursive-include tests *
