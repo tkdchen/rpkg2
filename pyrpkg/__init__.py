@@ -606,6 +606,34 @@ class Commands(object):
                         ' Use --module-name.')
 
     @property
+    def ns(self):
+        """This property provides the namespace of the module"""
+
+        if not self._ns:
+            self.load_ns()
+        return self._ns
+
+    def load_ns(self):
+        """Loads the namespace"""
+
+        try:
+            if self.distgit_namespaced:
+                if self.push_url:
+                    parts = urllib.parse.urlparse(self.push_url)
+
+                    path_parts = [p for p in parts.path.split("/") if p]
+                    if len(path_parts) == 1:
+                        path_parts.insert(0, "rpms")
+                    ns = path_parts[-2]
+
+                    self._ns = ns
+            else:
+                self._ns = None
+                self.log.info("Could not find ns, distgit is not namespaced")
+        except rpkgError:
+            self.log.warning('Failed to get ns from Git url or pushurl')
+
+    @property
     def ns_module_name(self):
         """This property ensures the module attribute"""
 
@@ -2507,11 +2535,17 @@ class Commands(object):
         git_branch = self.branch_merge
         user = self.user
         component = self.module_name
-        docker_target = self.target
+        container_target = self.target
         if not target_override:
             # Translate the build target into a docker target,
             # but only if --target wasn't specified on the command-line
-            docker_target = '%s-docker-candidate' % self.target.split('-candidate')[0]
+            if self.distgit_namespaced:
+                # Allow for any namespace, not just "docker"
+                container_target = '%s-%s-candidate' % \
+                    (self.target.split('-candidate')[0], self.ns)
+            else:
+                container_target = '%s-docker-candidate' % \
+                    self.target.split('-candidate')[0]
 
         build = osbs.create_build(
             git_uri=git_uri,
@@ -2519,7 +2553,7 @@ class Commands(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            target=docker_target,
+            target=container_target,
             architecture="x86_64",
             yum_repourls=yum_repourls
         )
@@ -2552,11 +2586,17 @@ class Commands(object):
                              nowait=False):
         # check if repo is dirty and all commits are pushed
         self.check_repo()
-        docker_target = self.target
+        container_target = self.target
         if not target_override:
             # Translate the build target into a docker target,
             # but only if --target wasn't specified on the command-line
-            docker_target = '%s-docker-candidate' % self.target.split('-candidate')[0]
+            if self.distgit_namespaced:
+                # Allow for any namespace, not just "docker"
+                container_target = '%s-%s-candidate' % \
+                    (self.target.split('-candidate')[0], self.ns)
+            else:
+                container_target = '%s-docker-candidate' % \
+                    self.target.split('-candidate')[0]
 
         koji_session_backup = (self.build_client, self.kojiconfig)
         (self.build_client, self.kojiconfig) = (build_client, kojiconfig)
@@ -2565,9 +2605,9 @@ class Commands(object):
             if "buildContainer" not in self.kojisession.system.listMethods():
                 raise RuntimeError("Kojihub instance does not support buildContainer")
 
-            build_target = self.kojisession.getBuildTarget(docker_target)
+            build_target = self.kojisession.getBuildTarget(container_target)
             if not build_target:
-                msg = "Unknown build target: %s" % docker_target
+                msg = "Unknown build target: %s" % container_target
                 self.log.error(msg)
                 raise UnknownTargetError(msg)
             else:
@@ -2587,7 +2627,7 @@ class Commands(object):
                     task_opts[key] = opts[key]
             priority = opts.get("priority", None)
             task_id = self.kojisession.buildContainer(source,
-                                                      docker_target,
+                                                      container_target,
                                                       task_opts,
                                                       priority=priority)
             self.log.info('Created task: %s', task_id)
