@@ -136,7 +136,9 @@ class CGILookasideCache(object):
         """Download a source file
 
         Args:
-            name (str): The name of the module. (usually the name of the SRPM)
+            name (str): The name of the module. (usually the name of the SRPM).
+                        This can include the namespace as well (depending on
+                        what the server side expects).
             filename (str): The name of the file to download.
             hash (str): The known good hash of the file.
             outfile (str): The full path where to save the downloaded file.
@@ -204,7 +206,9 @@ class CGILookasideCache(object):
         """Verify whether a file exists on the lookaside cache
 
         Args:
-            name: The name of the module. (usually the name of the SRPM)
+            name: The name of the module. (usually the name of the SRPM).
+                  This can include the namespace as well (depending on
+                  what the server side expects).
             filename: The name of the file to check for.
             hash: The known good hash of the file.
         """
@@ -275,6 +279,8 @@ class CGILookasideCache(object):
 
         Args:
             name (str): The name of the module. (usually the name of the SRPM)
+                        This can include the namespace as well (depending on
+                        what the server side expects).
             filepath (str): The full path to the file to upload.
             hash (str): The known good hash of the file.
         """

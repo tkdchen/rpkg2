@@ -69,7 +69,7 @@ class Commands(object):
                  build_client,
                  koji_config_type='kojiconfig', user=None,
                  dist=None, target=None, quiet=False,
-                 distgit_namespaced=False, realms=None):
+                 distgit_namespaced=False, realms=None, lookaside_namespaced=False):
         """Init the object and some configuration details."""
 
         # Path to operate on, most often pwd
@@ -174,6 +174,10 @@ class Commands(object):
         self.distgit_namespaced = distgit_namespaced
         # Kerberos realms used for username detection
         self.realms = realms
+        # Whether lookaside cache is namespaced as well. If set to true,
+        # package name will be sent to lookaside CGI script as 'namespace/name'
+        # instead of just name.
+        self.lookaside_namespaced = lookaside_namespaced
 
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
@@ -1752,7 +1756,8 @@ class Commands(object):
         for entry in sourcesf.entries:
             outfile = os.path.join(outdir, entry.file)
             self.lookasidecache.download(
-                self.module_name, entry.file, entry.hash, outfile,
+                self.ns_module_name if self.lookaside_namespaced else self.module_name,
+                entry.file, entry.hash, outfile,
                 hashtype=entry.hashtype, branch=self.branch_merge)
 
     def switch_branch(self, branch, fetch=True):
@@ -2381,7 +2386,9 @@ class Commands(object):
                 raise rpkgError(msg)
 
             gitignore.add('/%s' % file_basename)
-            self.lookasidecache.upload(self.module_name, f, file_hash)
+            self.lookasidecache.upload(
+                self.ns_module_name if self.lookaside_namespaced else self.module_name,
+                f, file_hash)
 
         sourcesf.write()
         gitignore.write()

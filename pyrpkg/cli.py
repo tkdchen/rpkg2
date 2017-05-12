@@ -96,6 +96,14 @@ class cliClient(object):
             self.load_cmd()
         return(self._cmd)
 
+    def _get_bool_opt(self, opt, default=False):
+        try:
+            return self.config.getboolean(self.name, opt)
+        except ValueError:
+            raise rpkgError('%s option must be a boolean' % opt)
+        except configparser.NoOptionError:
+            return default
+
     def load_cmd(self):
         """This sets up the cmd object"""
 
@@ -107,13 +115,8 @@ class cliClient(object):
         # load items from the config file
         items = dict(self.config.items(self.name, raw=True))
 
-        try:
-            dg_namespaced = self.config.getboolean(self.name,
-                                                   "distgit_namespaced")
-        except ValueError:
-            raise rpkgError('distgit_namespaced option must be a boolean')
-        except configparser.NoOptionError:
-            dg_namespaced = False
+        dg_namespaced = self._get_bool_opt('distgit_namespaced')
+        la_namespaced = self._get_bool_opt('lookaside_namespaced')
 
         # Read comma separated list of kerberos realms
         realms = [realm
@@ -155,7 +158,8 @@ class cliClient(object):
                                        target=target,
                                        quiet=self.args.q,
                                        distgit_namespaced=dg_namespaced,
-                                       realms=realms
+                                       realms=realms,
+                                       lookaside_namespaced=la_namespaced
                                        )
 
         if self.args.module_name:
