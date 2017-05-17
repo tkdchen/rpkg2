@@ -138,7 +138,21 @@ class cliClient(object):
                                        realms=realms
                                        )
 
-        self._cmd.module_name = self.args.module_name
+        if self.args.module_name:
+            # Module name was specified via argument
+            if '/' not in self.args.module_name:
+                # No slash, assume rpms namespace
+                self._cmd.module_name = self.args.module_name
+                self._cmd.ns_module_name = 'rpms/%s' % self.args.module_name
+            else:
+                self._cmd.ns_module_name = self.args.module_name
+                try:
+                    _, self._cmd.module_name = self.args.module_name.split('/')
+                    # Exactly one slash, let's continue on
+                except ValueError:
+                    # Too many segments, report an error
+                    self.parser.error('Argument to --module-name can contain '
+                                      'at most one / character')
         self._cmd.password = self.args.password
         self._cmd.runas = self.args.runas
         self._cmd.debug = self.args.debug
