@@ -68,6 +68,35 @@ class CliTestCase(CommandTestCase):
             map(lambda cmd: self.run_cmd(cmd, cwd=repo_path), cmds)
 
 
+class TestModuleNameOption(CliTestCase):
+
+    def get_cmd(self, module_name):
+        cmd = ['rpkg', '--path', self.cloned_repo_path, '--module-name', module_name, 'verrel']
+        with patch('sys.argv', new=cmd):
+            cli = self.new_cli()
+        return cli.cmd
+
+    def test_just_module_name(self):
+        cmd = self.get_cmd('foo')
+        self.assertEqual(cmd._module_name, 'foo')
+        self.assertEqual(cmd._ns_module_name, 'rpms/foo')
+
+    def test_explicit_default(self):
+        cmd = self.get_cmd('rpms/foo')
+        self.assertEqual(cmd._module_name, 'foo')
+        self.assertEqual(cmd._ns_module_name, 'rpms/foo')
+
+    def test_with_namespace(self):
+        cmd = self.get_cmd('container/foo')
+        self.assertEqual(cmd._module_name, 'foo')
+        self.assertEqual(cmd._ns_module_name, 'container/foo')
+
+    def test_with_nested_namespace(self):
+        cmd = self.get_cmd('user/project/foo')
+        self.assertEqual(cmd._module_name, 'foo')
+        self.assertEqual(cmd._ns_module_name, 'user/project/foo')
+
+
 class TestClog(CliTestCase):
 
     def setUp(self):
