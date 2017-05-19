@@ -126,8 +126,8 @@ class Commands(object):
         self._mockconfig = None
         # The name of the cloned module
         self._module_name = None
-        # The distgit namespaced name of the cloned module
-        self._ns_module_name = None
+        # The dist git namespace
+        self._ns = None
         # The name of the module from spec file
         self._module_name_spec = None
         # The rpm name-version-release of the cloned module
@@ -204,7 +204,7 @@ class Commands(object):
             self._push_url = None
             self._branch_remote = None
             self._repo = None
-            self._ns_module_name = None
+            self._ns = None
         self._path = value
 
     @property
@@ -613,6 +613,10 @@ class Commands(object):
             self.load_ns()
         return self._ns
 
+    @ns.setter
+    def ns(self, ns):
+        self._ns = ns
+
     def load_ns(self):
         """Loads the namespace"""
 
@@ -635,37 +639,10 @@ class Commands(object):
 
     @property
     def ns_module_name(self):
-        """This property ensures the module attribute"""
-
-        if not self._ns_module_name:
-            self.load_ns_module_name()
-        return self._ns_module_name
-
-    @ns_module_name.setter
-    def ns_module_name(self, ns_module_name):
-        self._ns_module_name = ns_module_name
-
-    def load_ns_module_name(self):
-        """Loads a package module."""
-
-        try:
-            if self.push_url:
-                parts = urllib.parse.urlparse(self.push_url)
-
-                if self.distgit_namespaced:
-                    path_parts = [p for p in parts.path.split("/") if p]
-                    if len(path_parts) == 1:
-                        path_parts.insert(0, "rpms")
-                    ns_module_name = "/".join(path_parts[-2:])
-                else:
-                    ns_module_name = posixpath.basename(parts.path)
-
-                if ns_module_name.endswith('.git'):
-                    ns_module_name = ns_module_name[:-len('.git')]
-                self._ns_module_name = ns_module_name
-                return
-        except rpkgError:
-            self.log.warning('Failed to get ns_module_name from Git url or pushurl')
+        if self.distgit_namespaced:
+            return '%s/%s' % (self.ns, self.module_name)
+        else:
+            return self.module_name
 
     @property
     def nvr(self):

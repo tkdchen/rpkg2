@@ -428,8 +428,9 @@ class TestProperties(CommandTestCase):
             )
         for push_url, expected_ns_module_name in tests:
             cmd._push_url = push_url
-            cmd.load_ns_module_name()
-            self.assertEqual(expected_ns_module_name, cmd._ns_module_name)
+            cmd.load_ns()
+            cmd.load_module_name()
+            self.assertEqual(expected_ns_module_name, cmd.ns_module_name)
 
         cmd.distgit_namespaced = True
         tests = (
@@ -440,8 +441,9 @@ class TestProperties(CommandTestCase):
             )
         for push_url, expected_ns_module_name in tests:
             cmd._push_url = push_url
-            cmd.load_ns_module_name()
-            self.assertEqual(expected_ns_module_name, cmd._ns_module_name)
+            cmd.load_ns()
+            cmd.load_module_name()
+            self.assertEqual(expected_ns_module_name, cmd.ns_module_name)
 
 
 class TestNamespaced(CommandTestCase):

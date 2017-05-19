@@ -141,12 +141,12 @@ class cliClient(object):
         if self.args.module_name:
             # Module name was specified via argument
             if '/' not in self.args.module_name:
-                # No slash, assume rpms namespace
                 self._cmd.module_name = self.args.module_name
-                self._cmd.ns_module_name = 'rpms/%s' % self.args.module_name
+                if dg_namespaced:
+                    # No slash, assume rpms namespace
+                    self._cmd.ns = 'rpms'
             else:
-                self._cmd.ns_module_name = self.args.module_name
-                _, self._cmd.module_name = self.args.module_name.rsplit('/', 1)
+                self._cmd.ns, self._cmd.module_name = self.args.module_name.rsplit('/', 1)
         self._cmd.password = self.args.password
         self._cmd.runas = self.args.runas
         self._cmd.debug = self.args.debug

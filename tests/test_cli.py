@@ -40,9 +40,9 @@ package demo for testing
 
 class CliTestCase(CommandTestCase):
 
-    def new_cli(self):
+    def new_cli(self, cfg=None):
         config = configparser.SafeConfigParser()
-        config.read(config_file)
+        config.read(cfg or config_file)
 
         client = pyrpkg.cli.cliClient(config, name='rpkg')
         client.setupLogging(pyrpkg.log)
@@ -70,31 +70,44 @@ class CliTestCase(CommandTestCase):
 
 class TestModuleNameOption(CliTestCase):
 
-    def get_cmd(self, module_name):
+    def get_cmd(self, module_name, cfg=None):
         cmd = ['rpkg', '--path', self.cloned_repo_path, '--module-name', module_name, 'verrel']
         with patch('sys.argv', new=cmd):
-            cli = self.new_cli()
+            cli = self.new_cli(cfg=cfg)
         return cli.cmd
 
-    def test_just_module_name(self):
+    def test_non_namespaced(self):
         cmd = self.get_cmd('foo')
         self.assertEqual(cmd._module_name, 'foo')
-        self.assertEqual(cmd._ns_module_name, 'rpms/foo')
+        self.assertEqual(cmd.ns_module_name, 'foo')
+
+    def test_just_module_name(self):
+        cmd = self.get_cmd(
+            'foo',
+            os.path.join(os.path.dirname(__file__), 'fixtures', 'rpkg-ns.conf'))
+        self.assertEqual(cmd._module_name, 'foo')
+        self.assertEqual(cmd.ns_module_name, 'rpms/foo')
 
     def test_explicit_default(self):
-        cmd = self.get_cmd('rpms/foo')
+        cmd = self.get_cmd(
+            'rpms/foo',
+            os.path.join(os.path.dirname(__file__), 'fixtures', 'rpkg-ns.conf'))
         self.assertEqual(cmd._module_name, 'foo')
-        self.assertEqual(cmd._ns_module_name, 'rpms/foo')
+        self.assertEqual(cmd.ns_module_name, 'rpms/foo')
 
     def test_with_namespace(self):
-        cmd = self.get_cmd('container/foo')
+        cmd = self.get_cmd(
+            'container/foo',
+            os.path.join(os.path.dirname(__file__), 'fixtures', 'rpkg-ns.conf'))
         self.assertEqual(cmd._module_name, 'foo')
-        self.assertEqual(cmd._ns_module_name, 'container/foo')
+        self.assertEqual(cmd.ns_module_name, 'container/foo')
 
     def test_with_nested_namespace(self):
-        cmd = self.get_cmd('user/project/foo')
+        cmd = self.get_cmd(
+            'user/project/foo',
+            os.path.join(os.path.dirname(__file__), 'fixtures', 'rpkg-ns.conf'))
         self.assertEqual(cmd._module_name, 'foo')
-        self.assertEqual(cmd._ns_module_name, 'user/project/foo')
+        self.assertEqual(cmd.ns_module_name, 'user/project/foo')
 
 
 class TestClog(CliTestCase):
