@@ -142,6 +142,8 @@ class Commands(object):
         self._spec = None
         # The build target within the buildsystem
         self._target = target
+        # The build target for containers within the buildsystem
+        self._container_build_target = target
         # The top url to our build server
         self._topurl = None
         # The user to use or discover
@@ -803,6 +805,17 @@ class Commands(object):
         # If a site has a different naming scheme, this would be where
         # a site would override
         self._target = '%s-candidate' % self.branch_merge
+
+    @property
+    def container_build_target(self):
+        """This property ensures the target for container builds."""
+        if not self._container_build_target:
+            self.load_container_build_target()
+        return self._container_build_target
+
+    def load_container_build_target(self):
+        """This creates a target based on git branch and namespace."""
+        self._container_build_target = '%s-%s-candidate' % (self.branch_merge, self.ns)
 
     @property
     def topurl(self):
@@ -2512,17 +2525,7 @@ class Commands(object):
         git_branch = self.branch_merge
         user = self.user
         component = self.module_name
-        container_target = self.target
-        if not target_override:
-            # Translate the build target into a docker target,
-            # but only if --target wasn't specified on the command-line
-            if self.distgit_namespaced:
-                # Allow for any namespace, not just "docker"
-                container_target = '%s-%s-candidate' % \
-                    (self.target.split('-candidate')[0], self.ns)
-            else:
-                container_target = '%s-docker-candidate' % \
-                    self.target.split('-candidate')[0]
+        container_target = self.target if target_override else self.container_build_target
 
         build = osbs.create_build(
             git_uri=git_uri,
@@ -2563,17 +2566,7 @@ class Commands(object):
                              nowait=False):
         # check if repo is dirty and all commits are pushed
         self.check_repo()
-        container_target = self.target
-        if not target_override:
-            # Translate the build target into a docker target,
-            # but only if --target wasn't specified on the command-line
-            if self.distgit_namespaced:
-                # Allow for any namespace, not just "docker"
-                container_target = '%s-%s-candidate' % \
-                    (self.target.split('-candidate')[0], self.ns)
-            else:
-                container_target = '%s-docker-candidate' % \
-                    self.target.split('-candidate')[0]
+        container_target = self.target if target_override else self.container_build_target
 
         koji_session_backup = (self.build_client, self.kojiconfig)
         (self.build_client, self.kojiconfig) = (build_client, kojiconfig)
