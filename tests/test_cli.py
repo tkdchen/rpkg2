@@ -721,6 +721,30 @@ class TestNew(CliTestCase):
             self.assertTrue('+New change' in output)
 
 
+class TestNewPrintUnicode(CliTestCase):
+    """Test new diff contains unicode characters
+
+    Fix issue 205: https://pagure.io/rpkg/issue/205
+    """
+
+    def setUp(self):
+        super(TestNewPrintUnicode, self).setUp()
+        self.run_cmd(['git', 'tag', '-m', 'New release 0.1', '0.1'], cwd=self.cloned_repo_path)
+        self.make_a_dummy_commit(git.Repo(self.cloned_repo_path),
+                                 file_content='Include unicode chars á ř',
+                                 commit_message=u'Write unicode to file')
+
+    @patch('sys.stdout', new=StringIO())
+    def test_get_diff(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'new']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.new()
+
+            output = sys.stdout.getvalue()
+            self.assertTrue('+Include unicode' in output)
+
+
 class LookasideCacheMock(object):
 
     def init_lookaside_cache(self):
