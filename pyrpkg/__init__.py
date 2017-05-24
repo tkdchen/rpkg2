@@ -27,11 +27,6 @@ import sys
 import tempfile
 import koji.ssl.SSLCommon
 
-try:
-    from osbs.api import OSBS
-    from osbs.conf import Configuration
-except ImportError:
-    pass
 from six.moves import configparser
 from six.moves import urllib
 
@@ -2491,6 +2486,15 @@ class Commands(object):
 
     def osbs_build(self, config_file, config_section, target_override=False,
                    yum_repourls=[], nowait=False):
+        # Because docker image should be built via Koji not in OSBS directly,
+        # it is not necessary to make osbs as a hard dependency
+        try:
+            from osbs.api import OSBS
+            from osbs.conf import Configuration
+        except ImportError:
+            raise rpkgError('Before building docker image in OSBS directly, '
+                            'please install python-osbs-client in advance.')
+
         self.check_repo()
         os_conf = Configuration(conf_file=config_file, conf_section=config_section)
         build_conf = Configuration(conf_file=config_file, conf_section=config_section)
