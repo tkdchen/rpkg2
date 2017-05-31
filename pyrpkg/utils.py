@@ -13,10 +13,9 @@ This module contains a bunch of utilities used elsewhere in pyrpkg.
 """
 
 
-import warnings
-
 import os
 import six
+import sys
 
 if six.PY3:
     def u(s):
@@ -28,8 +27,6 @@ else:
         return s.decode('utf-8')
 
     getcwd = os.getcwdu
-
-warnings.simplefilter('always', DeprecationWarning)
 
 
 class cached_property(property):
@@ -72,10 +69,9 @@ def warn_deprecated(clsname, oldname, newname):
         newname (str): The name of the new attribute, which should be used
             instead.
     """
-    warnings.warn(
-        "%s.%s is deprecated and will be removed eventually.\n    Please "
-        "use %s.%s instead." % (clsname, oldname, clsname, newname),
-        DeprecationWarning, stacklevel=3)
+    sys.stderr.write(
+        "DeprecationWarning: %s.%s is deprecated and will be removed eventually.\n"
+        "Please use %s.%s instead.\n" % (clsname, oldname, clsname, newname))
 
 
 def _log_value(log_func, value, level, indent, suffix=''):

@@ -148,10 +148,6 @@ class DeprecationUtilsTestCase(unittest.TestCase):
         self.assertTrue('Foo.old_method' in written_lines[0])
         self.assertTrue('Foo.new_method' in written_lines[0])
 
-        warnings.simplefilter('error', DeprecationWarning)
-        self.assertRaises(DeprecationWarning, foo.old_method)
-        self.assertEqual(len(written_lines), 1)
-
 
 class LogResultTestCase(unittest.TestCase):
     def setUp(self):
