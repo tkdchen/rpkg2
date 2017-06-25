@@ -639,7 +639,7 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             description='This will use the mock utility to build the package '
                         'for the distribution detected from branch '
                         'information. This can be overridden using the global'
-                        ' --dist option. Your user must be in the local '
+                        ' --release option. Your user must be in the local '
                         '"mock" group.',
                         epilog="If config file for mock isn't found in the "
                                "/etc/mock directory, a temporary config "
