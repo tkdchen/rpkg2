@@ -22,7 +22,7 @@ class CommandPatchTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         line, offset = cmd._byte_offset_to_line_number(self.text_ascii, 10)
@@ -34,7 +34,7 @@ class CommandPatchTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
 
@@ -47,7 +47,7 @@ class CommandPatchTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         text = self.text_utf8.decode('UTF-8', 'ignore')

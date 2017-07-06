@@ -25,7 +25,7 @@ class CommandAddTagTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True)
@@ -52,7 +52,7 @@ class CommandAddTagTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True)
@@ -74,7 +74,7 @@ class CommandAddTagTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True)
@@ -101,7 +101,7 @@ class CommandAddTagTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True)
@@ -127,7 +127,7 @@ class CommandAddTagTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True)
@@ -153,7 +153,7 @@ class CommandAddTagTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True)

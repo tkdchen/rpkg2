@@ -49,7 +49,7 @@ class CommandPushTestCase(CommandTestCase):
         cmd = pyrpkg.Commands(self.path, self.lookaside,
                               self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone_config = CLONE_CONFIG
@@ -81,7 +81,7 @@ class TestPushWithPatches(CommandTestCase):
                                    self.lookasidehash,
                                    self.lookaside_cgi, self.gitbaseurl,
                                    self.anongiturl, self.branchre,
-                                   self.kojiconfig,
+                                   self.kojiprofile,
                                    self.build_client, self.user, self.dist,
                                    self.target, self.quiet)
         self.cmd.clone_config = CLONE_CONFIG
