@@ -1159,8 +1159,8 @@ see API KEY section of copr-cli(1) man page.
                 "git_branch": self.cmd.branch_merge}
 
         section_name = "%s.container-build" % self.name
-        err_msg = "Missing {option} option in [{plugin.section}] section. "\
-                  "Using {option} from [{root.section}]"
+        err_msg = "Missing %(option)s option in [%(plugin.section)s] section. " \
+                  "Using %(option)s from [%(root.section)s]"
         err_args = {"plugin.section": section_name, "root.section": self.name}
 
         if self.config.has_option(section_name, "kojiconfig"):
