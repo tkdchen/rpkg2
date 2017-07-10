@@ -20,12 +20,11 @@ import random
 import string
 import sys
 import time
-import warnings
 
 import koji
 import pyrpkg.utils as utils
 
-from pyrpkg import rpkgError
+from pyrpkg import rpkgError, log as rpkgLogger
 from six.moves import xmlrpc_client, configparser
 
 OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
@@ -33,8 +32,8 @@ OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
 
 def warning_deprecated_dist(value):
     """Warning deprecated of option dist"""
-    warnings.warn('--dist is deprecated and will be removed in future version. '
-                  'Use --release instead.', DeprecationWarning)
+    rpkgLogger.warning('Deprecation warning: --dist is deprecated and will be '
+                       'removed in future version. Use --release instead.')
     return value
 
 
