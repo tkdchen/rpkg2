@@ -26,6 +26,7 @@ import six
 import sys
 import tempfile
 import koji.ssl.SSLCommon
+import subprocess
 
 from six.moves import configparser
 from six.moves import urllib
@@ -36,12 +37,6 @@ from .gitignore import GitIgnore
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, log_result
-
-if sys.version_info[0:2] >= (2, 5):
-    import subprocess
-else:
-    # We need a subprocess that has check_call
-    from kitchen.pycompat27 import subprocess
 
 
 class NullHandler(logging.Handler):
