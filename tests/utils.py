@@ -19,6 +19,7 @@ anongiturl = 'git://dist-git-qa.server/rpms/%(module)s'
 lookasidehash = 'md5'
 branchre = 'rhel'
 kojiconfig = '/path/to/koji.conf'
+kojiprofile = 'koji'
 build_client = 'koji'
 
 spec_file = '''

@@ -66,7 +66,8 @@ class Commands(object):
 
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
-                 build_client, user=None,
+                 build_client,
+                 koji_config_type='kojiconfig', user=None,
                  dist=None, target=None, quiet=False,
                  distgit_namespaced=False, realms=None):
         """Init the object and some configuration details."""
@@ -87,7 +88,12 @@ class Commands(object):
         # The regex of branches we care about
         self.branchre = branchre
         # The location of the buildsys config file
-        self.kojiconfig = os.path.expanduser(kojiconfig)
+        self._compat_kojiconfig = koji_config_type == 'config'
+        if self._compat_kojiconfig:
+            self.kojiconfig = os.path.expanduser(kojiconfig)
+        else:
+            self.kojiprofile = kojiconfig
+        # Koji profile of buildsys to build packages
         # The buildsys client to use
         self.build_client = build_client
         # A way to override the discovered "distribution"
@@ -221,6 +227,13 @@ class Commands(object):
         return self._anon_kojisession
 
     def read_koji_config(self):
+        """Read Koji config from Koji configuration files or profile"""
+        if self._compat_kojiconfig:
+            return self._deprecated_read_koji_config()
+        else:
+            return koji.read_config(self.kojiprofile)
+
+    def _deprecated_read_koji_config(self):
         """Read Koji config from Koji configuration files"""
 
         # Stealing a bunch of code from /usr/bin/koji here, too bad it isn't
@@ -307,7 +320,7 @@ class Commands(object):
 
         session_opts = {}
         for name in opt_names:
-            if koji_config[name] is not None:
+            if name in koji_config and koji_config[name] is not None:
                 session_opts[name] = koji_config[name]
         return session_opts
 
@@ -2556,15 +2569,24 @@ class Commands(object):
             raise RuntimeError("Build has failed.")
 
     def container_build_koji(self, target_override=False, opts={},
-                             kojiconfig=None, build_client=None,
+                             kojiconfig=None, kojiprofile=None,
+                             build_client=None,
                              koji_task_watcher=None,
                              nowait=False):
         # check if repo is dirty and all commits are pushed
         self.check_repo()
         container_target = self.target if target_override else self.container_build_target
 
-        koji_session_backup = (self.build_client, self.kojiconfig)
-        (self.build_client, self.kojiconfig) = (build_client, kojiconfig)
+        # This is for backward-compatibility of deprecated kojiconfig.
+        # Signature of container_build_koji is not changed in case someone
+        # reuses this method in his app and keep it unbroken.
+        # Why to check names of kojiconfig and kojiprofile on Commands? Please
+        # see also Commands.__init__
+        if self._compat_kojiconfig:
+            koji_session_backup = (self.build_client, self.kojiconfig)
+        else:
+            koji_session_backup = (self.build_client, self.kojiprofile)
+
         try:
             self.load_kojisession()
             if "buildContainer" not in self.kojisession.system.listMethods():
@@ -2611,7 +2633,10 @@ class Commands(object):
                     log_result(self.log.info, result)
 
         finally:
-            (self.build_client, self.kojiconfig) = koji_session_backup
+            if self._compat_kojiconfig:
+                self.build_client, self.kojiconfig = koji_session_backup
+            else:
+                self.build_client, self.kojiprofile = koji_session_backup
             self.load_kojisession()
 
     def container_build_setup(self, get_autorebuild=None,

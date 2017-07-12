@@ -120,6 +120,25 @@ class cliClient(object):
                   for realm in items.get("kerberos_realms", '').split(',')
                   if realm]
 
+        kojiconfig = None
+
+        if self.config.has_option(self.name, 'kojiconfig'):
+            kojiconfig = self.config.get(self.name, 'kojiconfig')
+            koji_config_type = 'config'
+            warnings.warn(
+                'kojiconfig is deprecated. Instead, kojiprofile should be used.',
+                DeprecationWarning)
+
+        # kojiprofile has higher priority to be used if both kojiconfig and
+        # kojiprofile exist at same time.
+        if self.config.has_option(self.name, 'kojiprofile'):
+            kojiconfig = self.config.get(self.name, 'kojiprofile')
+            koji_config_type = 'profile'
+
+        if not kojiconfig:
+            raise rpkgError('Missing kojiconfig and kojiprofile to load Koji '
+                            'session. One of them must be specified.')
+
         # Create the cmd object
         self._cmd = self.site.Commands(self.args.path,
                                        items['lookaside'],
@@ -128,8 +147,9 @@ class cliClient(object):
                                        items['gitbaseurl'],
                                        items['anongiturl'],
                                        items['branchre'],
-                                       items['kojiconfig'],
+                                       kojiconfig,
                                        items['build_client'],
+                                       koji_config_type=koji_config_type,
                                        user=self.args.user,
                                        dist=self.args.dist or self.args.release,
                                        target=target,
@@ -1165,20 +1185,30 @@ see API KEY section of copr-cli(1) man page.
 
         if self.config.has_option(section_name, "kojiconfig"):
             kojiconfig = self.config.get(section_name, "kojiconfig")
+            kojiprofile = None
         else:
             err_args["option"] = "kojiconfig"
             self.log.debug(err_msg % err_args)
-            kojiconfig = self.config.get(self.name, "kojiconfig")
+            kojiprofile = self.config.get(self.name, "kojiconfig")
+
+        if self.config.has_option(section_name, "kojiprofile"):
+            kojiconfig = None
+            kojiprofile = self.config.get(section_name, "kojiprofile")
+        else:
+            err_args["option"] = "kojiprofile"
+            self.log.debug(err_msg % err_args)
+            kojiprofile = self.config.get(self.name, "kojiprofile")
 
         if self.config.has_option(section_name, "build_client"):
             build_client = self.config.get(section_name, "build_client")
         else:
-            err_args["option"] = "kojiconfig"
+            err_args["option"] = "build_client"
             self.log.debug(err_msg % err_args)
             build_client = self.config.get(self.name, "build_client")
 
         self.cmd.container_build_koji(target_override, opts=opts,
                                       kojiconfig=kojiconfig,
+                                      kojiprofile=kojiprofile,
                                       build_client=build_client,
                                       koji_task_watcher=self._watch_koji_tasks,
                                       nowait=self.args.nowait)

@@ -20,7 +20,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone_config = CLONE_CONFIG
@@ -40,7 +40,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet, distgit_namespaced=True)
         cmd.clone_config = CLONE_CONFIG
@@ -61,7 +61,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True, path=altpath)
@@ -81,7 +81,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True, branch='rpkg-tests-1')
@@ -96,7 +96,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(self.module, anon=True, bare_dir='%s.git' % self.module)
@@ -112,7 +112,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
 
@@ -128,7 +128,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet)
         cmd.clone(
@@ -146,7 +146,7 @@ class CommandCloneTestCase(CommandTestCase):
         import pyrpkg
         cmd = pyrpkg.Commands(self.path, self.lookaside, self.lookasidehash,
                               self.lookaside_cgi, self.gitbaseurl,
-                              self.anongiturl, self.branchre, self.kojiconfig,
+                              self.anongiturl, self.branchre, self.kojiprofile,
                               self.build_client, self.user, self.dist,
                               self.target, self.quiet, distgit_namespaced=True)
         cmd.clone(

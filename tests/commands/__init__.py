@@ -23,7 +23,7 @@ class CommandTestCase(unittest.TestCase):
         self.lookasidehash = 'md5'
         self.lookaside_cgi = 'TODO'
         self.gitbaseurl = 'TODO'
-        self.kojiconfig = 'TODO'
+        self.kojiprofile = 'TODO'
         self.build_client = 'TODO'
         self.clone_config = '''
             bz.default-component %(module)s
