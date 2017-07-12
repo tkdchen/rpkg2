@@ -127,9 +127,9 @@ class cliClient(object):
         if self.config.has_option(self.name, 'kojiconfig'):
             kojiconfig = self.config.get(self.name, 'kojiconfig')
             koji_config_type = 'config'
-            warnings.warn(
-                'kojiconfig is deprecated. Instead, kojiprofile should be used.',
-                DeprecationWarning)
+            self.log.warning(
+                'Deprecation warning: kojiconfig is deprecated. Instead, '
+                'kojiprofile should be used.')
 
         # kojiprofile has higher priority to be used if both kojiconfig and
         # kojiprofile exist at same time.
