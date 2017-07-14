@@ -2196,8 +2196,17 @@ class Commands(object):
             cmd.append('--quiet')
         cmd.extend(['-ba', os.path.join(self.path, self.spec)])
         logfile = '.build-%s-%s.log' % (self.ver, self.rel)
-        # Run the command
-        self._run_command(cmd, shell=True, pipe=['tee', logfile])
+
+        cmd = '%s | tee %s' % (' '.join(cmd), logfile)
+        try:
+            # Since zsh is a widely used, which is supported by fedpkg
+            # actually, pipestatus is for checking the first command when zsh
+            # is used.
+            subprocess.check_call(
+                '%s; exit "${PIPESTATUS[0]} ${pipestatus[1]}"' % cmd,
+                shell=True)
+        except subprocess.CalledProcessError as e:
+            raise rpkgError(cmd)
 
     # Not to be confused with mockconfig the property
     def mock_config(self, target=None, arch=None):
