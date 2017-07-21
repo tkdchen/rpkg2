@@ -8,6 +8,7 @@ import git
 import rpm
 from mock import patch
 from mock import Mock
+from mock import PropertyMock
 
 from pyrpkg import rpkgError
 
@@ -567,3 +568,93 @@ class TestLoadModuleNameFromSpecialPushURL(CommandTestCase):
     def test_load_module_name(self):
         cmd = self.make_commands(path=self.case_repo)
         self.assertEqual(os.path.basename(self.repo_path), cmd.module_name)
+
+
+class TestLoginKojiSession(CommandTestCase):
+    """Test login_koji_session"""
+
+    def setUp(self):
+        super(TestLoginKojiSession, self).setUp()
+
+        self.cmd = self.make_commands()
+        self.cmd.log = Mock()
+        self.koji_config = {
+            'authtype': 'ssl',
+            'server': 'http://localhost/kojihub',
+            'cert': '/path/to/cert',
+            'ca': '/path/to/ca',
+            'serverca': '/path/to/serverca',
+        }
+        self.session = Mock()
+
+    @patch('pyrpkg.koji.is_requests_cert_error', return_value=True)
+    def test_ssl_login_cert_revoked_or_expired(self, is_requests_cert_error):
+        self.session.ssl_login.side_effect = Exception
+
+        self.koji_config['authtype'] = 'ssl'
+
+        self.assertRaises(rpkgError,
+                          self.cmd.login_koji_session,
+                          self.koji_config, self.session)
+        self.cmd.log.info.assert_called_once_with(
+            'Certificate is revoked or expired.')
+
+    def test_ssl_login(self):
+        self.koji_config['authtype'] = 'ssl'
+
+        self.cmd.login_koji_session(self.koji_config, self.session)
+
+        self.session.ssl_login.assert_called_once_with(
+            self.koji_config['cert'],
+            self.koji_config['ca'],
+            self.koji_config['serverca'],
+            proxyuser=None,
+        )
+
+    def test_runas_option_cannot_be_set_for_password_auth(self):
+        self.koji_config['authtype'] = 'password'
+        self.cmd.runas = 'user'
+        self.assertRaises(rpkgError,
+                          self.cmd.login_koji_session,
+                          self.koji_config, self.session)
+
+    @patch('pyrpkg.Commands.user', new_callable=PropertyMock)
+    def test_password_login(self, user):
+        user.return_value = 'tester'
+        self.session.opts = {}
+        self.koji_config['authtype'] = 'password'
+
+        self.cmd.login_koji_session(self.koji_config, self.session)
+
+        self.assertEqual({'user': 'tester', 'password': None},
+                         self.session.opts)
+        self.session.login.assert_called_once()
+
+    @patch('pyrpkg.Commands._load_krb_user', return_value=False)
+    def test_krb_login_fails_if_no_valid_credential(self, _load_krb_user):
+        self.koji_config['authtype'] = 'kerberos'
+        self.cmd.realms = ['FEDORAPROJECT.ORG']
+
+        self.cmd.login_koji_session(self.koji_config, self.session)
+
+        self.session.krb_login.assert_not_called()
+        self.assertEqual(2, self.cmd.log.warning.call_count)
+
+    @patch('pyrpkg.Commands._load_krb_user', return_value=True)
+    def test_krb_login_fails(self, _load_krb_user):
+        self.koji_config['authtype'] = 'kerberos'
+        # Simulate ClientSession.krb_login fails and error is raised.
+        self.session.krb_login.side_effect = Exception
+
+        self.cmd.login_koji_session(self.koji_config, self.session)
+
+        self.session.krb_login.assert_called_once_with(proxyuser=None)
+        self.cmd.log.error.assert_called_once()
+
+    @patch('pyrpkg.Commands._load_krb_user', return_value=True)
+    def test_successful_krb_login(self, _load_krb_user):
+        self.koji_config['authtype'] = 'kerberos'
+
+        self.cmd.login_koji_session(self.koji_config, self.session)
+
+        self.session.krb_login.assert_called_once_with(proxyuser=None)

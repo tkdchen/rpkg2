@@ -25,7 +25,6 @@ import shutil
 import six
 import sys
 import tempfile
-import koji.ssl.SSLCommon
 import subprocess
 
 from six.moves import configparser
@@ -340,13 +339,10 @@ class Commands(object):
                                   koji_config['ca'],
                                   koji_config['serverca'],
                                   proxyuser=self.runas)
-            except koji.ssl.SSLCommon.SSL.Error as error:
-                for (_, _, ssl_reason) in error.message:
-                    # Use heuristic. Some OpenSSL libs doesn't store error
-                    # codes
-                    if 'certificate revoked' in ssl_reason or 'certificate expired' in ssl_reason:
-                        self.log.info("Certificate is revoked or expired.")
-                raise rpkgAuthError('Could not auth with koji. Login failed: %s' % error)
+            except Exception as e:
+                if koji.is_requests_cert_error(e):
+                    self.log.info("Certificate is revoked or expired.")
+                raise rpkgAuthError('Could not auth with koji. Login failed: %s' % e)
 
         # Or try password auth
         elif authtype == 'password' or self.password and authtype is None:
@@ -364,8 +360,8 @@ class Commands(object):
             if self._load_krb_user():
                 try:
                     session.krb_login(proxyuser=self.runas)
-                except koji.krbV.Krb5Error as e:
-                    self.log.error('Kerberos authentication fails: %s', e.args[1])
+                except Exception as e:
+                    self.log.error('Kerberos authentication fails: %s', e)
             else:
                 self.log.warning('Kerberos authentication is used, but you do not have a '
                                  'valid credential.')
