@@ -280,16 +280,19 @@ class TestPull(CliTestCase):
 
 
 class TestSrpm(CliTestCase):
+    """Test srpm command"""
 
-    def test_srpm(self):
+    @patch('pyrpkg.Commands._run_command')
+    def test_srpm(self, _run_command):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'srpm']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.srpm()
 
-        self.assertTrue(os.path.exists(os.path.join(self.cloned_repo_path,
-                                                    'docpkg-1.2-2.el6.src.rpm')))
+        expected_cmd = ['rpmbuild'] + cli.cmd.rpmdefines + \
+            ['--nodeps', '-bs', os.path.join(cli.cmd.path, cli.cmd.spec)]
+        _run_command.assert_called_once_with(expected_cmd, shell=True)
 
 
 class TestCompile(CliTestCase):
