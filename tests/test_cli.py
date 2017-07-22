@@ -597,19 +597,29 @@ class TestDiff(CliTestCase):
 
         self.make_changes()
 
-    def test_diff(self):
+    @patch('pyrpkg.Commands._run_command')
+    @patch('pyrpkg.os.chdir')
+    def test_diff(self, chdir, _run_command):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'diff']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.diff()
 
-    def test_diff_cached(self):
+        self.assertEqual(2, chdir.call_count)
+        _run_command.assert_called_once_with(['git', 'diff'])
+
+    @patch('pyrpkg.Commands._run_command')
+    @patch('pyrpkg.os.chdir')
+    def test_diff_cached(self, chdir, _run_command):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'diff', '--cached']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.diff()
+
+        self.assertEqual(2, chdir.call_count)
+        _run_command.assert_called_once_with(['git', 'diff', '--cached'])
 
 
 class TestGimmeSpec(CliTestCase):
