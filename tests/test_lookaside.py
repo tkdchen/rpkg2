@@ -95,7 +95,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         lc = CGILookasideCache('sha512', 'http://example.com', '_')
         lc.download(name, filename, hash, outfile, hashtype='sha512')
         self.assertEqual(curl.perform.call_count, 1)
-        self.assertEqual(curlopts[pycurl.URL], full_url)
+        self.assertEqual(curlopts[pycurl.URL].decode('utf-8'), full_url)
         self.assertEqual(os.path.getmtime(outfile), 0)
 
         with open(outfile) as f:
@@ -150,7 +150,7 @@ class CGILookasideCacheTestCase(unittest.TestCase):
         lc.download(name, filename, hash, outfile, hashtype='sha512',
                     branch=branch)
         self.assertEqual(curl.perform.call_count, 1)
-        self.assertEqual(curlopts[pycurl.URL], full_url)
+        self.assertEqual(curlopts[pycurl.URL].decode('utf-8'), full_url)
 
     @mock.patch('pyrpkg.lookaside.pycurl.Curl')
     def test_download_corrupted(self, mock_curl):

@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import six
 import tempfile
 
 import git
@@ -275,7 +276,7 @@ class CheckRepoWithOrWithoutDistOptionCase(CommandTestCase):
         cloned_repo = git.Repo(self.cloned_repo_path)
         cloned_repo.git.pull()
         cloned_repo.git.checkout('-b', private_branch, 'origin/%s' % private_branch)
-        for i in xrange(3):
+        for i in range(3):
             self.make_a_dummy_commit(cloned_repo)
         cloned_repo.git.push()
 
@@ -388,7 +389,7 @@ class TestProperties(CommandTestCase):
     def test_commithash(self):
         cmd = self.make_commands(path=self.cloned_repo_path)
         repo = git.Repo(self.cloned_repo_path)
-        expected_commit_hash = str(repo.iter_commits().next())
+        expected_commit_hash = str(six.next(repo.iter_commits()))
         self.assertEqual(expected_commit_hash, cmd.commithash)
 
     def test_dist(self):
@@ -507,7 +508,7 @@ class TestGetLatestCommit(CommandTestCase):
         cmd.anongiturl = '/tmp/%(module)s'
         cmd.distgit_namespaced = False
 
-        self.assertEqual(str(git.Repo(self.repo_path).iter_commits().next()),
+        self.assertEqual(str(six.next(git.Repo(self.repo_path).iter_commits())),
                          cmd.get_latest_commit(os.path.basename(self.repo_path),
                                                'eng-rhel-6'))
 

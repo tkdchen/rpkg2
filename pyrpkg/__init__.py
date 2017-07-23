@@ -1015,7 +1015,10 @@ class Commands(object):
         archlist = [pkg.header['arch'] for pkg in hdr.packages]
         if not archlist:
             raise rpkgError('No compatible build arches found in %s' % spec)
-        return archlist
+        if six.PY3:
+            return [str(arch, encoding='utf-8') for arch in archlist]
+        else:
+            return archlist
 
     def _get_build_arches_from_srpm(self, srpm, arches):
         """Given the path to an srpm, determine the possible build arches
@@ -1100,6 +1103,10 @@ class Commands(object):
             hdr = koji.get_rpm_header(srpm)
             name = hdr[rpm.RPMTAG_NAME]
             contents = hdr[rpm.RPMTAG_FILENAMES]
+            if six.PY3:
+                name = str(name, encoding='utf-8')
+                contents = [str(filename, encoding='utf-8')
+                            for filename in contents]
         except Exception as e:
             raise rpkgError('Error querying srpm: {0}'.format(str(e)))
 
@@ -1448,8 +1455,10 @@ class Commands(object):
         # We need something better for epel
         cmd = ['git', 'ls-remote', url, 'refs/heads/%s' % branch]
         try:
-            proc = subprocess.Popen(cmd, stderr=subprocess.PIPE,
-                                    stdout=subprocess.PIPE)
+            proc = subprocess.Popen(cmd,
+                                    stderr=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    universal_newlines=True)
             output, error = proc.communicate()
         except OSError as e:
             raise rpkgError(e)
@@ -2009,7 +2018,8 @@ class Commands(object):
         cmd = ['rpm'] + self.rpmdefines + ['-q', '--qf', '"%{CHANGELOGTEXT}\n"',
                                            '--specfile', '"%s"' % spec_file]
         proc = subprocess.Popen(' '.join(cmd), shell=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                universal_newlines=True)
         stdout, stderr = proc.communicate()
         if proc.returncode > 0:
             raise rpkgError(stderr.strip())
@@ -2456,14 +2466,17 @@ class Commands(object):
         # Get the content of spec into memory for fast searching
         with open(os.path.join(self.path, self.spec), 'r') as f:
             data = f.read()
-        try:
-            spec = data.decode('UTF-8')
-        except UnicodeDecodeError as error:
-            # when can't decode file, ignore chars and show warning
-            spec = data.decode('UTF-8', 'ignore')
-            line, offset = self._byte_offset_to_line_number(spec, error.start)
-            self.log.warning("'%s' codec can't decode byte in position %d:%d : %s",
-                             error.encoding, line, offset, error.reason)
+        if six.PY2:
+            try:
+                spec = data.decode('UTF-8')
+            except UnicodeDecodeError as error:
+                # when can't decode file, ignore chars and show warning
+                spec = data.decode('UTF-8', 'ignore')
+                line, offset = self._byte_offset_to_line_number(spec, error.start)
+                self.log.warning("'%s' codec can't decode byte in position %d:%d : %s",
+                                 error.encoding, line, offset, error.reason)
+        else:
+            spec = data
         # Replace %{name} with the package name
         spec = spec.replace("%{name}", self.module_name)
         # Replace %{version} with the package version
