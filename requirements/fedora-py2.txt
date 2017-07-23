@@ -1,0 +1,13 @@
+python2-cccolutils
+python2-GitPython
+python2-koji
+python2-pycurl
+python-six
+python2-rpm  # rpm-python originally
+
+# For running tests
+python2-coverage
+python2-flake8
+python2-mock
+python2-nose
+python2-rpmfluff

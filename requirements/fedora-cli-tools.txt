@@ -1,0 +1,6 @@
+# Command line tools needed for running specific commands
+
+copr-cli
+mock
+rpm-build
+rpmlint

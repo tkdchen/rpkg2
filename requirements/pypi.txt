@@ -1,0 +1,27 @@
+# List of Python packages that can be installed from PyPI.
+
+cccolutils >= 1.4
+GitPython >= 0.2.0
+pycurl >= 7.43
+six >= 1.9.0
+
+# Only required for <= Python 2.6
+argparse == 1.4.0
+
+# For running tests
+coverage == 4.4.1
+flake8 >= 2.5.5
+mock >= 2.0.0
+nose >= 1.3.7
+git+https://pagure.io/rpmfluff.git@0.5.1#egg=rpmfluff
+
+# Several package that are not available in PyPI are also listed here.
+# If rpkg runs from a Python virtualenv, you may need --site-packages to create
+# the environment so that following Python modules can be imported.
+#
+# Please see also fedora-py2.txt or fedora-py3.txt to install them in your
+# system.
+#
+# koji
+# mock
+# rpm-python

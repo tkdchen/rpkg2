@@ -1,0 +1,4 @@
+python2-nose
+python2-mock
+python2-rpmfluff
+python2-coverage
