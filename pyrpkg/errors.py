@@ -9,6 +9,8 @@
 
 """Custom error classes"""
 
+import six
+
 
 class rpkgError(Exception):
     """Our base error class"""
@@ -59,4 +61,4 @@ class UploadError(rpkgError):
         return str(self.message)
 
     def __unicode__(self):
-        return unicode(self.message)
+        return six.text_type(self.message)

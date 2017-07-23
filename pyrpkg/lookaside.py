@@ -217,7 +217,7 @@ class CGILookasideCache(object):
         # type it would explode with "unsupported second type in tuple". Let's
         # convert to str just to be sure.
         # https://bugzilla.redhat.com/show_bug.cgi?id=1241059
-        if six.PY2 and isinstance(filename, unicode):
+        if six.PY2 and isinstance(filename, six.text_type):
             filename = filename.encode('utf-8')
 
         post_data = [('name', name),
@@ -288,9 +288,9 @@ class CGILookasideCache(object):
 
         # As in remote_file_exists, we need to convert unicode strings to str
         if six.PY2:
-            if isinstance(name, unicode):
+            if isinstance(name, six.text_type):
                 name = name.encode('utf-8')
-            if isinstance(filepath, unicode):
+            if isinstance(filepath, six.text_type):
                 filepath = filepath.encode('utf-8')
 
         if self.remote_file_exists(name, filename, hash):
