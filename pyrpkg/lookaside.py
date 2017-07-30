@@ -145,7 +145,7 @@ class CGILookasideCache(object):
             hashtype (str, optional): The hash algorithm. (e.g 'md5')
                 This defaults to the hashtype passed to the constructor.
             **kwargs: Additional keyword arguments. They will be used when
-                contructing the full URL to the file to download.
+                constructing the full URL to the file to download.
         """
         if hashtype is None:
             hashtype = self.hashtype
