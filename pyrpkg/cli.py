@@ -357,7 +357,7 @@ class cliClient(object):
             '--skip-nvr-check', action='store_false', default=True,
             dest='nvr_check',
             help='Submit build to buildsystem without check if NVR was '
-                 'already build. NVR is constructed locally and may be '
+                 'already built. NVR is constructed locally and may be '
                  'different from NVR constructed during build on builder.')
         build_parser.add_argument(
             '--skip-tag', action='store_true', default=False,
