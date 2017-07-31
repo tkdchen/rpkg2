@@ -2663,7 +2663,7 @@ class Commands(object):
 
         if get_autorebuild is not None:
             if not cfp.has_option('autorebuild', 'enabled'):
-                self.log.info('true')
+                self.log.info('false')
             else:
                 self.log.info('true' if cfp.getboolean('autorebuild', 'enabled') else 'false')
         elif set_autorebuild is not None:
