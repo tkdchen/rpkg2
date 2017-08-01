@@ -1,10 +1,51 @@
 ChangeLog
 =========
 
-NEXT
-----
+v1.50 (2017-08-01)
+------------------
 
+- Fix PEP8 error (cqi)
+- Spelling fixes (ville.skytta)
+- Reword help and description of new-sources and upload commands - 1248737
+  (cqi)
+- Set autorebuild enabled by default (bfontecc)
+- Add commands to whitelist_externals (cqi)
+- Declare Python 3 versions to support in setup.py (cqi)
+- Replace unicode with six.text_type (cqi)
+- Run tests in both Python 2 and 3 with tox (cqi)
+- Make tests and covered code compatible with Py3 (cqi)
+- Add requirements files (cqi)
+- Do not build srpm in test (cqi)
+- Do not actually run git-diff in tests (cqi)
+- Remove deprecated modules used in koji (cqi)
+- Non-zero exit when rpmbuild fails in local command (cqi)
+- Report deprecation of config via logger (lsedlar)
+- Print --dist deprecation warning explicitly (lsedlar)
+- utils: Avoid DeprecationWarning for messages for users (lsedlar)
+- Supply namespace to lookaside (if enabled) (lsedlar)
+- Support reading koji config from profile - #187 (cqi)
+- Remove kitchen (cqi)
+- Fix string format (cqi)
+- Recommend --release instead of --dist in mockbuild --help (tmz)
+- Allow overriding container build target by downstream (lsedlar)
+- Add a separate property for namespace (lsedlar)
+- Allow container builds from any namespace (maxamillion)
+- Make osbs support optional (cqi)
+- make osbs dependency optional (pavlix)
+- Allow explicit namespaces with slashes (lsedlar)
+- Do not hang indefinitely when lookaside cache server stops sending data
+  (jkaluza)
+- Make --module-name work with namespaces - #216 (lsedlar)
+- Include README.rst in dist package (cqi)
+- More document in README - #189 (cqi)
+- Make new command be able to print unicode - #205 (cqi)
+- Allow to specify custom info to a dummy commit (cqi)
+- Load module name correctly even if push url ends in slash - #192 (cqi)
+- Replace fedorahosted.org with pagure.io - #202 (cqi)
 - Fix rpm command to get changelog from SPEC - rhbz#1412224 (cqi)
+- Rewrite tests to avoid running rpmbuild and rpmlint (cqi)
+- Use fake value to make Command in test (cqi)
+- Python 3.6 invalid escape sequence deprecation fixes (ville.skytta)
 
 v1.49 (2017-02-22)
 ------------------
