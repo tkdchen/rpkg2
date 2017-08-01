@@ -398,8 +398,8 @@ class TestInstall(CliTestCase):
 
 class TestLocal(CliTestCase):
 
-    @patch('pyrpkg.Commands._run_command')
-    def test_local(self, _run_command):
+    @patch('pyrpkg.subprocess.check_call')
+    def test_local(self, check_call):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', 'local']
 
         with patch('sys.argv', new=cli_cmd):
@@ -409,10 +409,13 @@ class TestLocal(CliTestCase):
         spec = os.path.join(cli.cmd.path, cli.cmd.spec)
         rpmbuild = ['rpmbuild'] + cli.cmd.rpmdefines + ['-ba', spec]
         tee = ['tee', '.build-%s-%s.log' % (cli.cmd.ver, cli.cmd.rel)]
-        _run_command.assert_called_once_with(rpmbuild, pipe=tee, shell=True)
+        cmd = '%s | %s; exit "${PIPESTATUS[0]} ${pipestatus[1]}"' % (
+            ' '.join(rpmbuild), ' '.join(tee)
+        )
+        check_call.assert_called_once_with(cmd, shell=True)
 
-    @patch('pyrpkg.Commands._run_command')
-    def test_local_with_options(self, _run_command):
+    @patch('pyrpkg.subprocess.check_call')
+    def test_local_with_options(self, check_call):
         builddir = os.path.join(self.cloned_repo_path, 'this-builddir')
 
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, '--release', 'rhel-6', '-q', 'local',
@@ -427,7 +430,11 @@ class TestLocal(CliTestCase):
             ["--define '_builddir %s'" % builddir, '--target', 'i686', '--quiet', '-ba', spec]
         tee = ['tee', '.build-%s-%s.log' % (cli.cmd.ver, cli.cmd.rel)]
 
-        _run_command.assert_called_once_with(rpmbuild, pipe=tee, shell=True)
+        cmd = '%s | %s; exit "${PIPESTATUS[0]} ${pipestatus[1]}"' % (
+            ' '.join(rpmbuild), ' '.join(tee)
+        )
+
+        check_call.assert_called_once_with(cmd, shell=True)
 
 
 class TestVerifyFiles(CliTestCase):

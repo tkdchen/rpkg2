@@ -2211,7 +2211,7 @@ class Commands(object):
             subprocess.check_call(
                 '%s; exit "${PIPESTATUS[0]} ${pipestatus[1]}"' % cmd,
                 shell=True)
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise rpkgError(cmd)
 
     # Not to be confused with mockconfig the property
