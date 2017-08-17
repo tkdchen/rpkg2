@@ -685,6 +685,12 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         mockbuild_parser.add_argument(
             '--no-clean-all', '-N', help='Alias for both --no-clean and '
             '--no-cleanup-after', action='store_true')
+        mockbuild_parser.add_argument(
+            '--with', help='Enable configure option (bcond) for the build',
+            dest='bcond_with', action='append')
+        mockbuild_parser.add_argument(
+            '--without', help='Disable configure option (bcond) for the build',
+            dest='bcond_without', action='append')
         mockbuild_parser.set_defaults(command=self.mockbuild)
 
     def register_mock_config(self):
@@ -1297,6 +1303,14 @@ see API KEY section of copr-cli(1) man page.
 
         if self.args.no_cleanup_after or self.args.no_clean_all:
             mockargs.append('--no-cleanup-after')
+
+        if self.args.bcond_with:
+            for arg in self.args.bcond_with:
+                mockargs.extend(['--with', arg])
+
+        if self.args.bcond_without:
+            for arg in self.args.bcond_without:
+                mockargs.extend(['--without', arg])
 
         # Pick up any mockargs from the env
         try:

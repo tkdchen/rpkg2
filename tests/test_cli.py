@@ -1022,3 +1022,41 @@ class TestImportSrpm(LookasideCacheMock, CliTestCase):
     def test_import(self):
         self.assert_import_srpm(self.chaos_repo)
         self.assert_import_srpm(self.cloned_repo_path)
+
+
+class TestMockbuild(CliTestCase):
+    """Test mockbuild command"""
+
+    @patch('pyrpkg.Commands._run_command')
+    def test_mockbuild(self, _run_command):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--release', 'rhel-6', 'mockbuild',
+                   '--root', '/etc/mock/some-root']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.mockbuild()
+
+        expected_cmd = ['mock', '-r', '/etc/mock/some-root',
+                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
+                        cli.cmd.srpmname]
+        _run_command.assert_called_with(expected_cmd)
+
+    @patch('pyrpkg.Commands._run_command')
+    def test_with_without(self, _run_command):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--release', 'rhel-6', 'mockbuild',
+                   '--root', '/etc/mock/some-root',
+                   '--with', 'a', '--without', 'b', '--with', 'c',
+                   '--without', 'd']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.mockbuild()
+
+        expected_cmd = ['mock', '--with', 'a', '--with', 'c',
+                        '--without', 'b', '--without', 'd',
+                         '-r', '/etc/mock/some-root',
+                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
+                        cli.cmd.srpmname]
+        _run_command.assert_called_with(expected_cmd)
