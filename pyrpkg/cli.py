@@ -23,6 +23,7 @@ import time
 
 import koji
 import pyrpkg.utils as utils
+import six
 
 from pyrpkg import rpkgError, log as rpkgLogger
 from six.moves import xmlrpc_client, configparser
@@ -1329,7 +1330,12 @@ see API KEY section of copr-cli(1) man page.
 
     def new(self):
         new_diff = self.cmd.new()
-        print(new_diff.encode('utf-8'))
+        # When running rpkg with old version GitPython<1.0 which returns string
+        # in type basestring, no need to encode.
+        if isinstance(new_diff, six.string_types):
+            print(new_diff)
+        else:
+            print(new_diff.encode('utf-8'))
 
     def new_sources(self):
         # Check to see if the files passed exist

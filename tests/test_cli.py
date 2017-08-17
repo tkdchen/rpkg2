@@ -753,6 +753,21 @@ class TestNew(CliTestCase):
             output = sys.stdout.getvalue()
             self.assertTrue('+New change' in output)
 
+    @patch('sys.stdout', new=StringIO())
+    @patch('pyrpkg.Commands.new')
+    def test_diff_returned_as_bytestring(self, new):
+        # diff is return from Commands.new as bytestring when using
+        # GitPython<1.0. So, mock new method directly to test diff in
+        #  bytestring can be printed correctly.
+        new.return_value = b'New content'
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'new']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.new()
+
+        output = sys.stdout.getvalue()
+        self.assertTrue(b'New content' in output)
+
 
 class TestNewPrintUnicode(CliTestCase):
     """Test new diff contains unicode characters
