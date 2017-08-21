@@ -1038,7 +1038,7 @@ class TestMockbuild(CliTestCase):
             cli.mockbuild()
 
         expected_cmd = ['mock', '-r', '/etc/mock/some-root',
-                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
+                        '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
                         cli.cmd.srpmname]
         _run_command.assert_called_with(expected_cmd)
 
@@ -1056,7 +1056,7 @@ class TestMockbuild(CliTestCase):
 
         expected_cmd = ['mock', '--with', 'a', '--with', 'c',
                         '--without', 'b', '--without', 'd',
-                         '-r', '/etc/mock/some-root',
-                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
+                        '-r', '/etc/mock/some-root',
+                        '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
                         cli.cmd.srpmname]
         _run_command.assert_called_with(expected_cmd)
