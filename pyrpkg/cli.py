@@ -216,7 +216,7 @@ class cliClient(object):
                                 'which is used to determine the build target and value of '
                                 'dist macro. Generally, release is the name of a branch '
                                 'created in your package repository. --release is an alias '
-                                'of --dist, hence --release should be instead.')
+                                'of --dist, hence --release should be used instead.')
         # Allow forcing the dist value
         group.add_argument('--dist',
                            default=None,
