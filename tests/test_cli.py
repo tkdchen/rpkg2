@@ -16,6 +16,7 @@ from six.moves import StringIO
 import git
 import pyrpkg.cli
 
+import utils
 from mock import patch
 from utils import CommandTestCase
 from pyrpkg import rpkgError
@@ -109,6 +110,144 @@ class TestModuleNameOption(CliTestCase):
             os.path.join(os.path.dirname(__file__), 'fixtures', 'rpkg-ns.conf'))
         self.assertEqual(cmd._module_name, 'foo')
         self.assertEqual(cmd.ns_module_name, 'user/project/foo')
+
+
+class TestKojiConfigBackwardCompatibility(CliTestCase):
+    """Test backward compatibility of kojiconfig and kojiprofile
+
+    Remove this test case after deprecated kojiconfig is removed eventually.
+    """
+
+    @patch('pyrpkg.Commands._deprecated_read_koji_config')
+    @patch('pyrpkg.koji.read_config')
+    def test_use_deprecated_kojiconfig(self,
+                                       read_config,
+                                       _deprecated_read_koji_config):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'build']
+
+        cfg_file = os.path.join(os.path.dirname(__file__),
+                                'fixtures',
+                                'rpkg-deprecated-kojiconfig.conf')
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli(cfg_file)
+
+        cli.cmd.read_koji_config()
+
+        self.assertFalse(hasattr(cli.cmd, 'kojiprofile'))
+        self.assertEqual(utils.kojiconfig, cli.cmd.kojiconfig)
+        self.assertTrue(cli.cmd._compat_kojiconfig)
+
+        read_config.assert_not_called()
+        _deprecated_read_koji_config.assert_called_once()
+
+    @patch('pyrpkg.Commands._deprecated_read_koji_config')
+    @patch('pyrpkg.koji.read_config')
+    def test_use_kojiprofile(self, read_config, _deprecated_read_koji_config):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'build']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+
+        cli.cmd.read_koji_config()
+
+        self.assertFalse(hasattr(cli.cmd, 'kojiconfig'))
+        self.assertEqual(utils.kojiprofile, cli.cmd.kojiprofile)
+        self.assertFalse(cli.cmd._compat_kojiconfig)
+
+        read_config.assert_called_once_with(utils.kojiprofile)
+        _deprecated_read_koji_config.assert_not_called()
+
+
+class TestContainerBuildWithKoji(CliTestCase):
+    """Test container_build with koji"""
+
+    def setUp(self):
+        super(TestContainerBuildWithKoji, self).setUp()
+        self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-7')
+
+    @patch('pyrpkg.Commands.container_build_koji')
+    def test_using_kojiprofile(self, container_build_koji):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'container-build', '--build-with', 'koji']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.container_build()
+
+        container_build_koji.assert_called_once_with(
+            False,
+            opts={
+                'scratch': False,
+                'quiet': False,
+                'yum_repourls': None,
+                'git_branch': 'eng-rhel-7',
+            },
+            kojiconfig=None,
+            kojiprofile='koji',
+            build_client=utils.build_client,
+            koji_task_watcher=cli._watch_koji_tasks,
+            nowait=False
+        )
+
+    @patch('pyrpkg.Commands.container_build_koji')
+    def test_override_target(self, container_build_koji):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'container-build',
+                   '--target', 'f25-docker-candidate', '--build-with', 'koji']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.container_build()
+
+        self.assertEqual('f25-docker-candidate', cli.cmd._target)
+        container_build_koji.assert_called_once_with(
+            True,
+            opts={
+                'scratch': False,
+                'quiet': False,
+                'yum_repourls': None,
+                'git_branch': 'eng-rhel-7',
+            },
+            kojiconfig=None,
+            kojiprofile='koji',
+            build_client=utils.build_client,
+            koji_task_watcher=cli._watch_koji_tasks,
+            nowait=False
+        )
+
+    @patch('pyrpkg.Commands.container_build_koji')
+    def test_using_deprecated_kojiconfig(self, container_build_koji):
+        """test_build_using_deprecated_kojiconfig
+
+        This is for ensuring container_build works with deprecated kojiconfig.
+        This test can be delete after kojiconfig is removed eventually.
+        """
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--module-name', 'mycontainer',
+                   'container-build', '--build-with', 'koji']
+
+        cfg_file = os.path.join(os.path.dirname(__file__),
+                                'fixtures',
+                                'rpkg-deprecated-kojiconfig.conf')
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli(cfg_file)
+            cli.container_build()
+
+        container_build_koji.assert_called_once_with(
+            False,
+            opts={
+                'scratch': False,
+                'quiet': False,
+                'yum_repourls': None,
+                'git_branch': 'eng-rhel-7',
+            },
+            kojiconfig='/path/to/koji.conf',
+            kojiprofile=None,
+            build_client=utils.build_client,
+            koji_task_watcher=cli._watch_koji_tasks,
+            nowait=False
+        )
 
 
 class TestClog(CliTestCase):

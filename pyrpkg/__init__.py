@@ -66,7 +66,7 @@ class Commands(object):
     def __init__(self, path, lookaside, lookasidehash, lookaside_cgi,
                  gitbaseurl, anongiturl, branchre, kojiconfig,
                  build_client,
-                 koji_config_type='kojiconfig', user=None,
+                 koji_config_type='config', user=None,
                  dist=None, target=None, quiet=False,
                  distgit_namespaced=False, realms=None, lookaside_namespaced=False):
         """Init the object and some configuration details."""

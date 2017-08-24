@@ -1198,21 +1198,22 @@ see API KEY section of copr-cli(1) man page.
                   "Using %(option)s from [%(root.section)s]"
         err_args = {"plugin.section": section_name, "root.section": self.name}
 
-        if self.config.has_option(section_name, "kojiconfig"):
-            kojiconfig = self.config.get(section_name, "kojiconfig")
-            kojiprofile = None
-        else:
-            err_args["option"] = "kojiconfig"
-            self.log.debug(err_msg % err_args)
-            kojiprofile = self.config.get(self.name, "kojiconfig")
+        kojiconfig = kojiprofile = None
 
-        if self.config.has_option(section_name, "kojiprofile"):
-            kojiconfig = None
-            kojiprofile = self.config.get(section_name, "kojiprofile")
+        if self.cmd._compat_kojiconfig:
+            if self.config.has_option(section_name, "kojiconfig"):
+                kojiconfig = self.config.get(section_name, "kojiconfig")
+            else:
+                err_args["option"] = "kojiconfig"
+                self.log.debug(err_msg % err_args)
+                kojiconfig = self.config.get(self.name, "kojiconfig")
         else:
-            err_args["option"] = "kojiprofile"
-            self.log.debug(err_msg % err_args)
-            kojiprofile = self.config.get(self.name, "kojiprofile")
+            if self.config.has_option(section_name, "kojiprofile"):
+                kojiprofile = self.config.get(section_name, "kojiprofile")
+            else:
+                err_args["option"] = "kojiprofile"
+                self.log.debug(err_msg % err_args)
+                kojiprofile = self.config.get(self.name, "kojiprofile")
 
         if self.config.has_option(section_name, "build_client"):
             build_client = self.config.get(section_name, "build_client")
