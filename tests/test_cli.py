@@ -4,11 +4,18 @@ import gzip
 import hashlib
 import logging
 import os
-import rpmfluff
+try:
+    import rpmfluff
+except ImportError:
+    rpmfluff = None
 import shutil
 import six
 import sys
 import tempfile
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 from six.moves import configparser
 from six.moves import StringIO
@@ -1106,6 +1113,7 @@ class TestFailureImportSrpm(CliTestCase):
                 self.fail('import_srpm should fail if package repository is dirty.')
 
 
+@unittest.skipUnless(rpmfluff, 'rpmfluff is not available')
 class TestImportSrpm(LookasideCacheMock, CliTestCase):
 
     def setUp(self):
