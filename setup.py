@@ -13,9 +13,6 @@ setup(
     license="GPLv2+",
     url="https://pagure.io/rpkg",
     packages=find_packages(),
-    scripts=['bin/rpkg'],
-    data_files=[('/etc/bash_completion.d', ['etc/bash_completion.d/rpkg.bash']),
-                ('/etc/rpkg', ['etc/rpkg/rpkg.conf'])],
     install_requires=['six', 'pycurl', 'cccolutils'],  # + koji, but it's not in PyPI
     tests_require=['nose', 'mock', 'GitPython'],
     test_suite='nose.collector',
