@@ -432,7 +432,7 @@ class Commands(object):
                 raise rpkgError('Unable to find remote branch.  Use --release')
             # Trim off the refs/heads so that we're just working with
             # the branch name
-            merge = merge.replace('refs/heads/', '')
+            merge = merge.replace('refs/heads/', '', 1)
             self._branch_merge = merge
 
     @property
