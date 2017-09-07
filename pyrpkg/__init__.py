@@ -80,6 +80,8 @@ class Commands(object):
         self.lookasidehash = lookasidehash
         # The CGI server for the lookaside
         self.lookaside_cgi = lookaside_cgi
+        # Additional arguments needed for lookaside url expansion
+        self.lookaside_request_params = None
         # The base URL of the git server
         self.gitbaseurl = gitbaseurl
         # The anonymous version of the git url
@@ -1758,12 +1760,22 @@ class Commands(object):
 
         sourcesf = SourcesFile(self.sources_filename, self.source_entry_type)
 
+        args = dict()
+        if self.lookaside_request_params:
+            if 'branch' in self.lookaside_request_params.split():
+                # The value of branch_merge is dynamic property;  to get it's
+                # value you need to be in proper branch or you need to first
+                # specify --release (which is pretty annoying).  Since not every
+                # dist-git instance out there really needs 'branch' argument to
+                # expand lookaside cache urls - make it optional.
+                args['branch'] = self.branch_merge
+
         for entry in sourcesf.entries:
             outfile = os.path.join(outdir, entry.file)
             self.lookasidecache.download(
                 self.ns_module_name if self.lookaside_namespaced else self.module_name,
                 entry.file, entry.hash, outfile,
-                hashtype=entry.hashtype, branch=self.branch_merge)
+                hashtype=entry.hashtype, **args)
 
     def switch_branch(self, branch, fetch=True):
         """Switch the working branch

@@ -176,6 +176,7 @@ class cliClient(object):
         self._cmd.debug = self.args.debug
         self._cmd.verbose = self.args.v
         self._cmd.clone_config = items.get('clone_config')
+        self._cmd.lookaside_request_params = items.get('lookaside_request_params')
 
     # This function loads the extra stuff once we figure out what site
     # we are
