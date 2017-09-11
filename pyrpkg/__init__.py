@@ -42,6 +42,7 @@ from .gitignore import GitIgnore
 from pyrpkg.lookaside import CGILookasideCache
 from pyrpkg.sources import SourcesFile
 from pyrpkg.utils import cached_property, log_result
+from pyrpkg.pkgrepo import PackageRepo
 
 
 class NullHandler(logging.Handler):
@@ -80,6 +81,9 @@ class Commands(object):
         # Path to operate on, most often pwd
         self._path = None
         self.path = os.path.abspath(path)
+
+        self.default_branch_remote = 'origin'
+
         # The url of the lookaside for source archives
         self.lookaside = lookaside
         # The type of hash to use with the lookaside
@@ -112,8 +116,6 @@ class Commands(object):
         # Set place holders for properties
         # Anonymous buildsys session
         self._anon_kojisession = None
-        # The upstream branch a downstream branch is tracking
-        self._branch_merge = None
         # The latest commit
         self._commit = None
         # The disttag rpm value
@@ -163,12 +165,6 @@ class Commands(object):
         # The rpm version of the cloned module
         self._ver = None
         self.log = log
-        # Pushurl or url of remote of branch
-        self._push_url = None
-        # Name of remote determined from current clone
-        self._branch_remote = None
-        # Name of default remote to be used for new clone
-        self.default_branch_remote = 'origin'
         # Default sources file output format type
         self.source_entry_type = 'old'
         # Set an attribute debug
@@ -186,6 +182,28 @@ class Commands(object):
         # instead of just name.
         self.lookaside_namespaced = lookaside_namespaced
 
+        if distgit_namespaced:
+            try:
+                repo_name = self.repo.push_url
+            except rpkgError:
+                # Ignore error if cannot get remote push URL from this repo.
+                # That is we just skip has_namespace check when that error
+                # happens.
+                pass
+            else:
+                parts = urllib.parse.urlparse(repo_name)
+                parts = [p for p in parts.path.split('/') if p]
+                not_contain_namespace = len(parts) == 1
+                if not_contain_namespace:
+                    self.log.warning(
+                        'Your git configuration does not use a namespace.')
+                    self.log.warning(
+                        'Consider updating your git configuration by running:')
+                    self.log.warning(
+                        '  git remote set-url %s %s',
+                        self.repo.branch_remote,
+                        self._get_namespace_giturl(parts[0]))
+
     # Define properties here
     # Properties allow us to "lazy load" various attributes, which also means
     # that we can do clone actions without knowing things like the spec
@@ -202,9 +220,11 @@ class Commands(object):
         their own, returning their own implementation of a lookaside cache
         helper object.
         """
-        return CGILookasideCache(
-            self.lookasidehash, self.lookaside, self.lookaside_cgi,
-            client_cert=self.cert_file, ca_cert=self.ca_cert)
+        return CGILookasideCache(self.lookasidehash,
+                                 self.lookaside,
+                                 self.lookaside_cgi,
+                                 client_cert=self.cert_file,
+                                 ca_cert=self.ca_cert)
 
     @property
     def path(self):
@@ -215,8 +235,6 @@ class Commands(object):
         if self._path != value:
             # Ensure all properties which depend on self.path will be
             # freshly loaded next time
-            self._push_url = None
-            self._branch_remote = None
             self._repo = None
             self._ns = None
         self._path = value
@@ -410,108 +428,6 @@ class Commands(object):
             self.login_koji_session(koji_config, self._kojisession)
 
     @property
-    def branch_merge(self):
-        """This property ensures the branch attribute"""
-
-        if not self._branch_merge:
-            self.load_branch_merge()
-        return(self._branch_merge)
-
-    def load_branch_merge(self):
-        """Find the remote tracking branch from the branch we're on.
-
-        The goal of this function is to catch if we are on a branch we
-
-        can make some assumptions about.  If there is no merge point
-
-        then we raise and ask the user to specify.
-        """
-
-        if self.dist:
-            self._branch_merge = self.dist
-        else:
-            try:
-                localbranch = self.repo.active_branch.name
-            except TypeError as e:
-                raise rpkgError('Repo in inconsistent state: %s' % e)
-            try:
-                merge = self.repo.git.config('--get', 'branch.%s.merge' % localbranch)
-            except git.GitCommandError as e:
-                raise rpkgError('Unable to find remote branch.  Use --release')
-            # Trim off the refs/heads so that we're just working with
-            # the branch name
-            merge = merge.replace('refs/heads/', '', 1)
-            self._branch_merge = merge
-
-    @property
-    def branch_remote(self):
-        """This property ensures the branch_remote attribute"""
-
-        if not self._branch_remote:
-            self.load_branch_remote()
-        return self._branch_remote
-
-    def load_branch_remote(self):
-        """Find the name of remote from branch we're on."""
-
-        try:
-            remote = self.repo.git.config('--get', 'branch.%s.remote'
-                                          % self.branch_merge)
-        except (git.GitCommandError, rpkgError) as e:
-            remote = self.default_branch_remote
-            self.log.debug("Could not determine the remote name: %s", str(e))
-            self.log.debug("Falling back to default remote name '%s'", remote)
-
-        self._branch_remote = remote
-
-    @property
-    def push_url(self):
-        """This property ensures the push_url attribute"""
-
-        if not self._push_url:
-            self.load_push_url()
-        return self._push_url
-
-    def load_push_url(self):
-        """Find the pushurl or url of remote of branch we're on."""
-        try:
-            url = self.repo.git.remote('get-url', '--push', self.branch_remote)
-        except git.GitCommandError as e:
-            try:
-                url = self.repo.git.config(
-                    '--get', 'remote.%s.pushurl' % self.branch_remote)
-            except git.GitCommandError as e:
-                try:
-                    url = self.repo.git.config(
-                        '--get', 'remote.%s.url' % self.branch_remote)
-                except git.GitCommandError as e:
-                    raise rpkgError('Unable to find remote push url: %s' % e)
-        if isinstance(url, six.text_type):
-            # GitPython >= 1.0 return unicode. It must be encoded to string.
-            self._push_url = url
-        else:
-            self._push_url = url.decode('utf-8')
-
-    @property
-    def commithash(self):
-        """This property ensures the commit attribute"""
-
-        if not self._commit:
-            self.load_commit()
-        return self._commit
-
-    def load_commit(self):
-        """Discover the latest commit to the package"""
-
-        # Get the commit hash
-        comobj = six.next(self.repo.iter_commits())
-        # Work around different versions of GitPython
-        if hasattr(comobj, 'sha'):
-            self._commit = comobj.sha
-        else:
-            self._commit = comobj.hexsha
-
-    @property
     def disttag(self):
         """This property ensures the disttag attribute"""
 
@@ -600,8 +516,8 @@ class Commands(object):
         """Loads a package module."""
 
         try:
-            if self.push_url:
-                parts = urllib.parse.urlparse(self.push_url)
+            if self.repo.push_url:
+                parts = urllib.parse.urlparse(self.repo.push_url)
 
                 # FIXME
                 # if self.distgit_namespaced:
@@ -640,8 +556,8 @@ class Commands(object):
 
         try:
             if self.distgit_namespaced:
-                if self.push_url:
-                    parts = urllib.parse.urlparse(self.push_url)
+                if self.repo.push_url:
+                    parts = urllib.parse.urlparse(self.repo.push_url)
 
                     path_parts = [p for p in parts.path.split("/") if p]
                     if len(path_parts) == 1:
@@ -740,7 +656,10 @@ class Commands(object):
 
         self.log.debug('Creating repo object from %s', self.path)
         try:
-            self._repo = git.Repo(self.path)
+            self._repo = PackageRepo(
+                self.path,
+                default_branch_remote=self.default_branch_remote,
+                overwritten_branch_merge=self.dist)
         except (git.InvalidGitRepositoryError, git.NoSuchPathError):
             raise rpkgError('%s is not a valid repo' % self.path)
 
@@ -761,11 +680,11 @@ class Commands(object):
             # This regex should find the 'rhel-5' or 'rhel-6.2' parts of the
             # branch name.  There should only be one of those, and all branches
             # should end in one.
-            osver = re.search(r'rhel-\d.*$', self.branch_merge).group()
+            osver = re.search(r'rhel-\d.*$', self.repo.branch_merge).group()
         except AttributeError:
             raise rpkgError('Could not find the base OS ver from branch name'
                             ' %s. Consider using --release option' %
-                            self.branch_merge)
+                            self.repo.branch_merge)
         self._distvar, self._distval = osver.split('-')
         self._distval = self._distval.replace('.', '_')
         self._disttag = 'el%s' % self._distval
@@ -820,7 +739,7 @@ class Commands(object):
 
         # If a site has a different naming scheme, this would be where
         # a site would override
-        self._target = '%s-candidate' % self.branch_merge
+        self._target = '%s-candidate' % self.repo.branch_merge
 
     @property
     def container_build_target(self):
@@ -831,7 +750,8 @@ class Commands(object):
 
     def load_container_build_target(self):
         """This creates a target based on git branch and namespace."""
-        self._container_build_target = '%s-%s-candidate' % (self.branch_merge, self.ns)
+        self._container_build_target = '%s-%s-candidate' % (
+            self.repo.branch_merge, self.ns)
 
     @property
     def topurl(self):
@@ -1076,33 +996,6 @@ class Commands(object):
 
         # Fall back to the default hash type
         return(self.hashtype)
-
-    def _fetch_remotes(self):
-        self.log.debug('Fetching remotes')
-        for remote in self.repo.remotes:
-            self.repo.git.fetch(remote)
-
-    def _list_branches(self, fetch=True):
-        """Returns a tuple of local and remote branch names"""
-
-        if fetch:
-            self._fetch_remotes()
-        self.log.debug('Listing refs')
-        refs = self.repo.refs
-        # Sort into local and remote branches
-        remotes = []
-        locals = []
-        for ref in refs:
-            if type(ref) == git.Head:
-                self.log.debug('Found local branch %s', ref.name)
-                locals.append(ref.name)
-            elif type(ref) == git.RemoteReference:
-                if ref.remote_head == 'HEAD':
-                    self.log.debug('Skipping remote branch alias HEAD')
-                    continue  # Not useful in this context
-                self.log.debug('Found remote branch %s', ref.name)
-                remotes.append(ref.name)
-        return (locals, remotes)
 
     def _srpmdetails(self, srpm):
         """Return a tuple of package name, package files, and upload files."""
@@ -1419,7 +1312,7 @@ class Commands(object):
         """Delete a git tag from the repository found at optional path"""
 
         try:
-            self.repo.delete_tag(tagname)
+            self.repo.repo.delete_tag(tagname)
 
         except git.GitCommandError as e:
             raise rpkgError(e)
@@ -1535,6 +1428,7 @@ class Commands(object):
         # bail if we're dirty
         if self.repo.is_dirty():
             raise rpkgError('There are uncommitted changes in your repo')
+
         # see if the srpm even exists
         srpm = os.path.abspath(srpm)
         if not os.path.exists(srpm):
@@ -1565,7 +1459,7 @@ class Commands(object):
         for file in ourfiles:
             if file not in files:
                 self.log.info("Removing no longer used file: %s", file)
-                self.repo.index.remove([file])
+                self.repo.repo.index.remove([file])
                 os.remove(file)
 
         # Extract new files
@@ -1589,7 +1483,7 @@ class Commands(object):
                 # Create the file
                 open(file, 'w').close()
             files.append(file)
-        self.repo.index.add(files)
+        self.repo.repo.index.add(files)
         # Return to the caller and let them take it from there.
         os.chdir(oldpath)
         return [os.path.join(self.path, file) for file in uploadfiles]
@@ -1604,7 +1498,7 @@ class Commands(object):
         if tagname is None:
             tagname = '*'
 
-        tags = map(lambda t: t.name, self.repo.tags)
+        tags = map(lambda t: t.name, self.repo.repo.tags)
 
         if tagname != '*':
             tags = filter(lambda t: fnmatch.fnmatch(t, tagname), tags)
@@ -1692,7 +1586,7 @@ class Commands(object):
 
         # Add it to the index
         # Again this returns a blank line we want to keep quiet
-        self.repo.index.add([outfile])
+        self.repo.repo.index.add([outfile])
         log.info('Created %s and added it to the index' % outfile)
 
     def pull(self, rebase=False, norebase=False):
@@ -1701,10 +1595,7 @@ class Commands(object):
         Optionally rebase current branch on top of remote branch
 
         Optionally override .git setting to always rebase
-
         """
-        self.check_repo(is_dirty=False, all_pushed=False)
-
         cmd = ['git', 'pull']
         if self.quiet:
             cmd.append('-q')
@@ -1721,7 +1612,7 @@ class Commands(object):
         patches_in_repo = [os.path.basename(filename) for filename
                            in glob.glob(file_pattern)]
 
-        git_tree = self.repo.head.commit.tree
+        git_tree = self.repo.repo.head.commit.tree
         sources_file = SourcesFile(self.sources_filename,
                                    self.source_entry_type)
 
@@ -1733,8 +1624,6 @@ class Commands(object):
 
     def push(self, force=False):
         """Push changes to the remote repository"""
-        self.check_repo(is_dirty=False, all_pushed=False)
-
         # see if our branch is tracking anything
         try:
             self.load_branch_merge()
@@ -1774,7 +1663,7 @@ class Commands(object):
                 # specify --release (which is pretty annoying).  Since not every
                 # dist-git instance out there really needs 'branch' argument to
                 # expand lookaside cache urls - make it optional.
-                args['branch'] = self.branch_merge
+                args['branch'] = self.repo.branch_merge
 
         for entry in sourcesf.entries:
             outfile = os.path.join(outdir, entry.file)
@@ -1796,16 +1685,20 @@ class Commands(object):
         # the first remote it finds.  When multiple remotes are in play
         # this needs to get smarter
 
-        self.check_repo(all_pushed=False)
+        self.repo.check(all_pushed=False)
 
         # Get our list of branches
-        (locals, remotes) = self._list_branches(fetch)
+        self.log.debug('Listing refs')
+        if fetch:
+            self.log.debug('Fetching remotes')
+            self.repo.fetch_remotes()
+        (locals, remotes) = self.repo.list_branches()
 
         if branch not in locals:
             # We need to create a branch
             self.log.debug('No local branch found, creating a new one')
             totrack = None
-            full_branch = '%s/%s' % (self.branch_remote, branch)
+            full_branch = '%s/%s' % (self.repo.branch_remote, branch)
             for remote in remotes:
                 if remote == full_branch:
                     totrack = remote
@@ -1828,51 +1721,6 @@ class Commands(object):
                 raise rpkgError('Could not check out %s\n%s' % (branch,
                                                                 err.stderr))
         return
-
-    def check_repo(self, is_dirty=True, has_namespace=True, all_pushed=True):
-        """Check various status of current repository
-
-        :param bool is_dirty: Default to True. To check whether there is uncommitted changes.
-        :param bool has_namespace: Default to True. To check whether this repo
-            is checked out with namespace, e.g. rpms/, docker/. If the repo is
-            an old checkout, warn user with message how to fix it.
-        :param bool all_pushed: Default to True. To check whether all changes are pushed.
-        :raises rpkgError: if any unexpected status is detected. For example,
-            if changes are not committed yet.
-        """
-        if is_dirty:
-            if self.repo.is_dirty():
-                raise rpkgError('%s has uncommitted changes.  Use git status '
-                                'to see details' % self.path)
-        if has_namespace:
-            try:
-                repo_name = self.push_url
-            except rpkgError:
-                # Ignore error if cannot get remote push URL from this repo.
-                # That is we just skip has_namespace check when that error
-                # happens.
-                pass
-            else:
-                parts = urllib.parse.urlparse(repo_name)
-                parts = [p for p in parts.path.split('/') if p]
-                not_contain_namespace = len(parts) == 1
-                if not_contain_namespace:
-                    self.log.warning('Your git configuration does not use a namespace.')
-                    self.log.warning('Consider updating your git configuration by running:')
-                    self.log.warning('  git remote set-url %s %s',
-                                     self.branch_remote, self._get_namespace_giturl(parts[0]))
-        if all_pushed:
-            branch = self.repo.active_branch
-            try:
-                remote = self.repo.git.config('--get', 'branch.%s.remote' % branch)
-                merge = self.repo.git.config('--get', 'branch.%s.merge' % branch).replace(
-                    'refs/heads', remote)
-            except git.GitCommandError:
-                raise rpkgError('Branch {0} does not track remote branch.\n'
-                                'Use the following command to fix that:\n'
-                                '    git branch -u origin/REMOTE_BRANCH_NAME'.format(branch))
-            if self.repo.git.rev_list('%s...%s' % (merge, branch)):
-                raise rpkgError('There are unpushed changes in your repo')
 
     def check_inheritance(self, build_target, dest_tag):
         """Check if build tag inherits from dest tag"""
@@ -1923,7 +1771,7 @@ class Commands(object):
             # Check to see if the tree is dirty and if all local commits
             # are pushed
             try:
-                self.check_repo()
+                self.repo.check()
             except rpkgError as e:
                 msg = '{0}\n{1}'.format(
                     str(e),
@@ -2097,9 +1945,9 @@ class Commands(object):
 
     def giturl(self):
         """Return the git url that would be used for building"""
-        self.check_repo(is_dirty=False, all_pushed=False)
+        self.repo.check(is_dirty=False, all_pushed=False)
         url = self._get_namespace_anongiturl(self.ns_module_name) + \
-            '?#%s' % self.commithash
+            '?#%s' % self.repo.commit_hash
         return url
 
     def koji_upload(self, file, path, callback=None):
@@ -2431,7 +2279,7 @@ class Commands(object):
         sourcesf.write()
         gitignore.write()
 
-        self.repo.index.add(['sources', '.gitignore'])
+        self.repo.repo.index.add(['sources', '.gitignore'])
 
     def prep(self, arch=None, builddir=None):
         """Run rpm -bp on a module
@@ -2564,7 +2412,7 @@ class Commands(object):
                              koji_task_watcher=None,
                              nowait=False):
         # check if repo is dirty and all commits are pushed
-        self.check_repo()
+        self.repo.check()
         container_target = self.target if target_override else self.container_build_target
 
         # This is for backward-compatibility of deprecated kojiconfig.
@@ -2655,7 +2503,7 @@ class Commands(object):
             with open(self.osbs_config_filename, 'w') as fp:
                 cfp.write(fp)
 
-            self.repo.index.add([self.osbs_config_filename])
+            self.repo.repo.index.add([self.osbs_config_filename])
             self.log.info("Config value changed, don't forget to commit %s file",
                           self.osbs_config_filename)
         else:

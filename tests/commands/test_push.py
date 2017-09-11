@@ -122,8 +122,8 @@ Patch3: d.path
         self.cmd.push()
 
         # Verify added files are pushed to origin
-        origin_repo_path = self.cmd.repo.git.config(
-            '--get', 'remote.origin.url').replace('file://', '')
+        origin_repo_path = self.cmd.repo.git.get_config(
+            'remote.origin.url').replace('file://', '')
         origin_repo = git.Repo(origin_repo_path)
         git_tree = origin_repo.head.commit.tree
         self.assertTrue('a.patch' in git_tree)

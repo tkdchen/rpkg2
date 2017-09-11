@@ -48,27 +48,6 @@ def mock_load_spec(fake_spec):
     return mocked_load_spec
 
 
-def mock_load_branch_merge(fake_branch_merge):
-    """Return a mocked load_branch_merge method
-
-    The mocked method sets a fake branch name to _branch_merge.
-
-    :param str fake_branch_merge: an arbitrary string representing a fake
-    branch name. What value should be passed to fake_branch_merge depends on
-    the test purpose completely.
-    """
-    def mocked_method(self):
-        """
-        Mocked load_branch_merge to set fake branch name to an instance of
-        Commands.
-
-        :param Commands self: load_branch_merge is an instance method of
-        Commands, so self is the instance which is calling this method.
-        """
-        self._branch_merge = fake_branch_merge
-    return mocked_method
-
-
 class LoadNameVerRelTest(CommandTestCase):
     """Test case for Commands.load_nameverrel"""
 
@@ -97,7 +76,7 @@ class LoadNameVerRelTest(CommandTestCase):
         cloned_repo_dir = '/tmp/rpkg test cloned repo'
         if os.path.exists(cloned_repo_dir):
             shutil.rmtree(cloned_repo_dir)
-        cloned_repo = self.cmd.repo.clone(cloned_repo_dir)
+        cloned_repo = self.cmd.repo.repo.clone(cloned_repo_dir)
 
         # Switching to branch eng-rhel-6 explicitly is required by running this
         # on RHEL6/7 because an old version of git is available in the
@@ -131,58 +110,6 @@ class LoadNameVerRelTest(CommandTestCase):
         and enough.
         """
         self.assertRaises(rpkgError, self.cmd.load_nameverrel)
-
-
-class LoadBranchMergeTest(CommandTestCase):
-    """Test case for testing Commands.load_branch_merge"""
-
-    def setUp(self):
-        super(LoadBranchMergeTest, self).setUp()
-
-        self.cmd = self.make_commands()
-
-    def test_load_branch_merge_from_eng_rhel_6(self):
-        self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
-        self.cmd.load_branch_merge()
-        self.assertEqual(self.cmd._branch_merge, 'eng-rhel-6')
-
-    def test_load_branch_merge_from_eng_rhel_6_5(self):
-        """
-        Ensure load_branch_merge can work well against a more special branch
-        eng-rhel-6.5
-        """
-        self.checkout_branch(self.cmd.repo, 'eng-rhel-6.5')
-        self.cmd.load_branch_merge()
-        self.assertEqual(self.cmd._branch_merge, 'eng-rhel-6.5')
-
-    def test_load_branch_merge_from_not_remote_merge_branch(self):
-        """Ensure load_branch_merge fails against local-branch
-
-        A new local branch named local-branch is created for this test, loading
-        branch merge from this local branch should fail because there is no
-        configuration item branch.local-branch.merge.
-        """
-        self.create_branch(self.cmd.repo, 'local-branch')
-        self.checkout_branch(self.cmd.repo, 'local-branch')
-        try:
-            self.cmd.load_branch_merge()
-        except rpkgError as e:
-            self.assertEqual('Unable to find remote branch.  Use --release', str(e))
-        else:
-            self.fail("It's expected to raise rpkgError, but not.")
-
-    def test_load_branch_merge_using_release_option(self):
-        """Ensure load_branch_merge uses release specified via --release
-
-        Switch to eng-rhel-6 branch, that is valid for load_branch_merge and to
-        see if load_branch_merge still uses dist rather than such a valid
-        branch.
-        """
-        self.checkout_branch(self.cmd.repo, 'eng-rhel-6')
-
-        cmd = self.make_commands(dist='branch_merge')
-        cmd.load_branch_merge()
-        self.assertEqual('branch_merge', cmd._branch_merge)
 
 
 class LoadRPMDefinesTest(CommandTestCase):
@@ -247,17 +174,10 @@ class LoadRPMDefinesTest(CommandTestCase):
             }
         self.assert_loaded_rpmdefines('eng-rhel-6.5', expected_rpmdefines)
 
-    @patch('pyrpkg.Commands.load_branch_merge',
-           new=mock_load_branch_merge('invalid-branch-name'))
-    def test_load_rpmdefines_against_invalid_branch(self):
-        """Ensure load_rpmdefines if active branch name is invalid
+    @patch('pyrpkg.pkgrepo.PackageRepo.branch_merge', new_callable=PropertyMock)
+    def test_load_rpmdefines_against_invalid_branch(self, branch_merge):
+        branch_merge.return_value = 'invalid-branch-name'
 
-        This test requires an invalid branch name even if
-        Commands.load_branch_merge is able to get it from current active
-        branch. So, I only care about the value returned from method
-        load_branch_merge, and just mock it and let it return the value this
-        test requires.
-        """
         self.assertRaises(rpkgError, self.cmd.load_rpmdefines)
 
 
@@ -289,7 +209,7 @@ class CheckRepoWithOrWithoutDistOptionCase(CommandTestCase):
     def test_check_repo_with_specificed_dist(self):
         cmd = self.make_commands(self.cloned_repo_path, dist='eng-rhel-6')
         try:
-            cmd.check_repo()
+            cmd.repo.check()
         except rpkgError as e:
             if 'There are unpushed changes in your repo' in e:
                 self.fail('There are unpushed changes in your repo. This '
@@ -300,7 +220,7 @@ class CheckRepoWithOrWithoutDistOptionCase(CommandTestCase):
     def test_check_repo_without_specificed_dist(self):
         cmd = self.make_commands(self.cloned_repo_path)
         try:
-            cmd.check_repo()
+            cmd.repo.check()
         except rpkgError as e:
             if 'There are unpushed changes in your repo' in e:
                 self.fail('There are unpushed changes in your repo. This '
@@ -406,7 +326,7 @@ class TestProperties(CommandTestCase):
         cmd = self.make_commands(path=self.cloned_repo_path)
         repo = git.Repo(self.cloned_repo_path)
         expected_commit_hash = str(six.next(repo.iter_commits()))
-        self.assertEqual(expected_commit_hash, cmd.commithash)
+        self.assertEqual(expected_commit_hash, cmd.repo.commit_hash)
 
     def test_dist(self):
         repo = git.Repo(self.cloned_repo_path)
@@ -433,11 +353,10 @@ class TestProperties(CommandTestCase):
         cmd = self.make_commands(path=self.cloned_repo_path)
         self.checkout_branch(cmd.repo, 'eng-rhel-7')
         expected_localarch = rpm.expandMacro('%{_arch}')
-        self.assertEqual('eng-rhel-7-candidate-{0}'.format(expected_localarch), cmd.mockconfig)
+        self.assertEqual('eng-rhel-7-candidate-{0}'.format(expected_localarch),
+                         cmd.mockconfig)
 
     def test_get_ns_module_name(self):
-        cmd = self.make_commands(path=self.cloned_repo_path)
-
         tests = (
             ('http://localhost/rpms/docpkg.git', 'docpkg'),
             ('http://localhost/docker/docpkg.git', 'docpkg'),
@@ -445,12 +364,14 @@ class TestProperties(CommandTestCase):
             ('http://localhost/rpms/docpkg', 'docpkg'),
             )
         for push_url, expected_ns_module_name in tests:
-            cmd._push_url = push_url
-            cmd.load_ns()
-            cmd.load_module_name()
-            self.assertEqual(expected_ns_module_name, cmd.ns_module_name)
+            with patch('pyrpkg.pkgrepo.PackageRepo.push_url',
+                       new_callable=PropertyMock,
+                       return_value=push_url):
+                cmd = self.make_commands(path=self.cloned_repo_path)
+                cmd.load_ns()
+                cmd.load_module_name()
+                self.assertEqual(expected_ns_module_name, cmd.ns_module_name)
 
-        cmd.distgit_namespaced = True
         tests = (
             ('http://localhost/rpms/docpkg.git', 'rpms/docpkg'),
             ('http://localhost/docker/docpkg.git', 'docker/docpkg'),
@@ -458,10 +379,14 @@ class TestProperties(CommandTestCase):
             ('http://localhost/rpms/docpkg', 'rpms/docpkg'),
             )
         for push_url, expected_ns_module_name in tests:
-            cmd._push_url = push_url
-            cmd.load_ns()
-            cmd.load_module_name()
-            self.assertEqual(expected_ns_module_name, cmd.ns_module_name)
+            with patch('pyrpkg.pkgrepo.PackageRepo.push_url',
+                       new_callable=PropertyMock,
+                       return_value=push_url):
+                cmd = self.make_commands(path=self.cloned_repo_path)
+                cmd.distgit_namespaced = True
+                cmd.load_ns()
+                cmd.load_module_name()
+                self.assertEqual(expected_ns_module_name, cmd.ns_module_name)
 
 
 class TestNamespaced(CommandTestCase):

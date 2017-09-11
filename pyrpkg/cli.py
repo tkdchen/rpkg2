@@ -1155,7 +1155,7 @@ see API KEY section of copr-cli(1) man page.
                 sets = True
             else:
                 # Figure out the scm url to build from package name
-                hash = self.cmd.get_latest_commit(component, self.cmd.branch_merge)
+                hash = self.cmd.get_latest_commit(component, self.cmd.repo.branch_merge)
                 url = self.cmd.anongiturl % {'module': component} + '#%s' % hash
                 # If there are no ':' in the chain list, treat each object as
                 # an individual chain
@@ -1630,7 +1630,9 @@ see API KEY section of copr-cli(1) man page.
         if self.args.branch:
             self.cmd.switch_branch(self.args.branch, self.args.fetch)
         else:
-            (locals, remotes) = self.cmd._list_branches(self.args.fetch)
+            if self.args.fetch:
+                self.cmd.repo.fetch_remotes()
+            (locals, remotes) = self.cmd.repo.list_branches()
             # This is some ugly stuff here, but trying to emulate
             # the way git branch looks
             locals = ['  %s  ' % branch for branch in locals]

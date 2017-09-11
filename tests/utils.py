@@ -192,7 +192,7 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
         """Checkout to a local branch
 
         :param git.Repo repo: `git.Repo` instance represents a git repository
-        that current code works on top of.
+            that current code works on top of.
         :param str branch_name: name of local branch to checkout
         """
         heads = [head for head in repo.heads if head.name == branch_name]
