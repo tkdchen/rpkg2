@@ -2548,7 +2548,7 @@ class Commands(object):
         self._run_command(cmd, shell=True)
 
     def osbs_build(self, config_file, config_section, target_override=False,
-                   yum_repourls=[], nowait=False):
+                   yum_repourls=[], nowait=False, platforms=None):
         # Because docker image should be built via Koji not in OSBS directly,
         # it is not necessary to make osbs as a hard dependency
         try:
@@ -2572,6 +2572,10 @@ class Commands(object):
         component = self.module_name
         container_target = self.target if target_override else self.container_build_target
 
+        if platforms:
+            architecture = None
+        else:
+            architecture = 'x86_64'
         build = osbs.create_build(
             git_uri=git_uri,
             git_ref=git_ref,
@@ -2579,7 +2583,8 @@ class Commands(object):
             user=user,
             component=component,
             target=container_target,
-            architecture="x86_64",
+            platforms=platforms,
+            architecture=architecture,
             yum_repourls=yum_repourls
         )
         build_id = build.build_id
@@ -2646,7 +2651,7 @@ class Commands(object):
 
             task_opts = {}
             for key in ('scratch', 'name', 'version', 'release',
-                        'yum_repourls', 'git_branch'):
+                        'yum_repourls', 'git_branch', 'arches'):
                 if key in opts:
                     task_opts[key] = opts[key]
             priority = opts.get("priority", None)

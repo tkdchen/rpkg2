@@ -967,6 +967,11 @@ see API KEY section of copr-cli(1) man page.
             action='store_true',
             default=False,
             help="Don't wait on build")
+        self.container_build_parser.add_argument(
+            '--arches',
+            action='store',
+            nargs='*',
+            help='Limit a scratch build to an arch. May have multiple arches.')
 
         self.container_build_parser.set_defaults(command=self.container_build)
 
@@ -1192,7 +1197,8 @@ see API KEY section of copr-cli(1) man page.
         opts = {"scratch": self.args.scratch,
                 "quiet": self.args.q,
                 "yum_repourls": self.args.repo_url,
-                "git_branch": self.cmd.branch_merge}
+                "git_branch": self.cmd.branch_merge,
+                "arches": self.args.arches}
 
         section_name = "%s.container-build" % self.name
         err_msg = "Missing %(option)s option in [%(plugin.section)s] section. " \
@@ -1242,7 +1248,8 @@ see API KEY section of copr-cli(1) man page.
             config_section=self.args.instance,
             target_override=target_override,
             yum_repourls=self.args.repo_url,
-            nowait=self.args.nowait
+            nowait=self.args.nowait,
+            platform=self.args.arches
         )
 
     def container_build_setup(self):
