@@ -2651,9 +2651,17 @@ class Commands(object):
 
             task_opts = {}
             for key in ('scratch', 'name', 'version', 'release',
-                        'yum_repourls', 'git_branch', 'arches'):
+                        'yum_repourls', 'git_branch'):
                 if key in opts:
                     task_opts[key] = opts[key]
+
+            scratch = opts.get('scratch')
+            arches = opts.get('arches')
+            if arches:
+                if not scratch:
+                    raise rpkgError('Cannot override arches for non-scratch builds')
+                task_opts['arch_override'] = ' '.join(arches)
+
             priority = opts.get("priority", None)
             task_id = self.kojisession.buildContainer(source,
                                                       container_target,
