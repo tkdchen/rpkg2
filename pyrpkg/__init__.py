@@ -2547,69 +2547,6 @@ class Commands(object):
         # Run the command
         self._run_command(cmd, shell=True)
 
-    def osbs_build(self, config_file, config_section, target_override=False,
-                   yum_repourls=[], nowait=False, platforms=None):
-        # Because docker image should be built via Koji not in OSBS directly,
-        # it is not necessary to make osbs as a hard dependency
-        try:
-            from osbs.api import OSBS
-            from osbs.conf import Configuration
-        except ImportError:
-            raise rpkgError('Before building docker image in OSBS directly, '
-                            'please install python-osbs-client in advance.')
-
-        self.check_repo()
-        os_conf = Configuration(conf_file=config_file, conf_section=config_section)
-        build_conf = Configuration(conf_file=config_file, conf_section=config_section)
-        osbs = OSBS(os_conf, build_conf)
-
-        git_uri = re.sub(r"^git\+ssh", "git", self.push_url)
-        git_uri = re.sub("^ssh", "git", git_uri)
-        git_uri = re.sub("[^/]+@", "", git_uri)
-        git_ref = self.commithash
-        git_branch = self.branch_merge
-        user = self.user
-        component = self.module_name
-        container_target = self.target if target_override else self.container_build_target
-
-        if platforms:
-            architecture = None
-        else:
-            architecture = 'x86_64'
-        build = osbs.create_build(
-            git_uri=git_uri,
-            git_ref=git_ref,
-            git_branch=git_branch,
-            user=user,
-            component=component,
-            target=container_target,
-            platforms=platforms,
-            architecture=architecture,
-            yum_repourls=yum_repourls
-        )
-        build_id = build.build_id
-
-        if nowait:
-            self.log.info('Build submitted: %s', build_id)
-            return
-
-        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-        for line in osbs.get_build_logs(build_id, follow=True):
-            print(line)
-        build_response = osbs.wait_for_build_to_finish(build_id)
-        if build_response.is_succeeded():
-            repositories = build_response.get_repositories()
-            if repositories:
-                image_names = repositories.get("primary", []) + repositories.get("unique", [])
-                print("You can pull the image with one of the following commands:")
-                for image in image_names:
-                    print("  docker pull %s" % image)
-            else:
-                raise RuntimeError(
-                    "Build '%s' wasn't processed correctly. Please, report this." % build_id)
-        else:
-            raise RuntimeError("Build has failed.")
-
     def container_build_koji(self, target_override=False, opts={},
                              kojiconfig=None, kojiprofile=None,
                              build_client=None,
