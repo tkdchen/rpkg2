@@ -124,6 +124,7 @@ _rpkg()
             options="--scratch --nowait"
             options_target="--target"
             options_string="--repo-url"
+            options_arches="--arches"
             ;;
         container-build-config)
             options="--get-autorebuild"

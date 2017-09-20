@@ -28,8 +28,6 @@ import six
 from pyrpkg import rpkgError, log as rpkgLogger
 from six.moves import xmlrpc_client, configparser
 
-OSBS_DEFAULT_CONF_FILE = "/etc/osbs/osbs.conf"
-
 
 def warning_deprecated_dist(value):
     """Warning deprecated of option dist"""
@@ -931,42 +929,33 @@ see API KEY section of copr-cli(1) man page.
         verrel_parser.set_defaults(command=self.verrel)
 
     def register_container_build(self):
-        self.container_build_parser = \
-            self.subparsers.add_parser('container-build',
-                                       help='build a container')
-        self.container_build_parser.add_argument('--repo-url',
-                                                 metavar="URL",
-                                                 help=("URL of yum repo file"),
-                                                 nargs='*')
-        osbs_group = self.container_build_parser.add_argument_group('osbs')
-        osbs_group.add_argument('--osbs-config',
-                                help="path to file with configuration of osbs",
-                                metavar="PATH",
-                                default=OSBS_DEFAULT_CONF_FILE)
-        osbs_group.add_argument('--instance',
-                                help=("use specific instance specified "
-                                      "by section name in config"),
-                                metavar="SECTION", default="default")
-        koji_group = self.container_build_parser.add_argument_group('koji')
-        koji_group.add_argument('--scratch',
-                                help='Scratch build',
-                                action="store_true")
+        self.container_build_parser = self.subparsers.add_parser(
+            'container-build',
+            help='Build a container',
+            description='Build a container')
+
+        self.container_build_parser.add_argument(
+            '--repo-url',
+            metavar="URL",
+            help=('URL of yum repo file'),
+            nargs='*')
 
         self.container_build_parser.add_argument(
             '--target',
             help='Override the default target',
             default=None)
-        self.container_build_parser.add_argument(
-            '--build-with',
-            help='Build container with specified builder type. Default is koji',
-            dest="build_with",
-            choices=("koji", "osbs"),
-            default="koji")
+
         self.container_build_parser.add_argument(
             '--nowait',
             action='store_true',
             default=False,
             help="Don't wait on build")
+
+        self.container_build_parser.add_argument(
+            '--scratch',
+            help='Scratch build',
+            action="store_true")
+
         self.container_build_parser.add_argument(
             '--arches',
             action='store',
@@ -1181,13 +1170,11 @@ see API KEY section of copr-cli(1) man page.
         self.cmd.compile(arch=arch, short=short,
                          builddir=self.args.builddir, nocheck=nocheck)
 
-    def container_build(self):
-        if self.args.build_with == "koji":
-            self.container_build_koji()
-        elif self.args.build_with == "osbs":
-            self.container_build_osbs()
-
     def container_build_koji(self):
+        # Keep it around for backward compatibility
+        self.container_build()
+
+    def container_build(self):
         target_override = False
         # Override the target if we were supplied one
         if self.args.target:
@@ -1235,22 +1222,6 @@ see API KEY section of copr-cli(1) man page.
                                       build_client=build_client,
                                       koji_task_watcher=self._watch_koji_tasks,
                                       nowait=self.args.nowait)
-
-    def container_build_osbs(self):
-        target_override = False
-        # Override the target if we were supplied one
-        if self.args.target:
-            self.cmd._target = self.args.target
-            target_override = True
-
-        self.cmd.osbs_build(
-            config_file=self.args.osbs_config,
-            config_section=self.args.instance,
-            target_override=target_override,
-            yum_repourls=self.args.repo_url,
-            nowait=self.args.nowait,
-            platform=self.args.arches
-        )
 
     def container_build_setup(self):
         self.cmd.container_build_setup(get_autorebuild=self.args.get_autorebuild,

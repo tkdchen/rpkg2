@@ -169,7 +169,7 @@ class TestContainerBuildWithKoji(CliTestCase):
     @patch('pyrpkg.Commands.container_build_koji')
     def test_using_kojiprofile(self, container_build_koji):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
-                   'container-build', '--build-with', 'koji']
+                   'container-build']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
@@ -194,7 +194,7 @@ class TestContainerBuildWithKoji(CliTestCase):
     @patch('pyrpkg.Commands.container_build_koji')
     def test_override_target(self, container_build_koji):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'container-build',
-                   '--target', 'f25-docker-candidate', '--build-with', 'koji']
+                   '--target', 'f25-docker-candidate']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
@@ -226,7 +226,7 @@ class TestContainerBuildWithKoji(CliTestCase):
         """
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
                    '--module-name', 'mycontainer',
-                   'container-build', '--build-with', 'koji']
+                   'container-build']
 
         cfg_file = os.path.join(os.path.dirname(__file__),
                                 'fixtures',
