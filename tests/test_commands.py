@@ -659,3 +659,24 @@ class TestLoginKojiSession(CommandTestCase):
         self.cmd.login_koji_session(self.koji_config, self.session)
 
         self.session.krb_login.assert_called_once_with(proxyuser=None)
+
+
+class TestConstructBuildURL(CommandTestCase):
+    """Test Commands.construct_build_url"""
+
+    @patch('pyrpkg.Commands.ns_module_name', new_callable=PropertyMock)
+    @patch('pyrpkg.Commands.commithash', new_callable=PropertyMock)
+    def test_construct_url(self, commithash, ns_module_name):
+        commithash.return_value = '12345'
+        ns_module_name.return_value = 'container/fedpkg'
+
+        cmd = self.make_commands()
+
+        anongiturl = 'https://src.example.com/%(module)s'
+        with patch.object(cmd, 'anongiturl', new=anongiturl):
+            url = cmd.construct_build_url()
+
+        expected_url = '{0}?#{1}'.format(
+            anongiturl % {'module': ns_module_name.return_value},
+            commithash.return_value)
+        self.assertEqual(expected_url, url)
