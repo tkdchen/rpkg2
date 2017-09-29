@@ -1269,3 +1269,131 @@ class TestCoprBuild(CliTestCase):
             'copr-cli', 'build', '--nowait', 'user/project',
             '{0}.src.rpm'.format(self.mock_nvr.return_value)
         ])
+
+
+class TestMockConfig(CliTestCase):
+    """Test mockconfig command"""
+
+    def setUp(self):
+        super(TestMockConfig, self).setUp()
+
+        self.topurl_patcher = patch('pyrpkg.Commands.topurl',
+                                    new_callable=PropertyMock,
+                                    return_value='http://localhost/hub')
+        self.mock_topurl = self.topurl_patcher.start()
+
+        self.disttag_patcher = patch('pyrpkg.Commands.disttag',
+                                     new_callable=PropertyMock,
+                                     return_value='fc26')
+        self.mock_disttag = self.disttag_patcher.start()
+
+        self.target_patcher = patch('pyrpkg.Commands.target',
+                                    new_callable=PropertyMock,
+                                    return_value='f26-candidate')
+        self.mock_target = self.target_patcher.start()
+
+        self.localarch_patcher = patch('pyrpkg.Commands.localarch',
+                                       new_callable=PropertyMock,
+                                       return_value='x86_64')
+        self.mock_localarch = self.localarch_patcher.start()
+
+        self.genMockConfig_patcher = patch('koji.genMockConfig',
+                                           return_value='x86_64 mock config')
+        self.mock_genMockConfig = self.genMockConfig_patcher.start()
+
+        self.fake_build_target = {
+            'build_tag': 364,
+            'build_tag_name': 'f26-build',
+            'dest_tag': 359,
+            'dest_tag_name': 'f26-updates-candidate',
+            'id': 178,
+            'name': 'f26-candidate'
+        }
+        self.fake_repo = {
+            'create_event': 27478349,
+            'create_ts': 1506694416.4495,
+            'creation_time': '2017-09-29 14:13:36.449504',
+            'dist': False,
+            'id': 790843,
+            'state': 1
+        }
+
+        self.anon_kojisession_patcher = patch(
+            'pyrpkg.Commands.anon_kojisession',
+            new_callable=PropertyMock)
+        self.mock_anon_kojisession = self.anon_kojisession_patcher.start()
+        self.kojisession = self.mock_anon_kojisession.return_value
+        self.kojisession.getBuildTarget.return_value = self.fake_build_target
+        self.kojisession.getRepo.return_value = self.fake_repo
+
+    def tearDown(self):
+        self.genMockConfig_patcher.stop()
+        self.localarch_patcher.stop()
+        self.target_patcher.stop()
+        self.disttag_patcher.stop()
+        self.topurl_patcher.stop()
+        super(TestMockConfig, self).tearDown()
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_mock_config(self, stdout):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'mock-config']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.mock_config()
+
+        self.mock_genMockConfig.assert_called_once_with(
+            'f26-candidate-x86_64',
+            'x86_64',
+            distribution='fc26',
+            tag_name=self.fake_build_target['build_tag_name'],
+            repoid=self.fake_repo['id'],
+            topurl='http://localhost/hub'
+        )
+
+        mock_config = stdout.getvalue().strip()
+        self.assertEqual('x86_64 mock config', mock_config)
+
+    def test_fail_if_specified_target_not_exists(self):
+        self.kojisession.getBuildTarget.return_value = None
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'mock-config', '--target', 'some-target']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            self.assertRaises(rpkgError, cli.mock_config)
+
+    def test_fail_if_cannot_find_a_valid_repo(self):
+        self.kojisession.getRepo.side_effect = Exception
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'mock-config']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            self.assertRaises(rpkgError, cli.mock_config)
+
+    def test_mock_config_from_specified_target(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'mock-config', '--target', 'f25-candidate']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.mock_config()
+
+        self.kojisession.getBuildTarget.assert_called_once_with(
+            'f25-candidate')
+        args, kwargs = self.mock_genMockConfig.call_args
+        self.assertEqual('f25-candidate-x86_64', args[0])
+
+    def test_mock_config_from_specified_arch(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'mock-config', '--arch', 'i686']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.mock_config()
+
+        args, kwargs = self.mock_genMockConfig.call_args
+        self.assertEqual('f26-candidate-i686', args[0])
+        self.assertEqual('i686', args[1])
