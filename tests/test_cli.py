@@ -18,6 +18,7 @@ import pyrpkg.cli
 
 import utils
 from mock import patch
+from mock import PropertyMock
 from utils import CommandTestCase
 from pyrpkg import rpkgError
 
@@ -1217,3 +1218,54 @@ class TestMockbuild(CliTestCase):
                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
                         cli.cmd.srpmname]
         _run_command.assert_called_with(expected_cmd)
+
+
+class TestCoprBuild(CliTestCase):
+    """Test copr command"""
+
+    def setUp(self):
+        super(TestCoprBuild, self).setUp()
+        self.nvr_patcher = patch('pyrpkg.Commands.nvr',
+                                 new_callable=PropertyMock,
+                                 return_value='rpkg-1.29-3.fc26')
+        self.mock_nvr = self.nvr_patcher.start()
+
+        self.srpm_patcher = patch('pyrpkg.cli.cliClient.srpm')
+        self.mock_srpm = self.srpm_patcher.start()
+
+        self.run_command_patcher = patch('pyrpkg.Commands._run_command')
+        self.mock_run_command = self.run_command_patcher.start()
+
+    def tearDown(self):
+        self.run_command_patcher.stop()
+        self.srpm_patcher.stop()
+        self.nvr_patcher.stop()
+        super(TestCoprBuild, self).tearDown()
+
+    def test_copr_build(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'copr-build', 'user/project']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.copr_build()
+
+        self.mock_srpm.assert_called_once()
+        self.mock_run_command.assert_called_once_with([
+            'copr-cli', 'build', 'user/project',
+            '{0}.src.rpm'.format(self.mock_nvr.return_value)
+        ])
+
+    def test_copr_build_no_wait(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'copr-build', '--nowait', 'user/project']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.copr_build()
+
+        self.mock_srpm.assert_called_once()
+        self.mock_run_command.assert_called_once_with([
+            'copr-cli', 'build', '--nowait', 'user/project',
+            '{0}.src.rpm'.format(self.mock_nvr.return_value)
+        ])
