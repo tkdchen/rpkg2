@@ -175,17 +175,24 @@ class TestContainerBuildWithKoji(CliTestCase):
     def setUp(self):
         super(TestContainerBuildWithKoji, self).setUp()
         self.checkout_branch(git.Repo(self.cloned_repo_path), 'eng-rhel-7')
+        self.container_build_koji_patcher = patch(
+            'pyrpkg.Commands.container_build_koji')
+        self.mock_container_build_koji = \
+            self.container_build_koji_patcher.start()
 
-    @patch('pyrpkg.Commands.container_build_koji')
-    def test_using_kojiprofile(self, container_build_koji):
+    def tearDown(self):
+        self.mock_container_build_koji.stop()
+        super(TestContainerBuildWithKoji, self).tearDown()
+
+    def test_using_kojiprofile(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
                    'container-build']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            cli.container_build()
+            cli.container_build_koji()
 
-        container_build_koji.assert_called_once_with(
+        self.mock_container_build_koji.assert_called_once_with(
             False,
             opts={
                 'scratch': False,
@@ -201,17 +208,16 @@ class TestContainerBuildWithKoji(CliTestCase):
             nowait=False
         )
 
-    @patch('pyrpkg.Commands.container_build_koji')
-    def test_override_target(self, container_build_koji):
+    def test_override_target(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'container-build',
                    '--target', 'f25-docker-candidate']
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            cli.container_build()
+            cli.container_build_koji()
 
         self.assertEqual('f25-docker-candidate', cli.cmd._target)
-        container_build_koji.assert_called_once_with(
+        self.mock_container_build_koji.assert_called_once_with(
             True,
             opts={
                 'scratch': False,
@@ -227,8 +233,7 @@ class TestContainerBuildWithKoji(CliTestCase):
             nowait=False
         )
 
-    @patch('pyrpkg.Commands.container_build_koji')
-    def test_using_deprecated_kojiconfig(self, container_build_koji):
+    def test_using_deprecated_kojiconfig(self):
         """test_build_using_deprecated_kojiconfig
 
         This is for ensuring container_build works with deprecated kojiconfig.
@@ -244,9 +249,9 @@ class TestContainerBuildWithKoji(CliTestCase):
 
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli(cfg_file)
-            cli.container_build()
+            cli.container_build_koji()
 
-        container_build_koji.assert_called_once_with(
+        self.mock_container_build_koji.assert_called_once_with(
             False,
             opts={
                 'scratch': False,
@@ -261,6 +266,21 @@ class TestContainerBuildWithKoji(CliTestCase):
             koji_task_watcher=cli._watch_koji_tasks,
             nowait=False
         )
+
+    def test_use_container_build_own_config(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'container-build']
+        cfg_file = os.path.join(os.path.dirname(__file__),
+                                'fixtures',
+                                'rpkg-container-own-config.conf')
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli(cfg_file)
+            cli.container_build_koji()
+
+        args, kwargs = self.mock_container_build_koji.call_args
+        self.assertEqual('koji-container', kwargs['kojiprofile'])
+        self.assertEqual('koji', kwargs['build_client'])
 
 
 class TestClog(CliTestCase):
