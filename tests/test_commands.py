@@ -372,6 +372,16 @@ class TestProperties(CommandTestCase):
         cmd = self.make_commands()
         self.assertEqual('docpkg.spec', cmd.spec)
 
+    def test_no_spec_as_it_is_deadpackage(self):
+        with patch('os.listdir', return_value=['dead.package']):
+            cmd = self.make_commands()
+            self.assertRaises(rpkgError, cmd.load_spec)
+
+    def test_no_spec_there(self):
+        with patch('os.listdir', return_value=['anyfile']):
+            cmd = self.make_commands()
+            self.assertRaises(rpkgError, cmd.load_spec)
+
     def test_nvr(self):
         cmd = self.make_commands(dist='eng-rhel-6')
 
