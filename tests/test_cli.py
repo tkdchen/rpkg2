@@ -1434,3 +1434,79 @@ class TestMockConfig(CliTestCase):
         args, kwargs = self.mock_genMockConfig.call_args
         self.assertEqual('f26-candidate-i686', args[0])
         self.assertEqual('i686', args[1])
+
+
+class TestContainerBuildSetup(CliTestCase):
+    """Test container-build-setup command"""
+
+    def setUp(self):
+        super(TestContainerBuildSetup, self).setUp()
+
+        self.osbs_repo_config = os.path.join(self.cloned_repo_path,
+                                             '.osbs-repo-config')
+        self.write_file(self.osbs_repo_config, '''[autorebuild]
+enabled = True
+''')
+
+        self.log_patcher = patch.object(pyrpkg, 'log')
+        self.mock_log = self.log_patcher.start()
+
+    def tearDown(self):
+        if os.path.exists(self.osbs_repo_config):
+            os.unlink(self.osbs_repo_config)
+        self.mock_log.stop()
+        super(TestContainerBuildSetup, self).tearDown()
+
+    def test_get_autorebuild_when_config_file_not_exists(self):
+        os.unlink(self.osbs_repo_config)
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'container-build-setup', '--get-autorebuild']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.container_build_setup()
+
+        self.mock_log.info.assert_called_once_with('false')
+
+    def test_get_autorebuild_from_config_file(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'container-build-setup', '--get-autorebuild']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.container_build_setup()
+
+        self.mock_log.info.assert_called_once_with('true')
+
+    def test_set_autorebuild_by_creating_config_file(self):
+        os.unlink(self.osbs_repo_config)
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'container-build-setup', '--set-autorebuild', 'true']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.Commands.repo',
+                       new_callable=PropertyMock) as repo:
+                cli.container_build_setup()
+
+                repo.return_value.index.add.assert_called_once_with(
+                    [self.osbs_repo_config])
+
+        repo_config = self.read_file(self.osbs_repo_config).strip()
+        self.assertEqual('''[autorebuild]
+enabled = true''', repo_config)
+
+    def test_set_autorebuild_in_existing_config_file(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'container-build-setup', '--set-autorebuild', 'false']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('pyrpkg.Commands.repo',
+                       new_callable=PropertyMock) as repo:
+                cli.container_build_setup()
+
+                repo.return_value.index.add.assert_called_once_with(
+                    [self.osbs_repo_config])
+
+        repo_config = self.read_file(self.osbs_repo_config).strip()
+        self.assertEqual('''[autorebuild]
+enabled = false''', repo_config)
