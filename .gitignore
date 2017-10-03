@@ -10,3 +10,4 @@ dist/
 rpkg.egg-info/
 /sources
 .coverage
+.vscode
