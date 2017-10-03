@@ -1222,39 +1222,85 @@ class TestImportSrpm(LookasideCacheMock, CliTestCase):
 class TestMockbuild(CliTestCase):
     """Test mockbuild command"""
 
-    @patch('pyrpkg.Commands._run_command')
-    def test_mockbuild(self, _run_command):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
-                   '--release', 'rhel-6', 'mockbuild',
-                   '--root', '/etc/mock/some-root']
+    def setUp(self):
+        super(TestMockbuild, self).setUp()
+        self.run_command_patcher = patch('pyrpkg.Commands._run_command')
+        self.mock_run_command = self.run_command_patcher.start()
 
+    def tearDown(self):
+        self.run_command_patcher.stop()
+        super(TestMockbuild, self).tearDown()
+
+    def mockbuild(self, cli_cmd):
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.mockbuild()
+            return cli
+
+    def test_mockbuild(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--release', 'rhel-6', 'mockbuild',
+                   '--root', '/etc/mock/some-root']
+        cli = self.mockbuild(cli_cmd)
 
         expected_cmd = ['mock', '-r', '/etc/mock/some-root',
                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
                         cli.cmd.srpmname]
-        _run_command.assert_called_with(expected_cmd)
+        self.mock_run_command.assert_called_with(expected_cmd)
 
-    @patch('pyrpkg.Commands._run_command')
-    def test_with_without(self, _run_command):
+    def test_with_without(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
                    '--release', 'rhel-6', 'mockbuild',
                    '--root', '/etc/mock/some-root',
                    '--with', 'a', '--without', 'b', '--with', 'c',
                    '--without', 'd']
-
-        with patch('sys.argv', new=cli_cmd):
-            cli = self.new_cli()
-            cli.mockbuild()
+        cli = self.mockbuild(cli_cmd)
 
         expected_cmd = ['mock', '--with', 'a', '--with', 'c',
                         '--without', 'b', '--without', 'd',
                         '-r', '/etc/mock/some-root',
                         '--resultdir', cli.cmd.mock_results_dir, '--rebuild',
                         cli.cmd.srpmname]
-        _run_command.assert_called_with(expected_cmd)
+        self.mock_run_command.assert_called_with(expected_cmd)
+
+    @patch('pyrpkg.Commands._config_dir_basic')
+    @patch('pyrpkg.Commands._config_dir_other')
+    @patch('os.path.exists', return_value=False)
+    def test_use_mock_config_got_from_koji(
+            self, exists, config_dir_other, config_dir_basic):
+        config_dir_basic.return_value = '/path/to/config-dir'
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--release', 'rhel-7', 'mockbuild']
+        self.mockbuild(cli_cmd)
+
+        args, kwargs = self.mock_run_command.call_args
+        cmd_to_execute = args[0]
+
+        self.assertTrue('--configdir' in cmd_to_execute)
+        self.assertTrue(config_dir_basic.return_value in cmd_to_execute)
+
+    @patch('pyrpkg.Commands._config_dir_basic')
+    @patch('os.path.exists', return_value=False)
+    def test_fail_to_store_mock_config_in_created_config_dir(
+            self, exists, config_dir_basic):
+        config_dir_basic.side_effect = rpkgError
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--release', 'rhel-7', 'mockbuild']
+        self.assertRaises(rpkgError, self.mockbuild, cli_cmd)
+
+    @patch('pyrpkg.Commands._config_dir_basic')
+    @patch('pyrpkg.Commands._config_dir_other')
+    @patch('os.path.exists', return_value=False)
+    def test_fail_to_populate_mock_config(
+            self, exists, config_dir_other, config_dir_basic):
+        config_dir_basic.return_value = '/path/to/config-dir'
+        config_dir_other.side_effect = rpkgError
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   '--release', 'rhel-7', 'mockbuild']
+        self.assertRaises(rpkgError, self.mockbuild, cli_cmd)
 
 
 class TestCoprBuild(CliTestCase):

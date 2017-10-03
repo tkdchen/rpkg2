@@ -1,16 +1,21 @@
 # -*- coding: utf-8 -*-
 
+import errno
 import os
 import shutil
 import six
 import subprocess
 import tempfile
 
+from contextlib import contextmanager
+
 import git
 import rpm
+from mock import call
 from mock import patch
 from mock import Mock
 from mock import PropertyMock
+from mock import mock_open
 
 from pyrpkg import rpkgError
 
@@ -691,3 +696,200 @@ class TestConstructBuildURL(CommandTestCase):
             anongiturl % {'module': ns_module_name.return_value},
             commithash.return_value)
         self.assertEqual(expected_url, url)
+
+
+class TestCleanupTmpDir(CommandTestCase):
+    """Test Commands._cleanup_tmp_dir for mockbuild command"""
+
+    def setUp(self):
+        super(TestCleanupTmpDir, self).setUp()
+        self.tmp_dir_name = tempfile.mkdtemp(prefix='test-cleanup-tmp-dir-')
+
+    def tearDown(self):
+        if os.path.exists(self.tmp_dir_name):
+            os.rmdir(self.tmp_dir_name)
+        super(TestCleanupTmpDir, self).tearDown()
+
+    @patch('shutil.rmtree')
+    def test_do_nothing_is_tmp_dir_is_invalid(self, rmtree):
+        cmd = self.make_commands()
+        for invalid_dir in ('', None):
+            cmd._cleanup_tmp_dir(invalid_dir)
+            rmtree.assert_not_called()
+
+    def test_remove_tmp_dir(self):
+        cmd = self.make_commands()
+        cmd._cleanup_tmp_dir(self.tmp_dir_name)
+
+        self.assertFalse(os.path.exists(self.tmp_dir_name))
+
+    def test_keep_silient_if_tmp_dir_does_not_exist(self):
+        cmd = self.make_commands()
+        tmp_dir = tempfile.mkdtemp()
+        os.rmdir(tmp_dir)
+
+        cmd._cleanup_tmp_dir(tmp_dir)
+
+    def test_raise_error_if_other_non_no_such_file_dir_error(self):
+        cmd = self.make_commands()
+        with patch('shutil.rmtree',
+                   side_effect=OSError((errno.EEXIST), 'error message')):
+            self.assertRaises(rpkgError, cmd._cleanup_tmp_dir, '/tmp/dir')
+
+
+class TestConfigMockConfigDir(CommandTestCase):
+    """Test Commands._config_dir_basic for mockbuild"""
+
+    def setUp(self):
+        super(TestConfigMockConfigDir, self).setUp()
+
+        self.cmd = self.make_commands()
+
+        self.fake_root = 'fedora-26-x86_64'
+        self.mock_config_patcher = patch('pyrpkg.Commands.mock_config',
+                                         return_value='mock config x86_64')
+        self.mock_mock_config = self.mock_config_patcher.start()
+
+        self.mkdtemp_patcher = patch('tempfile.mkdtemp',
+                                     return_value='/tmp/mockconfig/dir')
+        self.mock_mkdtemp = self.mkdtemp_patcher.start()
+
+    def tearDown(self):
+        self.mkdtemp_patcher.stop()
+        self.mock_config_patcher.stop()
+        super(TestConfigMockConfigDir, self).tearDown()
+
+    @contextmanager
+    def assert_file_op(self, filename, mode, write_data=None):
+        """Assert file object operation"""
+        with patch('__builtin__.open', mock_open()) as mock:
+            yield
+            mock.assert_called_once_with(filename, mode)
+            if write_data is not None:
+                mock.return_value.write.assert_called_once_with(write_data)
+
+    def test_config_in_created_config_dir(self):
+        config_file = '{0}.cfg'.format(
+            os.path.join(self.mock_mkdtemp.return_value, self.fake_root))
+
+        with self.assert_file_op(
+                config_file, 'wb',
+                write_data=self.mock_mock_config.return_value):
+            config_dir = self.cmd._config_dir_basic(root=self.fake_root)
+            self.assertEqual(self.mock_mkdtemp.return_value, config_dir)
+
+    def test_config_in_specified_config_dir(self):
+        fake_config_dir = '/path/to/fake/config-dir'
+        config_file = '{0}.cfg'.format(
+            os.path.join(fake_config_dir, self.fake_root))
+
+        with self.assert_file_op(
+                config_file, 'wb',
+                write_data=self.mock_mock_config.return_value):
+            config_dir = self.cmd._config_dir_basic(config_dir=fake_config_dir,
+                                                    root=self.fake_root)
+            self.assertEqual(fake_config_dir, config_dir)
+
+    @patch('pyrpkg.Commands.mockconfig', new_callable=PropertyMock)
+    def test_config_using_root_guessed_from_branch(self, mockconfig):
+        mockconfig.return_value = 'f26-candidate-i686'
+        config_file = '{0}.cfg'.format(
+            os.path.join(self.mock_mkdtemp.return_value,
+                         mockconfig.return_value))
+
+        with self.assert_file_op(
+                config_file, 'wb',
+                write_data=self.mock_mock_config.return_value):
+            config_dir = self.cmd._config_dir_basic()
+            self.assertEqual(self.mock_mkdtemp.return_value,
+                             config_dir)
+
+    def test_fail_if_error_occurs_while_getting_mock_config(self):
+        self.mock_mock_config.side_effect = rpkgError
+
+        with patch('pyrpkg.Commands._cleanup_tmp_dir') as mock:
+            self.assertRaises(
+                rpkgError, self.cmd._config_dir_basic, root=self.fake_root)
+            mock.assert_called_once_with(self.mock_mkdtemp.return_value)
+
+        with patch('pyrpkg.Commands._cleanup_tmp_dir') as mock:
+            self.assertRaises(rpkgError,
+                              self.cmd._config_dir_basic,
+                              config_dir='/path/to/fake/config-dir',
+                              root=self.fake_root)
+            mock.assert_called_once_with(None)
+
+    def test_fail_if_error_occurs_while_writing_cfg_file(self):
+        with patch('__builtin__.open', mock_open()) as m:
+            m.return_value.write.side_effect = IOError
+
+            with patch('pyrpkg.Commands._cleanup_tmp_dir') as mock:
+                self.assertRaises(rpkgError,
+                                  self.cmd._config_dir_basic,
+                                  root=self.fake_root)
+                mock.assert_called_once_with(self.mock_mkdtemp.return_value)
+
+            with patch('pyrpkg.Commands._cleanup_tmp_dir') as mock:
+                self.assertRaises(rpkgError,
+                                  self.cmd._config_dir_basic,
+                                  config_dir='/path/to/fake/config-dir',
+                                  root=self.fake_root)
+                mock.assert_called_once_with(None)
+
+
+class TestConfigMockConfigDirWithNecessaryFiles(CommandTestCase):
+    """Test Commands._config_dir_other"""
+
+    @patch('shutil.copy2')
+    @patch('os.path.exists', return_value=True)
+    def test_copy_cfg_files_from_etc_mock_dir(self, exists, copy2):
+        cmd = self.make_commands()
+        cmd._config_dir_other('/path/to/config-dir')
+
+        exists.assert_has_calls([
+            call('/etc/mock/site-defaults.cfg'),
+            call('/etc/mock/logging.ini')
+        ])
+        copy2.assert_has_calls([
+            call('/etc/mock/site-defaults.cfg',
+                 '/path/to/config-dir/site-defaults.cfg'),
+            call('/etc/mock/logging.ini',
+                 '/path/to/config-dir/logging.ini'),
+        ])
+
+    @patch('os.path.exists', return_value=False)
+    def test_create_empty_cfg_files_if_not_exist_in_system_mock(self, exists):
+        cmd = self.make_commands()
+
+        with patch('__builtin__.open', mock_open()) as m:
+            cmd._config_dir_other('/path/to/config-dir')
+
+            m.assert_has_calls([
+                call('/path/to/config-dir/site-defaults.cfg', 'w'),
+                call().close(),
+                call('/path/to/config-dir/logging.ini', 'w'),
+                call().close(),
+            ])
+
+        exists.assert_has_calls([
+            call('/etc/mock/site-defaults.cfg'),
+            call('/etc/mock/logging.ini')
+        ])
+
+    @patch('shutil.copy2')
+    @patch('os.path.exists', return_value=True)
+    def test_fail_when_copy_cfg_file(self, exists, copy2):
+        copy2.side_effect = OSError
+
+        cmd = self.make_commands()
+        self.assertRaises(rpkgError,
+                          cmd._config_dir_other, '/path/to/config-dir')
+
+    @patch('os.path.exists', return_value=False)
+    def test_fail_if_error_when_write_empty_cfg_files(self, exists):
+        cmd = self.make_commands()
+
+        with patch('__builtin__.open', mock_open()) as m:
+            m.side_effect = IOError
+            self.assertRaises(rpkgError,
+                              cmd._config_dir_other, '/path/to/config-dir')

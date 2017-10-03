@@ -2336,7 +2336,7 @@ class Commands(object):
         try:
             shutil.rmtree(tmp_dir)
         except OSError as error:
-            if error.errno != errno.EEXIST:
+            if error.errno != errno.ENOENT:
                 raise rpkgError('Failed to remove temporary directory'
                                 ' %s. Reason: %s.' % (tmp_dir, error))
 
