@@ -10,6 +10,7 @@ except ImportError:
     rpmfluff = None
 import shutil
 import six
+import subprocess
 import sys
 import tempfile
 try:
@@ -75,7 +76,8 @@ class CliTestCase(CommandTestCase):
             cmds.append(['git', 'commit', '-m', 'Add new file {0}'.format(_filename)])
 
         for cmd in cmds:
-            self.run_cmd(cmd, cwd=repo_path)
+            self.run_cmd(cmd, cwd=repo_path,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 class TestModuleNameOption(CliTestCase):
@@ -347,7 +349,7 @@ class TestCommit(CliTestCase):
 
     def test_with_clog(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'commit', '--clog']
-
+        
         with patch('sys.argv', new=cli_cmd):
             self.cli_commit()
 
@@ -891,8 +893,12 @@ class TestNew(CliTestCase):
 
     @patch('sys.stdout', new=StringIO())
     def test_get_diff(self):
-        self.run_cmd(['git', 'tag', '-m', 'New release v0.1', 'v0.1'], cwd=self.cloned_repo_path)
-        self.make_changes(repo=self.cloned_repo_path, commit=True, content='New change')
+        self.run_cmd(['git', 'tag', '-m', 'New release v0.1', 'v0.1'],
+                     cwd=self.cloned_repo_path,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.make_changes(repo=self.cloned_repo_path,
+                          commit=True,
+                          content='New change')
 
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'new']
 
@@ -927,7 +933,9 @@ class TestNewPrintUnicode(CliTestCase):
 
     def setUp(self):
         super(TestNewPrintUnicode, self).setUp()
-        self.run_cmd(['git', 'tag', '-m', 'New release 0.1', '0.1'], cwd=self.cloned_repo_path)
+        self.run_cmd(['git', 'tag', '-m', 'New release 0.1', '0.1'],
+                     cwd=self.cloned_repo_path,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.make_a_dummy_commit(git.Repo(self.cloned_repo_path),
                                  file_content='Include unicode chars á ř',
                                  commit_message=u'Write unicode to file')
@@ -1149,7 +1157,8 @@ class TestImportSrpm(LookasideCacheMock, CliTestCase):
             ['git', 'commit', '-m', '"Add README"'],
         )
         for cmd in cmds:
-            self.run_cmd(cmd, cwd=self.chaos_repo)
+            self.run_cmd(cmd, cwd=self.chaos_repo,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def tearDown(self):
         os.remove(self.docpkg_gz)

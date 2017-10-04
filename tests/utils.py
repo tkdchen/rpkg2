@@ -136,11 +136,13 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
             ['git', 'branch', 'rhel-7'],
             ]
         for cmd in git_cmds:
-            self.run_cmd(cmd, cwd=self.repo_path)
+            self.run_cmd(cmd, cwd=self.repo_path,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Clone the repo
         self.cloned_repo_path = tempfile.mkdtemp(prefix='rpkg-commands-tests-cloned-')
-        self.run_cmd(['git', 'clone', self.repo_path, self.cloned_repo_path])
+        self.run_cmd(['git', 'clone', self.repo_path, self.cloned_repo_path],
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         git_cmds = [
             ['git', 'config', 'user.email', 'tester@example.com'],
             ['git', 'config', 'user.name', 'tester'],
@@ -149,7 +151,8 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
             ['git', 'branch', '--track', 'eng-rhel-7', 'origin/eng-rhel-7'],
             ]
         for cmd in git_cmds:
-            self.run_cmd(cmd, cwd=self.cloned_repo_path)
+            self.run_cmd(cmd, cwd=self.cloned_repo_path,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def tearDown(self):
         shutil.rmtree(self.repo_path)

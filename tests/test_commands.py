@@ -3,6 +3,7 @@
 import os
 import shutil
 import six
+import subprocess
 import tempfile
 
 import git
@@ -560,7 +561,7 @@ class TestLoadModuleNameFromSpecialPushURL(CommandTestCase):
 
         self.case_repo = tempfile.mkdtemp(prefix='case-test-load-module-name-')
         cmd = ['git', 'clone', '{0}/'.format(self.repo_path), self.case_repo]
-        self.run_cmd(cmd)
+        self.run_cmd(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def tearDown(self):
         shutil.rmtree(self.case_repo)
