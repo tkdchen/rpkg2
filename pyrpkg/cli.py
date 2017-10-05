@@ -12,6 +12,7 @@
 # There are 6 functions derived from /usr/bin/koji which are licensed under
 # LGPLv2.1.  See comments before those functions.
 
+from __future__ import print_function
 import argparse
 import logging
 import os
@@ -290,6 +291,12 @@ class cliClient(object):
         self.register_local()
         self.register_mockbuild()
         self.register_mock_config()
+        self.register_module_build()
+        self.register_module_build_cancel()
+        self.register_module_build_info()
+        self.register_module_local_build()
+        self.register_module_build_watch()
+        self.register_module_overview()
         self.register_new()
         self.register_new_sources()
         self.register_patch()
@@ -704,6 +711,87 @@ defined, packages will be built sequentially.""" % {'name': self.name})
             '--target', help='Override target used for config', default=None)
         mock_config_parser.add_argument('--arch', help='Override local arch')
         mock_config_parser.set_defaults(command=self.mock_config)
+
+    def register_module_build(self):
+        sub_help = 'Build a module using MBS'
+        self.module_build_parser = self.subparsers.add_parser(
+            'module-build', help=sub_help, description=sub_help)
+        self.module_build_parser.add_argument(
+            'scm_url', nargs='?',
+            help='The module\'s SCM URL. This defaults to the current repo.')
+        self.module_build_parser.add_argument(
+            'branch', nargs='?',
+            help=('The module\'s SCM branch. This defaults to the current '
+                  'checked-out branch.'))
+        self.module_build_parser.add_argument(
+            '--watch', '-w', help='Watch the module build',
+            action='store_true')
+        self.module_build_parser.add_argument(
+            '--optional', action='append', metavar='KEY=VALUE',
+            dest='optional',
+            help='MBS optional arguments in the form of "key=value"')
+        self.module_build_parser.set_defaults(command=self.module_build)
+
+    def register_module_build_cancel(self):
+        sub_help = 'Cancel an MBS module build'
+        self.module_build_cancel_parser = self.subparsers.add_parser(
+            'module-build-cancel', help=sub_help, description=sub_help)
+        self.module_build_cancel_parser.add_argument(
+            'build_id', help='The ID of the module build to cancel', type=int)
+        self.module_build_cancel_parser.set_defaults(
+            command=self.module_build_cancel)
+
+    def register_module_build_info(self):
+        sub_help = 'Show information of an MBS module build'
+        self.module_build_info_parser = self.subparsers.add_parser(
+            'module-build-info', help=sub_help, description=sub_help)
+        self.module_build_info_parser.add_argument(
+            'build_id', help='The ID of the module build', type=int)
+        self.module_build_info_parser.set_defaults(
+            command=self.module_build_info)
+
+    def register_module_local_build(self):
+        sub_help = 'Build a module locally using the mbs-manager command'
+        self.module_build_local_parser = self.subparsers.add_parser(
+            'module-build-local', help=sub_help, description=sub_help)
+        self.module_build_local_parser.add_argument(
+            'scm_url', nargs='?',
+            help='The module\'s SCM URL. This defaults to the current repo.')
+        self.module_build_local_parser.add_argument(
+            'branch', nargs='?',
+            help=('The module\'s SCM branch. This defaults to the current '
+                  'checked-out branch.'))
+        self.module_build_local_parser.add_argument(
+            '--skip-tests', help='Adds a macro for skipping the check section',
+            action='store_true')
+        self.module_build_local_parser.add_argument(
+            '--add-local-build', action='append', dest='local_builds_nsvs',
+            metavar='BUILD_ID', type=int,
+            help='Import previously finished local module builds into MBS')
+        self.module_build_local_parser.set_defaults(
+            command=self.module_build_local)
+
+    def register_module_build_watch(self):
+        sub_help = 'Watch an MBS build'
+        self.module_build_watch_parser = self.subparsers.add_parser(
+            'module-build-watch', help=sub_help, description=sub_help)
+        self.module_build_watch_parser.add_argument(
+            'build_id', help='The ID of the module build to watch', type=int)
+        self.module_build_watch_parser.set_defaults(
+            command=self.module_build_watch)
+
+    def register_module_overview(self):
+        sub_help = 'Shows an overview of MBS builds'
+        self.module_overview_parser = self.subparsers.add_parser(
+            'module-overview', help=sub_help, description=sub_help)
+        self.module_overview_parser.add_argument(
+            '--unfinished', help='Show unfinished module builds',
+            default=False, action='store_true')
+        self.module_overview_parser.add_argument(
+            '--limit', default=10, type=int,
+            help='The number of most recent module builds to display')
+        self.module_overview_parser.set_defaults(
+            command=self.module_overview)
 
     def register_new_sources(self):
         """Register the new-sources target"""
@@ -1314,6 +1402,170 @@ see API KEY section of copr-cli(1) man page.
 
     def mock_config(self):
         print(self.cmd.mock_config(self.args.target, self.args.arch))
+
+    def module_build(self):
+        """
+        Builds a module using MBS
+        :return: None
+        """
+        self.module_validate_config()
+        scm_url, branch = self.cmd.module_get_scm_info(
+            self.args.scm_url, self.args.branch)
+        api_url = self.config.get(self.config_section, 'api_url')
+        auth_method, oidc_id_provider, oidc_client_id, oidc_client_secret, \
+            oidc_scopes = self.module_get_auth_config()
+
+        if not self.args.q:
+            print('Submitting the module build...')
+        build_id = self._cmd.module_submit_build(
+            api_url, scm_url, branch, auth_method, self.args.optional,
+            oidc_id_provider, oidc_client_id, oidc_client_secret, oidc_scopes)
+        if self.args.watch:
+            self.module_watch_build(build_id)
+        elif not self.args.q:
+            print('The build #{0} was submitted to the MBS'
+                  .format(build_id))
+
+    def module_build_cancel(self):
+        """
+        Cancel an MBS build
+        :return: None
+        """
+        self.module_validate_config()
+        build_id = self.args.build_id
+        api_url = self.config.get(self.config_section, 'api_url')
+        auth_method, oidc_id_provider, oidc_client_id, oidc_client_secret, \
+            oidc_scopes = self.module_get_auth_config()
+
+        if not self.args.q:
+            print('Cancelling module build #{0}...'.format(build_id))
+        self.cmd.module_build_cancel(
+            api_url, build_id, auth_method, oidc_id_provider, oidc_client_id,
+            oidc_client_secret, oidc_scopes)
+        if not self.args.q:
+                print('The module build #{0} was cancelled'.format(build_id))
+
+    def module_build_info(self):
+        """
+        Show information about an MBS build
+        :return: None
+        """
+        self.module_validate_config()
+        api_url = self.config.get(self.config_section, 'api_url')
+        self.cmd.module_build_info(api_url, self.args.build_id)
+
+    def module_build_local(self):
+        """
+        Build a module locally using mbs-manager
+        :return: None
+        """
+        self.module_validate_config()
+        scm_url, branch = self.cmd.module_get_scm_info(
+            self.args.scm_url, self.args.branch)
+        self.cmd.module_local_build(
+            scm_url, branch, self.args.local_builds_nsvs,
+            self.args.skip_tests, verbose=self.args.v, debug=self.args.debug)
+
+    def module_get_auth_config(self):
+        """
+        Get the authentication configuration for the MBS
+        :return: a tuple consisting of the authentication method, the OIDC ID
+        provider, the OIDC client ID, the OIDC client secret, and the OIDC
+        scopes. If the authentication method is not OIDC, the OIDC values in
+        the tuple are set to None.
+        """
+        auth_method = self.config.get(self.config_section, 'auth_method')
+        oidc_id_provider = None
+        oidc_client_id = None
+        oidc_client_secret = None
+        oidc_scopes = None
+        if auth_method == 'oidc':
+            oidc_id_provider = self.config.get(
+                self.config_section, 'oidc_id_provider')
+            oidc_client_id = self.config.get(
+                self.config_section, 'oidc_client_id')
+            oidc_scopes_str = self.config.get(
+                self.config_section, 'oidc_scopes')
+            oidc_scopes = [
+                scope.strip() for scope in oidc_scopes_str.split(',')]
+            if self.config.has_option(self.config_section,
+                                      'oidc_client_secret'):
+                oidc_client_secret = self.config.get(
+                    self.config_section, 'oidc_client_secret')
+        return (auth_method, oidc_id_provider, oidc_client_id,
+                oidc_client_secret, oidc_scopes)
+
+    def module_build_watch(self):
+        """
+        Watch an MBS build from the command-line
+        :return: None
+        """
+        self.module_validate_config()
+        self.module_watch_build(self.args.build_id)
+
+    def module_overview(self):
+        """
+        Show the overview of the latest builds in the MBS
+        :return: None
+        """
+        self.module_validate_config()
+        api_url = self.config.get(self.config_section, 'api_url')
+        self.cmd.module_overview(
+            api_url, self.args.limit, finished=(not self.args.unfinished))
+
+    def module_validate_config(self):
+        """
+        Validates the configuration needed for MBS commands
+        :return: None or rpkgError
+        """
+        self.config_section = '{0}.mbs'.format(self.name)
+        # Verify that all necessary config options are set
+        config_error = ('The config option "{0}" in the "{1}" section is '
+                        'required')
+        if not self.config.has_option(self.config_section, 'auth_method'):
+            raise rpkgError(config_error.format(
+                'auth_method', self.config_section))
+        required_configs = ['api_url']
+        auth_method = self.config.get(self.config_section, 'auth_method')
+        if auth_method not in ['oidc', 'kerberos']:
+            raise rpkgError('The MBS authentication mechanism of "{0}" is not '
+                            'supported'.format(auth_method))
+
+        if auth_method == 'oidc':
+            # Try to import this now so the user gets immediate feedback if
+            # it isn't installed
+            try:
+                import openidc_client  # noqa: F401
+            except ImportError:
+                raise rpkgError('python-openidc-client needs to be installed')
+            required_configs.append('oidc_id_provider')
+            required_configs.append('oidc_client_id')
+            required_configs.append('oidc_scopes')
+        elif auth_method == 'kerberos':
+            # Try to import this now so the user gets immediate feedback if
+            # it isn't installed
+            try:
+                import requests_kerberos  # noqa: F401
+            except ImportError:
+                raise rpkgError(
+                    'python-requests-kerberos needs to be installed')
+
+        for required_config in required_configs:
+            if not self.config.has_option(self.config_section,
+                                          required_config):
+                raise rpkgError(config_error.format(
+                    required_config, self.config_section))
+
+    def module_watch_build(self, build_id):
+        """
+        Watches the MBS build in a loop that updates every 15 seconds.
+        The loop ends when the build state is 'failed', 'done', or 'ready'.
+        :param build_id: an integer of the module build to watch
+        :return: None
+        """
+        self.module_validate_config()
+        api_url = self.config.get(self.config_section, 'api_url')
+        self.cmd.module_watch_build(api_url, build_id)
 
     def new(self):
         new_diff = self.cmd.new()

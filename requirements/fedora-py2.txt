@@ -4,6 +4,9 @@ python2-koji
 python2-pycurl
 python-six
 python2-rpm  # rpm-python originally
+python2-requests
+# python2-openidc-client # used for MBS OIDC authentication
+# python2-requests-kerberos # used for MBS Kerberos authentication
 
 # For running tests
 python2-coverage
@@ -11,3 +14,4 @@ python2-flake8
 python2-mock
 python2-nose
 python2-rpmfluff
+python2-openidc-client # used in MBS tests

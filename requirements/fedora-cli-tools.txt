@@ -4,3 +4,4 @@ copr-cli
 mock
 rpm-build
 rpmlint
+module-build-service # needed for the module-buld-local command

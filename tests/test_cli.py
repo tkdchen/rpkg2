@@ -24,13 +24,11 @@ from six.moves import StringIO
 
 import git
 import pyrpkg.cli
+import openidc_client
 
 import utils
-from mock import PropertyMock
-from mock import call
-from mock import mock_open
-from mock import patch
-from pyrpkg import rpkgError
+from mock import PropertyMock, call, mock_open, patch, Mock
+from pyrpkg import rpkgError, Commands
 from utils import CommandTestCase
 
 
@@ -1705,3 +1703,429 @@ class TestPatch(CliTestCase):
 
                 exists.assert_called_once_with(
                     os.path.join(cli.cmd.path, patch_file))
+
+
+class TestModulesCli(CliTestCase):
+    """Test module commands"""
+
+    scopes = [
+        'openid',
+        'https://id.fedoraproject.org/scope/groups',
+        'https://mbs.fedoraproject.org/oidc/submit-build'
+    ]
+    module_build_json = {
+        'component_builds': [
+            59417, 59418, 59419, 59420, 59421, 59422, 59423, 59428,
+            59424, 59425],
+        'id': 2150,
+        'koji_tag': 'module-14050f52e62d955b',
+        'modulemd': '...',
+        'name': 'python3-ecosystem',
+        'owner': 'torsava',
+        'scmurl': ('git://pkgs.fedoraproject.org/modules/python3-ecosystem'
+                    '?#34774a9416c799aadda74f2c44ec4dba4d519c04'),
+        'state': 4,
+        'state_name': 'failed',
+        'state_reason': 'Some error',
+        'state_trace': [],
+        'state_url': '/module-build-service/1/module-builds/1093',
+        'stream': 'master',
+        'tasks': {
+            'rpms': {
+                'module-build-macros': {
+                    'nvr': 'module-build-macros-None-None',
+                    'state': 3,
+                    'state_reason': 'Some error',
+                    'task_id': 22370514
+                },
+                'python-cryptography': {
+                    'nvr': None,
+                    'state': 3,
+                    'state_reason': 'Some error',
+                    'task_id': None
+                },
+                'python-dns': {
+                    'nvr': None,
+                    'state': 3,
+                    'state_reason': 'Some error',
+                    'task_id': None
+                }
+            }
+        },
+        'time_completed': '2017-10-11T09:42:11Z',
+        'time_modified': '2017-10-11T09:42:11Z',
+        'time_submitted': '2017-10-10T14:55:33Z',
+        'version': '20171010145511'
+    }
+
+    @patch('sys.stdout', new=StringIO())
+    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    def test_module_build(self, mock_oidc_req):
+        """
+        Test a module build with an SCM URL and branch supplied
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build',
+            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
+            'master'
+        ]
+        mock_rv = Mock()
+        mock_rv.json.return_value = {'id': 1094}
+        mock_oidc_req.return_value = mock_rv
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_build()
+
+        exp_url = ('https://mbs.fedoraproject.org/module-build-service/1/'
+                   'module-builds/')
+        exp_json = {
+            'scmurl': ('git://pkgs.fedoraproject.org/modules/testmodule?'
+                       '#79d87a5a'),
+            'branch': 'master'}
+        mock_oidc_req.assert_called_once_with(
+            exp_url,
+            http_method='POST',
+            json=exp_json,
+            scopes=self.scopes,
+            timeout=120)
+        output = sys.stdout.getvalue().strip()
+        expected_output = ('Submitting the module build...\nThe build #1094 '
+                           'was submitted to the MBS')
+        self.assertEqual(output, expected_output)
+
+    @patch('sys.stdout', new=StringIO())
+    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    def test_module_build_input(self, mock_oidc_req):
+        """
+        Test a module build with default parameters
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build'
+        ]
+        mock_rv = Mock()
+        mock_rv.json.return_value = {'id': 1094}
+        mock_oidc_req.return_value = mock_rv
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_build()
+
+        output = sys.stdout.getvalue().strip()
+        expected_output = ('Submitting the module build...\nThe build #1094 '
+                           'was submitted to the MBS')
+        self.assertEqual(output, expected_output)
+        # Can't verify the calls since the SCM commit hash always changes
+        mock_oidc_req.assert_called_once()
+
+    @patch('sys.stdout', new=StringIO())
+    @patch('requests.get')
+    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    def test_module_cancel(self, mock_oidc_req, mock_get):
+        """
+        Test canceling a module build when the build exists
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-cancel',
+            '1125'
+        ]
+        mock_rv = Mock()
+        mock_rv.json.return_value = {'id': 1094}
+        mock_get.return_value = mock_rv
+        mock_rv_two = Mock()
+        mock_rv_two.json.ok = True
+        mock_oidc_req.return_value = mock_rv_two
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_build_cancel()
+        exp_url = ('https://mbs.fedoraproject.org/module-build-service/1/'
+                   'module-builds/1125?verbose=true')
+        mock_get.assert_called_once_with(exp_url, timeout=60)
+        exp_url_two = ('https://mbs.fedoraproject.org/module-build-service/1/'
+                       'module-builds/1125')
+        mock_oidc_req.assert_called_once_with(
+            exp_url_two,
+            http_method='PATCH',
+            json={'state': 'failed'},
+            scopes=self.scopes,
+            timeout=60)
+        output = sys.stdout.getvalue().strip()
+        expected_output = ('Cancelling module build #1125...\nThe module '
+                           'build #1125 was cancelled')
+        self.assertEqual(output, expected_output)
+
+    @patch('requests.get')
+    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    def test_module_cancel_not_found(self, mock_oidc_req, mock_get):
+        """
+        Test canceling a module build when the build doesn't exist
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-cancel',
+            '1125'
+        ]
+        mock_rv = Mock()
+        mock_rv.ok = False
+        mock_rv.json.return_value = {
+            'status': 404,
+            'message': 'No such module found.',
+            'error': 'Not Found'
+        }
+        mock_get.return_value = mock_rv
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            try:
+                cli.module_build_cancel()
+                raise RuntimeError('An rpkgError was not raised')
+            except rpkgError as error:
+                expected_error = ('The following error occurred while getting '
+                                  'information on module build #1125:\nNo '
+                                  'such module found.')
+                self.assertEqual(str(error), expected_error)
+        exp_url = ('https://mbs.fedoraproject.org/module-build-service/1/'
+                   'module-builds/1125?verbose=true')
+        mock_get.assert_called_once_with(exp_url, timeout=60)
+        mock_oidc_req.assert_not_called()
+
+    @patch('sys.stdout', new=StringIO())
+    @patch('requests.get')
+    def test_module_build_info(self, mock_get):
+        """
+        Test getting information on a module build
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-info',
+            '2150'
+        ]
+        mock_rv = Mock()
+        mock_rv.ok = True
+        mock_rv.json.return_value = self.module_build_json
+        mock_get.return_value = mock_rv
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_build_info()
+        exp_url = ('https://mbs.fedoraproject.org/module-build-service/1/'
+                   'module-builds/2150?verbose=true')
+        mock_get.assert_called_once_with(exp_url, timeout=60)
+        output = sys.stdout.getvalue().strip()
+        expected_output = """
+Name:           python3-ecosystem
+Stream:         master
+Version:        20171010145511
+Koji Tag:       module-14050f52e62d955b
+Owner:          torsava
+State:          failed
+State Reason:   Some error
+Time Submitted: 2017-10-10T14:55:33Z
+Time Completed: 2017-10-11T09:42:11Z
+Components:
+    Name:       module-build-macros
+    NVR:        module-build-macros-None-None
+    State:      FAILED
+    Koji Task:  https://koji.fedoraproject.org/koji/taskinfo?taskID=22370514
+
+    Name:       python-dns
+    NVR:        None
+    State:      FAILED
+    Koji Task:  
+
+    Name:       python-cryptography
+    NVR:        None
+    State:      FAILED
+    Koji Task:
+""".strip()  # noqa: W291
+        self.assertEqual(expected_output, output)
+
+    @patch('sys.stdout', new=StringIO())
+    @patch.object(Commands, 'kojiweburl',
+                  'https://koji.fedoraproject.org/koji')
+    @patch('requests.get')
+    @patch('os.system')
+    @patch.object(Commands, 'load_kojisession')
+    def test_module_build_watch(self, mock_load_koji, mock_system, mock_get):
+        """
+        Test watching a module build that is already complete
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-watch',
+            '1500'
+        ]
+        mock_rv = Mock()
+        mock_rv.ok = True
+        mock_rv.json.return_value = self.module_build_json
+        mock_get.return_value = mock_rv
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_build_watch()
+
+        exp_url = ('https://mbs.fedoraproject.org/module-build-service/1/'
+                   'module-builds/1500?verbose=true')
+        mock_get.assert_called_once_with(exp_url, timeout=60)
+        mock_system.assert_called_once_with('clear')
+        output = sys.stdout.getvalue().strip()
+        expected_output = """
+Failed:
+   module-build-macros https://koji.fedoraproject.org/koji/taskinfo?taskID=22370514
+   python-dns
+   python-cryptography
+
+Summary:
+   3 components in the "failed" state
+torsava's build #2150 of python3-ecosystem-master is in the "failed" state (reason: Some error) (koji tag: "module-14050f52e62d955b")
+""".strip()  # noqa: E501
+        self.assertEqual(output, expected_output)
+
+    @patch('sys.stdout', new=StringIO())
+    @patch('requests.get')
+    def test_module_overview(self, mock_get):
+        """
+        Test the module overview command with 4 modules in the finished state
+        and a desired limit of 2
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-overview',
+            '--limit',
+            '2'
+        ]
+        # Minimum amount of JSON for the command to succeed
+        json_one = {
+            'items': [],
+            'meta': {
+                'next': None
+            }
+        }
+        json_two = {
+            'items': [
+                {
+                    'id': 1100,
+                    'koji_tag': 'module-c24f55c24c8fede1',
+                    'name': 'testmodule',
+                    'owner': 'jkaluza',
+                    'state_name': 'ready',
+                    'stream': 'master',
+                    'version': '20171011093314'
+                },
+                {
+                    'id': 1099,
+                    'koji_tag': 'module-72e94da1453758d8',
+                    'name': 'testmodule',
+                    'owner': 'jkaluza',
+                    'state_name': 'ready',
+                    'stream': 'master',
+                    "version": "20171011092951"
+                }
+            ],
+            'meta': {
+                'next': ('http://mbs.fedoraproject.org/module-build-service/1/'
+                         'module-builds/?state=5&verbose=true&per_page=2&'
+                         'order_desc_by=id&page=2')
+            }
+        }
+        json_three = {
+            'items': [
+                {
+                    'id': 1109,
+                    'koji_tag': 'module-057fc15e0e44b333',
+                    'name': 'testmodule',
+                    'owner': 'mprahl',
+                    'state_name': 'failed',
+                    'stream': 'master',
+                    'version': '20171011173928'
+                },
+                {
+                    'id': 1094,
+                    'koji_tag': 'module-640521aea601c6b2',
+                    'name': 'testmodule',
+                    'owner': 'mprahl',
+                    'state_name': 'failed',
+                    'stream': 'master',
+                    'version': '20171010151103'
+                }
+            ],
+            'meta': {
+                'next': ('http://mbs.fedoraproject.org/module-build-service/1'
+                         '/module-builds/?state=4&verbose=true&per_page=2&'
+                         'order_desc_by=id&page=2')
+            }
+        }
+
+        mock_rv = Mock()
+        mock_rv.ok = True
+        mock_rv.json.side_effect = [json_one, json_two, json_three]
+        mock_get.return_value = mock_rv
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_overview()
+
+        # Can't confirm the call parameters because multithreading makes the
+        # order random
+        self.assertEqual(mock_get.call_count, 3)
+        output = sys.stdout.getvalue().strip()
+        expected_output = """
+ID:       1100
+Name:     testmodule
+Stream:   master
+Version:  20171011093314
+Koji Tag: module-c24f55c24c8fede1
+Owner:    jkaluza
+State:    ready
+
+ID:       1109
+Name:     testmodule
+Stream:   master
+Version:  20171011173928
+Koji Tag: module-057fc15e0e44b333
+Owner:    mprahl
+State:    failed
+""".strip()
+        self.assertEqual(output, expected_output)
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local(self, mock_run):
+        """
+        Test submitting a local module build
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local',
+            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
+            'master'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            cli.module_build_local()
+        mock_run.assert_called_once_with([
+            'mbs-manager',
+            'build_module_locally',
+            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
+            'master'])

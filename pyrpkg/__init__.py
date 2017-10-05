@@ -9,6 +9,7 @@
 # option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
 # the full text of the license.
 
+from __future__ import print_function
 import cccolutils
 import errno
 import fnmatch
@@ -26,9 +27,14 @@ import six
 import sys
 import tempfile
 import subprocess
+import json
+import time
+from multiprocessing.dummy import Pool as ThreadPool
 
 from six.moves import configparser
 from six.moves import urllib
+from six.moves.urllib.parse import urljoin
+import requests
 
 from pyrpkg.errors import HashtypeMixingError, rpkgError, rpkgAuthError, \
     UnknownTargetError
@@ -2664,3 +2670,484 @@ class Commands(object):
             cmd.append('--nowait')
         cmd.extend([project, srpm_name])
         self._run_command(cmd)
+
+    def module_build_cancel(self, api_url, build_id, auth_method,
+                            oidc_id_provider=None, oidc_client_id=None,
+                            oidc_client_secret=None, oidc_scopes=None):
+        """
+        Cancel an MBS build
+        :param api_url: a string of the URL of the MBS API
+        :param build_id: an integer of the build ID to cancel
+        :param auth_method: a string of the authentication method used by the
+        MBS
+        :kwarg oidc_id_provider: a string of the OIDC provider when MBS is
+        using OIDC for authentication
+        :kwarg oidc_client_id: a string of the OIDC client ID when MBS is
+        using OIDC for authentication
+        :kwarg oidc_client_secret: a string of the OIDC client secret when MBS
+        is using OIDC for authentication. Based on the OIDC setup, this could
+        be None.
+        :kwarg oidc_scopes: a list of OIDC scopes when MBS is using OIDC for
+        authentication
+        :return: None
+        """
+        # Make sure the build they are trying to cancel exists
+        self.module_get_build(api_url, build_id)
+        url = self.module_get_url(api_url, build_id, action='PATCH')
+        resp = self.module_send_authorized_request(
+            'PATCH', url, {'state': 'failed'}, auth_method, oidc_id_provider,
+            oidc_client_id, oidc_client_secret, oidc_scopes, timeout=60)
+        if not resp.ok:
+            try:
+                error_msg = resp.json()['message']
+            except (ValueError, KeyError):
+                error_msg = resp.text
+            raise rpkgError(
+                'The cancellation of module build #{0} failed with:\n{1}'
+                .format(build_id, error_msg))
+
+    def module_build_info(self, api_url, build_id):
+        """
+        Show information about an MBS build
+        :param api_url: a string of the URL of the MBS API
+        :param build_id: an integer of the build ID to query MBS about
+        :return: None
+        """
+        # Load the Koji session anonymously so we get access to the Koji web
+        # URL
+        self.load_kojisession(anon=True)
+        state_names = self.module_get_koji_state_dict()
+        data = self.module_get_build(api_url, build_id)
+        print('Name:           {0}'.format(data['name']))
+        print('Stream:         {0}'.format(data['stream']))
+        print('Version:        {0}'.format(data['version']))
+        print('Koji Tag:       {0}'.format(data['koji_tag']))
+        print('Owner:          {0}'.format(data['owner']))
+        print('State:          {0}'.format(data['state_name']))
+        print('State Reason:   {0}'.format(data['state_reason'] or ''))
+        print('Time Submitted: {0}'.format(data['time_submitted']))
+        print('Time Completed: {0}'.format(data['time_completed']))
+        print('Components:')
+        for package_name, task_data in data['tasks'].get('rpms', {}).items():
+            koji_task_url = ''
+            if task_data.get('task_id'):
+                koji_task_url = '{0}/taskinfo?taskID={1}'.format(
+                    self.kojiweburl, task_data['task_id'])
+            print('    Name:       {0}'.format(package_name))
+            print('    NVR:        {0}'.format(task_data['nvr']))
+            print('    State:      {0}'.format(
+                state_names[task_data.get('state', None)]))
+            print('    Koji Task:  {0}\n'.format(koji_task_url))
+
+    def module_get_build(self, api_url, build_id):
+        """
+        Get an MBS build
+        :param api_url: a string of the URL of the MBS API
+        :param build_id: an integer of the build ID to query MBS about
+        :return: None or a dictionary representing the module build
+        """
+        url = self.module_get_url(api_url, build_id)
+        response = requests.get(url, timeout=60)
+        if response.ok:
+            return response.json()
+        else:
+            try:
+                error_msg = response.json()['message']
+            except (ValueError, KeyError):
+                error_msg = response.text
+            raise rpkgError(
+                'The following error occurred while getting information on '
+                'module build #{0}:\n{1}'.format(build_id, error_msg))
+
+    def module_get_url(self, api_url, build_id, action='GET'):
+        """
+        Get the proper MBS API URL for the desired action
+        :param api_url: a string of the URL of the MBS API
+        :param build_id: an integer of the module build desired. If this is set
+        to None, then the base URL for all module builds is returned.
+        :kwarg action: a string determining the HTTP action. If this is set to
+        GET, then the URL will contain `?verbose=true`. Any other value will
+        not have verbose set.
+        :return: a string of the desired MBS API URL
+        """
+        url = urljoin(api_url, 'module-builds/')
+        if build_id is not None:
+            url = '{0}{1}'.format(url, build_id)
+        else:
+            url = '{0}'.format(url)
+
+        if action == 'GET':
+            url = '{0}?verbose=true'.format(url)
+        return url
+
+    @staticmethod
+    def module_get_koji_state_dict():
+        """
+        Get a dictionary of Koji build states with the keys being strings and
+        the values being their associated integer
+        :return: a dictionary of Koji build states
+        """
+        state_names = dict([(v, k) for k, v in koji.BUILD_STATES.items()])
+        state_names[None] = 'undefined'
+        return state_names
+
+    def module_get_scm_info(self, scm_url=None, branch=None):
+        """
+        Determines the proper SCM URL and branch based on the arguments. If the
+        user doesn't specify an SCM URL and branch, then the git repo the user
+        is currently in is used instead.
+        :kwarg scm_url: a string of the module's SCM URL
+        :kwarg branch: a string of the module's branch
+        :return: a tuple containing a string of the SCM URL and a string of the
+        branch
+        """
+        if not scm_url:
+            # Make sure the local repo is clean (no unpushed changes) if the
+            # user didn't specify an SCM URL
+            self.check_repo()
+
+        if branch:
+            actual_branch = branch
+        else:
+            # If the branch wasn't specified, make sure they also didn't
+            # specify an scm_url
+            if scm_url:
+                raise rpkgError('You need to specify a branch if you specify '
+                                'the SCM URL')
+            # If the scm_url was not specified, then just use the active
+            # branch
+            actual_branch = self.repo.active_branch.name
+
+        if scm_url:
+            actual_scm_url = scm_url
+        else:
+            # If the scm_url isn't specified, get the remote git URL of the
+            # git repo the current user is in
+            actual_scm_url = self._get_namespace_anongiturl(
+                self.ns_module_name)
+            actual_scm_url = '{0}?#{1}'.format(actual_scm_url, self.commithash)
+        return actual_scm_url, actual_branch
+
+    def module_local_build(self, scm_url, branch, local_builds_nsvs=None,
+                           skip_tests=False, verbose=False, debug=False):
+        """
+        A wrapper for `mbs-manager build_module_locally`.
+        :param scm_url: a string of the module's SCM URL.
+        :param branch: a string of the module's branch.
+        :kwarg local_builds_nsvs: a list of localbuilds to import into MBS
+        before running this local build.
+        :kwarg skip_tests: a boolean determining if the check sections should
+        be skipped.
+        :kwarg verbose: a boolean specifying if mbs-manager should be verbose.
+        This is overridden by self.quiet.
+        :kwarg debug: a boolean specifying if mbs-manager should be debug.
+        This is overridden by self.quiet and verbose.
+        :return: None
+        """
+        command = ['mbs-manager']
+        if self.quiet:
+            command.append('-q')
+        elif verbose:
+            command.append('-v')
+        elif debug:
+            command.append('-d')
+        command.append('build_module_locally')
+        if skip_tests:
+            command.append('--skiptests')
+
+        if local_builds_nsvs:
+            for build_id in local_builds_nsvs:
+                command += ['--add-local-build', build_id]
+
+        command.extend([scm_url, branch])
+        self._run_command(command)
+
+    def module_overview(self, api_url, limit=10, finished=True):
+        """
+        Show the overview of the latest builds in MBS
+        :param api_url: a string of the URL of the MBS API
+        :kwarg limit: an integer of the number of most recent module builds to
+        display. This defaults to 10.
+        :kwarg finished: a boolean that determines if only finished or
+        unfinished module builds should be displayed. This defaults to True.
+        :return: None
+        """
+        # Don't let the user cause problems by specifying a negative limit
+        if limit < 1:
+            limit = 1
+        build_states = {
+            'init': 0,
+            'wait': 1,
+            'build': 2,
+            'done': 3,
+            'failed': 4,
+            'ready': 5,
+        }
+        baseurl = self.module_get_url(api_url, build_id=None)
+        if finished:
+            # These are the states when a build is finished
+            states = [build_states['done'], build_states['ready'],
+                      build_states['failed']]
+        else:
+            # These are the states when a build is in progress
+            states = [build_states['init'], build_states['wait'],
+                      build_states['build']]
+
+        def _get_module_builds(state):
+            """
+            Private function that is used for multithreading later on to get
+            the desired amount of builds for a specific state.
+            :param state: an integer representing the build state to query for
+            :return: yields dictionaries of the builds found
+            """
+            total = 0
+            page = 1
+            # If the limit is above 100, we don't want the amount of results
+            # per_page to exceed 100 since this is not allowed.
+            per_page = min(limit, 100)
+            params = {
+                'state': state,
+                # Order by the latest builds first
+                'order_desc_by': 'id',
+                'verbose': True,
+                'per_page': per_page
+            }
+            while total < limit:
+                params['page'] = page
+                response = requests.get(baseurl, params=params, timeout=30)
+                if not response.ok:
+                    try:
+                        error = response.json()['message']
+                    except (ValueError, KeyError):
+                        error = response.text
+                    raise rpkgError(
+                        'The request to "{0}" failed with parameters "{1}". '
+                        'The status code was "{2}". The error was: {3}'
+                        .format(baseurl, str(params), response.status_code,
+                                error))
+
+                data = response.json()
+                for item in data['items']:
+                    total += 1
+                    yield item
+
+                if data['meta']['next']:
+                    page += 1
+                else:
+                    # Even if we haven't reached the desired amount of builds,
+                    # we must break out of the loop because we are out of pages
+                    # to search
+                    break
+
+        # Make this one thread per state we want to query
+        pool = ThreadPool(3)
+        # Eventually, the MBS should support a range of states but for now, we
+        # have to be somewhat wasteful and query per state
+        module_builds = pool.map(
+            lambda x: list(_get_module_builds(state=x)), states)
+        # Make one flat list with all the modules
+        module_builds = [item for sublist in module_builds for item in sublist]
+        # Sort the list of builds to be oldest to newest
+        module_builds.sort(key=lambda x: x['id'])
+        # Only grab the desired limit starting from the newest builds
+        module_builds = module_builds[(limit * -1):]
+        # Track potential duplicates if the state changed in the middle of the
+        # query
+        module_build_ids = set()
+        for build in module_builds:
+            if build['id'] in module_build_ids:
+                continue
+            module_build_ids.add(build['id'])
+            print('ID:       {0}'.format(build['id']))
+            print('Name:     {0}'.format(build['name']))
+            print('Stream:   {0}'.format(build['stream']))
+            print('Version:  {0}'.format(build['version']))
+            print('Koji Tag: {0}'.format(build['koji_tag']))
+            print('Owner:    {0}'.format(build['owner']))
+            print('State:    {0}\n'.format(build['state_name']))
+
+    def module_send_authorized_request(self, verb, url, body, auth_method,
+                                       oidc_id_provider=None,
+                                       oidc_client_id=None,
+                                       oidc_client_secret=None,
+                                       oidc_scopes=None, **kwargs):
+        """
+        Sends authorized request to MBS
+        :param verb: a string of the HTTP verb of the request (e.g. POST)
+        :param url: a string of the URL to make the request on
+        :param body: a dictionary of the data to send in the authorized request
+        :param auth_method: a string of the authentication method used by the
+        MBS
+        :kwarg oidc_id_provider: a string of the OIDC provider when MBS is
+        using OIDC for authentication
+        :kwarg oidc_client_id: a string of the OIDC client ID when MBS is
+        using OIDC for authentication
+        :kwarg oidc_client_secret: a string of the OIDC client secret when MBS
+        is using OIDC for authentication. Based on the OIDC setup, this could
+        be None.
+        :kwarg oidc_scopes: a list of OIDC scopes when MBS is using OIDC for
+        authentication
+        :kwarg **kwargs: any additional python-requests keyword arguments
+        :return: a python-requests response object
+        """
+        if auth_method == 'oidc':
+            import openidc_client
+            if oidc_id_provider is None or oidc_client_id is None or \
+                    oidc_scopes is None:
+                raise ValueError('The selected authentication method was '
+                                 '"oidc" but the OIDC configuration keyword '
+                                 'arguments were not specified')
+
+            mapping = {'Token': 'Token', 'Authorization': 'Authorization'}
+            # Get the auth token using the OpenID client
+            oidc = openidc_client.OpenIDCClient(
+                'mbs_build', oidc_id_provider, mapping, oidc_client_id,
+                oidc_client_secret)
+
+            resp = oidc.send_request(
+                url, http_method=verb.upper(), json=body, scopes=oidc_scopes,
+                **kwargs)
+        elif auth_method == 'kerberos':
+            import requests_kerberos
+
+            if type(body) is dict:
+                data = json.dumps(body)
+            else:
+                data = body
+            auth = requests_kerberos.HTTPKerberosAuth(
+                mutual_authentication=requests_kerberos.OPTIONAL)
+            resp = requests.request(verb, url, data=data, auth=auth, **kwargs)
+            if resp.status_code == 401:
+                raise rpkgError('MBS authentication using Kerberos failed. '
+                                'Make sure you have a valid Kerberos ticket.')
+        else:
+            # This scenario should not be reached because the config was
+            # validated in the function that calls this function
+            raise rpkgError('An unsupported MBS "auth_method" was provided')
+        return resp
+
+    def module_submit_build(self, api_url, scm_url, branch, auth_method,
+                            optional=None, oidc_id_provider=None,
+                            oidc_client_id=None, oidc_client_secret=None,
+                            oidc_scopes=None):
+        """
+        Submit a module build to the MBS
+        :param api_url: a string of the URL of the MBS API
+        :param scm_url: a string of the module's SCM URL
+        :param branch: a string of the module's branch
+        :param auth_method: a string of the authentication method used by the
+        MBS
+        :param optional: an optional list of "key=value" to be passed in with
+        the MBS build submission
+        :kwarg oidc_id_provider: a string of the OIDC provider when MBS is
+        using OIDC for authentication
+        :kwarg oidc_client_id: a string of the OIDC client ID when MBS is
+        using OIDC for authentication
+        :kwarg oidc_client_secret: a string of the OIDC client secret when MBS
+        is using OIDC for authentication. Based on the OIDC setup, this could
+        be None.
+        :kwarg oidc_scopes: a list of OIDC scopes when MBS is using OIDC for
+        authentication
+        :return: None
+        """
+        body = {'scmurl': scm_url, 'branch': branch}
+        optional = optional if optional else []
+        optional_dict = {}
+        try:
+            for x in optional:
+                key, value = x.split('=', 1)
+                optional_dict[key] = value
+        except (IndexError, ValueError):
+            raise rpkgError(
+                'Optional arguments are not in the proper "key=value" format')
+
+        body.update(optional_dict)
+        url = self.module_get_url(api_url, build_id=None, action='POST')
+        resp = self.module_send_authorized_request(
+            'POST', url, body, auth_method, oidc_id_provider, oidc_client_id,
+            oidc_client_secret, oidc_scopes, timeout=120)
+
+        data = {}
+        try:
+            data = resp.json()
+            return data['id']
+        except (KeyError, ValueError):
+            if 'message' in data:
+                error_msg = data['message']
+            else:
+                error_msg = resp.text
+            raise rpkgError('The build failed with:\n{0}'.format(error_msg))
+
+    def module_watch_build(self, api_url, build_id):
+        """
+        Watches the MBS build in a loop that updates every 15 seconds.
+        The loop ends when the build state is 'failed', 'done', or 'ready'.
+        :param api_url: a string of the URL of the MBS API
+        :param build_id: an integer of the module build to watch.
+        :return: None
+        """
+        # Load the Koji session anonymously so we get access to the Koji web
+        # URL
+        self.load_kojisession(anon=True)
+        done = False
+        while not done:
+            state_names = self.module_get_koji_state_dict()
+            build = self.module_get_build(api_url, build_id)
+            tasks = {}
+            if 'rpms' in build['tasks']:
+                tasks = build['tasks']['rpms']
+
+            states = list(set([task['state'] for task in tasks.values()]))
+            inverted = {}
+            for name, task in tasks.items():
+                state = task['state']
+                inverted[state] = inverted.get(state, [])
+                inverted[state].append(name)
+
+            # Clear the screen
+            try:
+                os.system('clear')
+            except Exception:
+                # If for whatever reason the clear command fails, fall back to
+                # clearing the screen using print
+                print(chr(27) + "[2J")
+
+            # Display all RPMs that have built or have failed
+            build_state = 0
+            failed_state = 3
+            for state in (build_state, failed_state):
+                if state not in inverted:
+                    continue
+                if state == build_state:
+                    print('Still Building:')
+                else:
+                    print('Failed:')
+                for name in inverted[state]:
+                    task = tasks[name]
+                    if task['task_id']:
+                        print('   {0} {1}/taskinfo?taskID={2}'.format(
+                            name, self.kojiweburl, task['task_id']))
+                    else:
+                        print('   {0}'.format(name))
+
+            print('\nSummary:')
+            for state in states:
+                num_in_state = len(inverted[state])
+                if num_in_state == 1:
+                    component_text = 'component'
+                else:
+                    component_text = 'components'
+                print('   {0} {1} in the "{2}" state'.format(
+                    num_in_state, component_text, state_names[state].lower()))
+
+            done = build['state_name'] in ['failed', 'done', 'ready']
+
+            template = ('{owner}\'s build #{id} of {name}-{stream} is in '
+                        'the "{state_name}" state')
+            if build['state_reason']:
+                template += ' (reason: {state_reason})'
+            if build.get('koji_tag'):
+                template += ' (koji tag: "{koji_tag}")'
+            print(template.format(**build))
+            if not done:
+                time.sleep(15)

@@ -4,6 +4,9 @@ python3-koji
 python3-pycurl
 python3-six
 python3-rpm  # rpm-python originally
+python3-requests
+# python3-openidc-client # used for MBS OIDC authentication
+# python3-requests-kerberos # used for MBS Kerberos authentication
 
 # For running tests
 python3-coverage
@@ -11,3 +14,4 @@ python3-flake8
 python3-mock
 python3-nose
 python3-rpmfluff
+python3-openidc-client # used in MBS tests
