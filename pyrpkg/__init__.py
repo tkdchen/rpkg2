@@ -1876,6 +1876,12 @@ class Commands(object):
             raise rpkgError('Packages in destination tag %(dest_tag_name)s are not inherited by'
                             ' build tag %(build_tag_name)s' % build_target)
 
+    def construct_build_url(self):
+        """Construct build URL with namespaced anongiturl and commit hash"""
+        return '{0}?#{1}'.format(
+            self._get_namespace_anongiturl(self.ns_module_name),
+            self.commithash)
+
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):
         """Initiate a build of the module.  Available options are:
@@ -1917,8 +1923,7 @@ class Commands(object):
                     str(e),
                     'Try option --srpm to make scratch build from local changes.')
                 raise rpkgError(msg)
-            url = self._get_namespace_anongiturl(self.ns_module_name) + \
-                '?#%s' % self.commithash
+            url = self.construct_build_url()
         # Check to see if the target is valid
         build_target = self.kojisession.getBuildTarget(self.target)
         if not build_target:
@@ -2583,8 +2588,7 @@ class Commands(object):
                 if dest_tag['locked'] and 'scratch' not in opts:
                     self.log.error("Destination tag %s is locked", dest_tag['name'])
 
-            source = self._get_namespace_anongiturl(self.ns_module_name)
-            source += "#%s" % self.commithash
+            source = self.construct_build_url()
 
             task_opts = {}
             for key in ('scratch', 'name', 'version', 'release',
