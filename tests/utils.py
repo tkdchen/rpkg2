@@ -3,11 +3,16 @@
 import os
 import subprocess
 import tempfile
-import unittest
 import shutil
 import sys
 
 from pyrpkg import Commands
+
+# For running tests with Python 2.6
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 # Following global variables are used to construct Commands for tests in this
 # module. Only for testing purpose, and they are not going to be used for

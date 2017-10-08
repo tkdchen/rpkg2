@@ -25,10 +25,12 @@ import git
 import pyrpkg.cli
 
 import utils
-from mock import patch
 from mock import PropertyMock
-from utils import CommandTestCase
+from mock import call
+from mock import mock_open
+from mock import patch
 from pyrpkg import rpkgError
+from utils import CommandTestCase
 
 
 # rpkg.conf for running tests below
@@ -369,7 +371,7 @@ class TestCommit(CliTestCase):
 
     def test_with_clog(self):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'commit', '--clog']
-        
+
         with patch('sys.argv', new=cli_cmd):
             self.cli_commit()
 
@@ -1556,3 +1558,129 @@ enabled = true''', repo_config)
         repo_config = self.read_file(self.osbs_repo_config).strip()
         self.assertEqual('''[autorebuild]
 enabled = false''', repo_config)
+
+
+class TestPatch(CliTestCase):
+    """Test patch command"""
+
+    def setUp(self):
+        super(TestPatch, self).setUp()
+
+        self.repo_patcher = patch('pyrpkg.Commands.repo',
+                                  new_callable=PropertyMock)
+        self.mock_repo = self.repo_patcher.start()
+
+        self.Popen_patcher = patch('subprocess.Popen')
+        self.mock_Popen = self.Popen_patcher.start()
+
+        self.module_name_patcher = patch('pyrpkg.Commands.module_name',
+                                         new_callable=PropertyMock,
+                                         return_value='docpkg')
+        self.mock_module_name = self.module_name_patcher.start()
+
+        self.ver_patcher = patch('pyrpkg.Commands.ver',
+                                 new_callable=PropertyMock,
+                                 return_value='2.0')
+        self.mock_ver = self.ver_patcher.start()
+
+    def tearDown(self):
+        self.ver_patcher.stop()
+        self.module_name_patcher.stop()
+        self.Popen_patcher.stop()
+        self.repo_patcher.stop()
+        super(TestPatch, self).tearDown()
+
+    def test_expanded_source_dir_not_found(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'patch', 'fix']
+
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            six.assertRaisesRegex(
+                self, rpkgError,
+                'Expanded source dir not found!', cli.patch)
+
+    @patch('os.path.isdir', return_value=True)
+    def test_generate_diff(self, isdir):
+        self.mock_Popen.return_value.communicate.return_value = ['+ diff', '']
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'patch', 'fix']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with patch('__builtin__.open', mock_open()) as m:
+                cli.patch()
+                m.return_value.write.assert_called_once_with('+ diff')
+
+        patch_file = '{0}-{1}-fix.patch'.format(cli.cmd.module_name,
+                                                cli.cmd.ver)
+        self.mock_repo.return_value.index.add.assert_called_once_with(
+                [patch_file])
+
+    @patch('os.path.isdir', return_value=True)
+    def test_generate_empty_patch(self, isdir):
+        self.mock_Popen.return_value.communicate.return_value = ['', '']
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'patch', 'fix']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            six.assertRaisesRegex(
+                self, rpkgError,
+                'gendiff generated an empty patch!', cli.patch)
+
+    @patch('os.rename')
+    @patch('os.path.isdir', return_value=True)
+    def test_rediff(self, isdir, rename):
+        origin_diff = '''diff -up fedpkg-1.29/fedpkg/__init__.py.origin fedpkg-1.29/fedpkg/__init__.py
+--- fedpkg-1.29/fedpkg/__init__.py.origin  2017-10-05 01:55:34.268488598 +0000
++++ fedpkg-1.29/fedpkg/__init__.py	2017-10-05 01:55:59.736947877 +0000
+@@ -9,12 +9,12 @@
+ # option) any later version.  See http://www.gnu.org/copyleft/gpl.html for
+ # the full text of the license.
+
+-import pyrpkg'''
+
+        self.mock_Popen.return_value.communicate.return_value = [
+            origin_diff, '']
+
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'patch', '--rediff', 'fix']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+
+            patch_file = '{0}-{1}-fix.patch'.format(cli.cmd.module_name,
+                                                    cli.cmd.ver)
+            copied_patch_file = '{0}~'.format(patch_file)
+
+            with patch('__builtin__.open',
+                       mock_open(read_data=origin_diff)) as m:
+                with patch('os.path.exists', return_value=True) as exists:
+                    cli.patch()
+
+                    exists.assert_called_once_with(
+                        os.path.join(cli.cmd.path, patch_file))
+
+                rename.assert_called_once_with(
+                    os.path.join(cli.cmd.path, patch_file),
+                    os.path.join(cli.cmd.path, copied_patch_file))
+
+                m.assert_has_calls([
+                    call(os.path.join(cli.cmd.path, patch_file), 'r'),
+                    call().readlines(),
+                    call(os.path.join(cli.cmd.path, patch_file), 'w'),
+                    call().write(origin_diff),
+                ])
+
+    def test_fail_if_no_previous_diff_exists(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'patch', '--rediff', 'fix']
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+
+            patch_file = '{0}-{1}-fix.patch'.format(cli.cmd.module_name,
+                                                    cli.cmd.ver)
+            with patch('os.path.exists', return_value=False) as exists:
+                six.assertRaisesRegex(
+                    self, rpkgError,
+                    'Patch file [^ ]+ not found, unable to rediff', cli.patch)
+
+                exists.assert_called_once_with(
+                    os.path.join(cli.cmd.path, patch_file))
