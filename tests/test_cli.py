@@ -1327,16 +1327,19 @@ class TestCoprBuild(CliTestCase):
         self.nvr_patcher.stop()
         super(TestCoprBuild, self).tearDown()
 
-    def test_copr_build(self):
-        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
-                   'copr-build', 'user/project']
-
+    def assert_copr_build(self, cli_cmd, expected_copr_cli):
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.copr_build()
 
         self.mock_srpm.assert_called_once()
-        self.mock_run_command.assert_called_once_with([
+        self.mock_run_command.assert_called_once_with(expected_copr_cli)
+
+    def test_copr_build(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'copr-build', 'user/project']
+
+        self.assert_copr_build(cli_cmd, [
             'copr-cli', 'build', 'user/project',
             '{0}.src.rpm'.format(self.mock_nvr.return_value)
         ])
@@ -1345,13 +1348,19 @@ class TestCoprBuild(CliTestCase):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
                    'copr-build', '--nowait', 'user/project']
 
-        with patch('sys.argv', new=cli_cmd):
-            cli = self.new_cli()
-            cli.copr_build()
-
-        self.mock_srpm.assert_called_once()
-        self.mock_run_command.assert_called_once_with([
+        self.assert_copr_build(cli_cmd, [
             'copr-cli', 'build', '--nowait', 'user/project',
+            '{0}.src.rpm'.format(self.mock_nvr.return_value)
+        ])
+
+    def test_copr_build_with_alternative_config_file(self):
+        cli_cmd = ['rpkg', '--path', self.cloned_repo_path,
+                   'copr-build', '--config', '/path/to/alternative/config',
+                   'user/project']
+
+        self.assert_copr_build(cli_cmd, [
+            'copr-cli', '--config', '/path/to/alternative/config',
+            'build', 'user/project',
             '{0}.src.rpm'.format(self.mock_nvr.return_value)
         ])
 

@@ -2655,8 +2655,11 @@ class Commands(object):
         else:
             self.log.info('Nothing to be done')
 
-    def copr_build(self, project, srpm_name, nowait):
-        cmd = ['copr-cli', 'build']
+    def copr_build(self, project, srpm_name, nowait, config_file):
+        cmd = ['copr-cli']
+        if config_file:
+            cmd.extend(['--config', config_file])
+        cmd.append('build')
         if nowait:
             cmd.append('--nowait')
         cmd.extend([project, srpm_name])

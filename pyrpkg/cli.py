@@ -829,6 +829,10 @@ see API KEY section of copr-cli(1) man page.
 """)
 
         copr_parser.add_argument(
+            '--config', required=False,
+            metavar='CONFIG', dest='copr_config',
+            help="Path to an alternative Copr configuration file")
+        copr_parser.add_argument(
             '--nowait', action='store_true', default=False,
             help="Don't wait on build")
         copr_parser.add_argument(
@@ -1232,7 +1236,10 @@ see API KEY section of copr-cli(1) man page.
         self.args.hash = None
         self.srpm()
         srpm_name = '%s.src.rpm' % self.cmd.nvr
-        self.cmd.copr_build(self.args.project[0], srpm_name, self.args.nowait)
+        self.cmd.copr_build(self.args.project[0],
+                            srpm_name,
+                            self.args.nowait,
+                            self.args.copr_config)
 
     def diff(self):
         self.cmd.diff(self.args.cached, self.args.files)
