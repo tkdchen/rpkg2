@@ -13,6 +13,7 @@ import six
 import subprocess
 import sys
 import tempfile
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -1671,9 +1672,20 @@ class TestPatch(CliTestCase):
                     os.path.join(cli.cmd.path, patch_file),
                     os.path.join(cli.cmd.path, copied_patch_file))
 
+                # Following calls assert_has_calls twice in order is a
+                # workaround for running this test with old mock 1.0.1, that
+                # is the latest version in el6 and el7.
+                #
+                # When run this test with newer version of mock, e.g. 2.0.0,
+                # these 4 calls can be asserted together in order in a single
+                # call of m.assert_has_calls.
                 m.assert_has_calls([
                     call(os.path.join(cli.cmd.path, patch_file), 'r'),
                     call().readlines(),
+                ])
+                # Here, skip to check call().readlines().__iter__() that
+                # happens only within mock 1.0.1.
+                m.assert_has_calls([
                     call(os.path.join(cli.cmd.path, patch_file), 'w'),
                     call().write(origin_diff),
                 ])
