@@ -24,7 +24,11 @@ from six.moves import StringIO
 
 import git
 import pyrpkg.cli
-import openidc_client
+
+try:
+    import openidc_client
+except ImportError:
+    openidc_client = None
 
 import utils
 from mock import PropertyMock, call, mock_open, patch, Mock
@@ -1705,6 +1709,10 @@ class TestPatch(CliTestCase):
                     os.path.join(cli.cmd.path, patch_file))
 
 
+@unittest.skipUnless(
+    openidc_client,
+    'Skip if rpkg is rebuilt for an environment where Kerberos authentication'
+    'is used and python-openidc-client is not available.')
 class TestModulesCli(CliTestCase):
     """Test module commands"""
 
@@ -1950,7 +1958,7 @@ Components:
     Name:       python-cryptography
     NVR:        None
     State:      FAILED
-    Koji Task:
+    Koji Task:  
 """.strip()  # noqa: W291
         self.assertEqual(expected_output, output)
 
