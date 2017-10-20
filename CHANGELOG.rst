@@ -1,6 +1,37 @@
 ChangeLog
 =========
 
+1.51 (2017-10-20)
+-----------------
+
+- Do not read real koji config in test (cqi)
+- Ignore TestModulesCli if openidc-client is unavailable (cqi)
+- Port mbs-build to rpkg (mprahl)
+- Add .vscode to .gitignore (mprahl)
+- Fix TestPatch.test_rediff in order to run with old version of mock (cqi)
+- Allow to specify alternative Copr config file - #184 (cqi)
+- Tests for patch command (cqi)
+- More Tests for mockbuild command (cqi)
+- More tests for getting spec file (cqi)
+- Tests for container-build-setup command (cqi)
+- Test for container-build to use custom config (cqi)
+- Suppress output from git command within setUp (cqi)
+- Skip test if rpmfluff is not available (lsedlar)
+- Allow to override build URL (cqi)
+- Test for mock-config command (cqi)
+- Tests for copr-build command (cqi)
+- Fix arch-override for container-build (lucarval)
+- Remove unsupported osbs for container-build (lucarval)
+- cli: add --arches support for koji_cointainerbuild (mlangsdo)
+- Strip refs/heads/ from branch only once (lsedlar)
+- Don't install bin and config files (cqi)
+- Fix kojiprofile selection in cliClient.container_build_koji (cqi)
+- Avoid branch detection for 'rpkg sources' (praiskup)
+- Fix encoding in new command (cqi)
+- Minor wording improvement in help (pgier)
+- Fix indentation (pviktori)
+- Add --with and --without options to mockbuild (pviktori)
+
 v1.50 (2017-08-01)
 ------------------
 
