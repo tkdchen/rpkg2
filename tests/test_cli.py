@@ -1911,10 +1911,13 @@ class TestModulesCli(CliTestCase):
 
     @patch('sys.stdout', new=StringIO())
     @patch('requests.get')
-    def test_module_build_info(self, mock_get):
+    @patch('pyrpkg.Commands.kojiweburl', new_callable=PropertyMock)
+    def test_module_build_info(self, kojiweburl, mock_get):
         """
         Test getting information on a module build
         """
+        kojiweburl.return_value = 'https://koji.example.org/koji'
+
         cli_cmd = [
             'rpkg',
             '--path',
@@ -1948,7 +1951,7 @@ Components:
     Name:       module-build-macros
     NVR:        module-build-macros-None-None
     State:      FAILED
-    Koji Task:  https://koji.fedoraproject.org/koji/taskinfo?taskID=22370514
+    Koji Task:  https://koji.example.org/koji/taskinfo?taskID=22370514
 
     Name:       python-dns
     NVR:        None
