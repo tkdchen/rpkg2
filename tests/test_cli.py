@@ -1767,7 +1767,7 @@ class TestModulesCli(CliTestCase):
     }
 
     @patch('sys.stdout', new=StringIO())
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_build(self, mock_oidc_req):
         """
         Test a module build with an SCM URL and branch supplied
@@ -1806,7 +1806,7 @@ class TestModulesCli(CliTestCase):
         self.assertEqual(output, expected_output)
 
     @patch('sys.stdout', new=StringIO())
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_build_input(self, mock_oidc_req):
         """
         Test a module build with default parameters
@@ -1834,7 +1834,7 @@ class TestModulesCli(CliTestCase):
 
     @patch('sys.stdout', new=StringIO())
     @patch('requests.get')
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_cancel(self, mock_oidc_req, mock_get):
         """
         Test canceling a module build when the build exists
@@ -1873,7 +1873,7 @@ class TestModulesCli(CliTestCase):
         self.assertEqual(output, expected_output)
 
     @patch('requests.get')
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_cancel_not_found(self, mock_oidc_req, mock_get):
         """
         Test canceling a module build when the build doesn't exist
