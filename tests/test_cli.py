@@ -13,6 +13,7 @@ import six
 import subprocess
 import sys
 import tempfile
+import koji_cli.lib
 
 try:
     import unittest2 as unittest
@@ -209,7 +210,7 @@ class TestContainerBuildWithKoji(CliTestCase):
             kojiconfig=None,
             kojiprofile='koji',
             build_client=utils.build_client,
-            koji_task_watcher=cli._watch_koji_tasks,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
             nowait=False
         )
 
@@ -234,7 +235,7 @@ class TestContainerBuildWithKoji(CliTestCase):
             kojiconfig=None,
             kojiprofile='koji',
             build_client=utils.build_client,
-            koji_task_watcher=cli._watch_koji_tasks,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
             nowait=False
         )
 
@@ -268,7 +269,7 @@ class TestContainerBuildWithKoji(CliTestCase):
             kojiconfig='/path/to/koji.conf',
             kojiprofile=None,
             build_client=utils.build_client,
-            koji_task_watcher=cli._watch_koji_tasks,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
             nowait=False
         )
 
