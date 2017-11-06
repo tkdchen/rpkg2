@@ -2165,16 +2165,13 @@ class Commands(object):
             log.warning('No srpm found')
 
         # Get the possible built arches
-        arches = self._get_build_arches_from_spec()
-        rpms = []
+        arches = set(self._get_build_arches_from_spec())
+        rpms = set()
         for arch in arches:
             if os.path.exists(os.path.join(self.path, arch)):
                 # For each available arch folder, lists file and keep
                 # those ending with .rpm
-                rpms.extend([os.path.join(self.path, arch, file)
-                             for file in os.listdir(os.path.join(self.path,
-                                                    arch))
-                             if file.endswith('.rpm')])
+                rpms.update(glob.glob(os.path.join(self.path, arch, '*.rpm')))
         if not rpms:
             log.warning('No rpm found')
         cmd = ['rpmlint']
@@ -2187,7 +2184,7 @@ class Commands(object):
         cmd.append(os.path.join(self.path, self.spec))
         if os.path.exists(os.path.join(self.path, srpm)):
             cmd.append(os.path.join(self.path, srpm))
-        cmd.extend(rpms)
+        cmd.extend(sorted(rpms))
         # Run the command
         self._run_command(cmd, shell=True)
 
