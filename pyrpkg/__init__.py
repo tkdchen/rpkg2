@@ -2109,9 +2109,7 @@ class Commands(object):
     def giturl(self):
         """Return the git url that would be used for building"""
         self.check_repo(is_dirty=False, all_pushed=False)
-        url = self._get_namespace_anongiturl(self.ns_module_name) + \
-            '?#%s' % self.commithash
-        return url
+        return self.construct_build_url()
 
     def koji_upload(self, file, path, callback=None):
         """Upload a file to koji
