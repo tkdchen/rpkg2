@@ -1156,7 +1156,10 @@ see API KEY section of copr-cli(1) man page.
             else:
                 # Figure out the scm url to build from package name
                 hash = self.cmd.get_latest_commit(component, self.cmd.branch_merge)
-                url = self.cmd.anongiturl % {'module': component} + '#%s' % hash
+                # Passing given package name to module_name parameter directly without
+                # guessing namespace as no way to guess that. rpms/ will be
+                # added by default if namespace is not given.
+                url = self.cmd.construct_build_url(component, hash)
                 # If there are no ':' in the chain list, treat each object as
                 # an individual chain
                 if ':' in self.args.package:
