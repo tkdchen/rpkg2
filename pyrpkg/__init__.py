@@ -1882,11 +1882,22 @@ class Commands(object):
             raise rpkgError('Packages in destination tag %(dest_tag_name)s are not inherited by'
                             ' build tag %(build_tag_name)s' % build_target)
 
-    def construct_build_url(self):
-        """Construct build URL with namespaced anongiturl and commit hash"""
+    def construct_build_url(self, module_name=None, commit_hash=None):
+        """Construct build URL with namespaced anongiturl and commit hash
+
+        :param str module_name: name of the module part of the build URL. If
+            omitted, module name with namespace will be guessed from current
+            repository. The given module name will be used in URL directly
+            without guessing namespace.
+        :param str commit_hash: the commit hash appended to build URL. It
+            omitted, the latest commit hash got from current repository will be
+            used.
+        :return: URL built from anongiturl.
+        :rtype: str
+        """
         return '{0}?#{1}'.format(
-            self._get_namespace_anongiturl(self.ns_module_name),
-            self.commithash)
+            self._get_namespace_anongiturl(module_name or self.ns_module_name),
+            commit_hash or self.commithash)
 
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):

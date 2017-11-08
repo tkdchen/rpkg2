@@ -697,6 +697,20 @@ class TestConstructBuildURL(CommandTestCase):
             commithash.return_value)
         self.assertEqual(expected_url, url)
 
+    def test_construct_with_given_module_name_and_hash(self):
+        cmd = self.make_commands()
+
+        anongiturl = 'https://src.example.com/%(module)s'
+        with patch.object(cmd, 'anongiturl', new=anongiturl):
+            for module_name in ('extra-cmake-modules',
+                                'rpms/kf5-kfilemetadata'):
+                url = cmd.construct_build_url(module_name, '123456')
+
+                expected_url = '{0}?#{1}'.format(
+                    anongiturl % {'module': module_name},
+                    '123456')
+                self.assertEqual(expected_url, url)
+
 
 class TestCleanupTmpDir(CommandTestCase):
     """Test Commands._cleanup_tmp_dir for mockbuild command"""
