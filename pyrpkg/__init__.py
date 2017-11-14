@@ -2834,20 +2834,19 @@ class Commands(object):
             actual_scm_url = '{0}?#{1}'.format(actual_scm_url, self.commithash)
         return actual_scm_url, actual_branch
 
-    def module_local_build(self, scm_url, branch, local_builds_nsvs=None,
-                           skip_tests=False, verbose=False, debug=False):
+    def module_local_build(self, file_path, stream, local_builds_nsvs=None, verbose=False,
+                           debug=False, skip_tests=False):
         """
         A wrapper for `mbs-manager build_module_locally`.
-        :param scm_url: a string of the module's SCM URL.
-        :param branch: a string of the module's branch.
-        :kwarg local_builds_nsvs: a list of localbuilds to import into MBS
+        :param file_path: a string, path of the module's modulemd yaml file.
+        :param stream: a string, stream of the module.
+        :kwarg local_builds_nsvs: a list of localbuild ids to import into MBS
         before running this local build.
-        :kwarg skip_tests: a boolean determining if the check sections should
-        be skipped.
         :kwarg verbose: a boolean specifying if mbs-manager should be verbose.
         This is overridden by self.quiet.
         :kwarg debug: a boolean specifying if mbs-manager should be debug.
         This is overridden by self.quiet and verbose.
+        :kwarg skip_tests: a boolean determining if the check sections should be skipped
         :return: None
         """
         command = ['mbs-manager']
@@ -2858,14 +2857,17 @@ class Commands(object):
         elif debug:
             command.append('-d')
         command.append('build_module_locally')
-        if skip_tests:
-            command.append('--skiptests')
 
         if local_builds_nsvs:
             for build_id in local_builds_nsvs:
                 command += ['--add-local-build', build_id]
 
-        command.extend([scm_url, branch])
+        if skip_tests:
+            command.append('--skiptests')
+
+        command.extend(['--file', file_path])
+        command.extend(['--stream', stream])
+
         self._run_command(command)
 
     def module_overview(self, api_url, limit=10, finished=True):

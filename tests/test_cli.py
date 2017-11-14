@@ -2132,18 +2132,97 @@ State:    failed
             'rpkg',
             '--path',
             self.cloned_repo_path,
-            'module-build-local',
-            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
-            'master'
+            'module-build-local'
         ]
         mock_proc = Mock()
         mock_proc.returncode = 0
         mock_run.return_value = mock_proc
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
+            file_path = os.path.join(self.cloned_repo_path, cli.cmd.module_name + '.yaml')
+            # we create an empty file for the purpose of this test so we don't raise an exception
+            open(file_path, 'a').close()
             cli.module_build_local()
-        mock_run.assert_called_once_with([
-            'mbs-manager',
-            'build_module_locally',
-            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
-            'master'])
+
+        mock_run.assert_called_once_with(['mbs-manager', 'build_module_locally', '--file',
+                                          file_path, '--stream', 'master'])
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local_file_not_found(self, mock_run):
+        """
+        Test submitting a local module build and raising an IOError exception
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with self.assertRaises(IOError):
+                cli.module_build_local()
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local_with_params(self, mock_run):
+        """
+        Test submitting a local module build with parameters
+        """
+
+        file_path = os.path.join(self.cloned_repo_path, 'modulemd.yaml')
+
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local',
+            '--file',
+            file_path,
+            '--stream',
+            'test'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            # we create an empty file for the purpose of this test so we don't raise an exception
+            open(file_path, 'a').close()
+            cli.module_build_local()
+
+        mock_run.assert_called_once_with(['mbs-manager', 'build_module_locally', '--file',
+                                          file_path, '--stream', 'test'])
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local_with_skiptests(self, mock_run):
+        """
+        Test submitting a local module build with parameters
+        """
+
+        file_path = os.path.join(self.cloned_repo_path, "modulemd.yaml")
+
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local',
+            '--file',
+            file_path,
+            '--stream',
+            'test',
+            '--skip-tests'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            # we create an empty file for the purpose of this test so we don't raise an exception
+            open(file_path, 'a').close()
+            cli.module_build_local()
+
+        mock_run.assert_called_once_with(['mbs-manager', 'build_module_locally', '--skiptests',
+                                          '--file', file_path, '--stream', 'test'])

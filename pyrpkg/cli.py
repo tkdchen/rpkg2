@@ -755,15 +755,16 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         self.module_build_local_parser = self.subparsers.add_parser(
             'module-build-local', help=sub_help, description=sub_help)
         self.module_build_local_parser.add_argument(
-            'scm_url', nargs='?',
-            help='The module\'s SCM URL. This defaults to the current repo.')
+            '--file', nargs='?', dest='file_path',
+            help=('The module\'s modulemd yaml file. If not specified, a yaml file'
+                  ' with the same basename as the name of the repository will be used.'))
         self.module_build_local_parser.add_argument(
-            'branch', nargs='?',
-            help=('The module\'s SCM branch. This defaults to the current '
+            '--stream', nargs='?', dest='stream',
+            help=('The module\'s stream/SCM branch. This defaults to the current '
                   'checked-out branch.'))
         self.module_build_local_parser.add_argument(
             '--skip-tests', help='Adds a macro for skipping the check section',
-            action='store_true')
+            action='store_true', dest='skiptests')
         self.module_build_local_parser.add_argument(
             '--add-local-build', action='append', dest='local_builds_nsvs',
             metavar='BUILD_ID', type=int,
@@ -1481,11 +1482,23 @@ see API KEY section of copr-cli(1) man page.
         :return: None
         """
         self.module_validate_config()
-        scm_url, branch = self.cmd.module_get_scm_info(
-            self.args.scm_url, self.args.branch)
+
+        if not self.args.stream:
+            _, stream = self.cmd.module_get_scm_info()
+        else:
+            stream = self.args.stream
+
+        if not self.args.file_path:
+            file_path = os.path.join(self.cmd.path, self.cmd.module_name + ".yaml")
+        else:
+            file_path = self.args.file_path
+
+        if not os.path.isfile(file_path):
+            raise IOError("Module metadata yaml file %s not found!" % file_path)
+
         self.cmd.module_local_build(
-            scm_url, branch, self.args.local_builds_nsvs,
-            self.args.skip_tests, verbose=self.args.v, debug=self.args.debug)
+            file_path, stream, self.args.local_builds_nsvs,
+            verbose=self.args.v, debug=self.args.debug, skip_tests=self.args.skiptests)
 
     def module_get_auth_config(self):
         """
