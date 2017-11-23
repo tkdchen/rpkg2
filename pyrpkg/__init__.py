@@ -1509,7 +1509,7 @@ class Commands(object):
                 # don't do anything here, we'll handle not having hash
                 # later
                 pass
-        elif buildsource.startswith('git://'):
+        elif buildsource.startswith('git://') or buildsource.startswith('git+https://'):
             # Match a 40 char block of text on the url line, that'll be
             # our hash
             hash = buildsource.rsplit('#')[-1]
