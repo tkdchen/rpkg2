@@ -1026,11 +1026,24 @@ see API KEY section of copr-cli(1) man page.
             help='Build a container',
             description='Build a container')
 
-        self.container_build_parser.add_argument(
-            '--repo-url',
-            metavar="URL",
-            help=('URL of yum repo file'),
-            nargs='*')
+        group = self.container_build_parser.add_mutually_exclusive_group()
+        group.add_argument(
+                           '--compose-id',
+                           dest='compose_ids',
+                           metavar='COMPOSE_ID',
+                           help='ODCS composes used. '
+                                'Cannot be used with --signing-intent or --repo-url',
+                           nargs='*')
+        group.add_argument(
+                          '--signing-intent',
+                          help='Signing intent of the ODCS composes. Cannot be '
+                               'used with --compose-id or --repo-url')
+        group.add_argument(
+                          '--repo-url',
+                          metavar="URL",
+                          help='URL of yum repo file'
+                               'Cannot be used with --signing-intent or --compose-id',
+                          nargs='*')
 
         self.container_build_parser.add_argument(
             '--target',
@@ -1280,7 +1293,9 @@ see API KEY section of copr-cli(1) man page.
                 "quiet": self.args.q,
                 "yum_repourls": self.args.repo_url,
                 "git_branch": self.cmd.branch_merge,
-                "arches": self.args.arches}
+                "arches": self.args.arches,
+                "compose_ids": self.args.compose_ids,
+                "signing_intent": self.args.signing_intent}
 
         section_name = "%s.container-build" % self.name
         err_msg = "Missing %(option)s option in [%(plugin.section)s] section. " \
