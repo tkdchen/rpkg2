@@ -914,7 +914,10 @@ class TestLint(CommandTestCase):
     @patch('os.path.exists')
     @patch('pyrpkg.Commands._run_command')
     @patch('pyrpkg.Commands.load_rpmdefines', new=mock_load_rpmdefines)
-    def test_lint_each_file_once(self, run, exists, glob):
+    @patch('pyrpkg.Commands.rel', new_callable=PropertyMock)
+    def test_lint_each_file_once(self, rel, run, exists, glob):
+        rel.return_value = '2.fc26'
+
         cmd = self.make_commands()
         srpm_path = os.path.join(cmd.path, 'docpkg-1.2-2.fc26.src.rpm')
         bin_path = os.path.join(cmd.path, 'x86_64', 'docpkg-1.2-2.fc26.x86_64.rpm')
