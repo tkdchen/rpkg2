@@ -206,6 +206,8 @@ class TestContainerBuildWithKoji(CliTestCase):
                 'yum_repourls': None,
                 'git_branch': 'eng-rhel-7',
                 'arches': None,
+                'signing_intent': None,
+                'compose_ids': None
             },
             kojiconfig=None,
             kojiprofile='koji',
@@ -231,6 +233,8 @@ class TestContainerBuildWithKoji(CliTestCase):
                 'yum_repourls': None,
                 'git_branch': 'eng-rhel-7',
                 'arches': None,
+                'signing_intent': None,
+                'compose_ids': None
             },
             kojiconfig=None,
             kojiprofile='koji',
@@ -265,6 +269,8 @@ class TestContainerBuildWithKoji(CliTestCase):
                 'yum_repourls': None,
                 'git_branch': 'eng-rhel-7',
                 'arches': None,
+                'signing_intent': None,
+                'compose_ids': None
             },
             kojiconfig='/path/to/koji.conf',
             kojiprofile=None,
