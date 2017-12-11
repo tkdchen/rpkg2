@@ -1031,6 +1031,7 @@ see API KEY section of copr-cli(1) man page.
                            '--compose-id',
                            dest='compose_ids',
                            metavar='COMPOSE_ID',
+                           type=int,
                            help='ODCS composes used. '
                                 'Cannot be used with --signing-intent or --repo-url',
                            nargs='*')
