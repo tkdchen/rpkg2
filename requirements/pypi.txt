@@ -13,11 +13,15 @@ six >= 1.9.0
 # Only required for <= Python 2.6
 argparse == 1.4.0 ; python_version < '2.7'
 
+# setuptools support is supported since version 1.15.
+# Requires koji>=1.15.0
+# Install koji from source code and tag koji-1.15.0 without waiting for Koji
+# developers to publish it to PyPI.
+git+https://pagure.io/koji.git@koji-1.15.0#egg=koji
+
 # Several package that are not available in PyPI are also listed here.
 # If rpkg runs from a Python virtualenv, you may need --site-packages to create
 # the environment so that following Python modules can be imported.
 #
 # Please see also fedora-py2.txt or fedora-py3.txt to install them in your
 # system.
-#
-# koji
