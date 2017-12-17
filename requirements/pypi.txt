@@ -3,8 +3,10 @@
 cccolutils >= 1.4
 GitPython >= 0.2.0
 pycurl >= 7.43
-six >= 1.9.0
 requests
+rpm-py-installer
+six >= 1.9.0
+
 # openidc-client # used for MBS OIDC authentication
 # requests-kerberos # used for MBS Kerberos authentication
 
@@ -29,4 +31,3 @@ openidc-client # used in MBS tests
 #
 # koji
 # mock
-# rpm-python
