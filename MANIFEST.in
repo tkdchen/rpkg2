@@ -7,3 +7,6 @@ include doc/rpkg_man_page.py
 include bin/rpkg
 recursive-include tests *
 recursive-include etc *
+
+include requirements/README.rst
+include requirements/*.txt
