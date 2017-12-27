@@ -398,7 +398,7 @@ class Commands(object):
 
         try:
             session = koji.ClientSession(koji_config['server'], session_opts)
-        except:
+        except Exception:
             raise rpkgError('Could not initiate %s session' % os.path.basename(self.build_client))
         else:
             if anon:
@@ -1070,7 +1070,7 @@ class Commands(object):
             # anyway.
             if int(re.search(r'\d+', self.distval).group()) < 6:
                 return('md5')
-        except:
+        except Exception:
             # An error here is OK, don't bother the user.
             pass
 
@@ -1505,7 +1505,7 @@ class Commands(object):
             try:
                 output = subprocess.check_output(cmd)
                 hash = output.split()[0]
-            except:
+            except Exception:
                 # don't do anything here, we'll handle not having hash
                 # later
                 pass
@@ -1738,7 +1738,7 @@ class Commands(object):
         # see if our branch is tracking anything
         try:
             self.load_branch_merge()
-        except:
+        except Exception:
             self.log.warning('Current branch cannot be pushed anywhere!')
 
         untracked_patches = self.find_untracked_patches()

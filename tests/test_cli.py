@@ -1969,7 +1969,7 @@ Components:
     NVR:        None
     State:      FAILED
     Koji Task:  
-"""
+"""  # noqa
         self.maxDiff = None
         self.assertEqual(self.sort_lines(expected_output),
                          self.sort_lines(output))
@@ -2014,7 +2014,7 @@ Failed:
 Summary:
    3 components in the "failed" state
 torsava's build #2150 of python3-ecosystem-master is in the "failed" state (reason: Some error) (koji tag: "module-14050f52e62d955b")
-"""
+"""  # noqa
         self.maxDiff = None
         self.assertEqual(self.sort_lines(expected_output),
                          self.sort_lines(output))
