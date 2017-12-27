@@ -4,6 +4,7 @@ import os
 import subprocess
 import tempfile
 import shutil
+import six
 import sys
 
 from pyrpkg import Commands
@@ -211,3 +212,11 @@ class CommandTestCase(Assertions, Utils, unittest.TestCase):
         self.write_file(_filename, file_content or 'Hello rpkg')
         repo.index.add([_filename])
         repo.index.commit(commit_message or 'update document')
+
+    @staticmethod
+    def sort_lines(s):
+        buf = six.moves.StringIO(s)
+        try:
+            return sorted((line.strip() for line in buf))
+        finally:
+            buf.close()
