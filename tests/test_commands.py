@@ -776,7 +776,7 @@ class TestConfigMockConfigDir(CommandTestCase):
     @contextmanager
     def assert_file_op(self, filename, mode, write_data=None):
         """Assert file object operation"""
-        with patch('__builtin__.open', mock_open()) as mock:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as mock:
             yield
             mock.assert_called_once_with(filename, mode)
             if write_data is not None:
@@ -834,7 +834,7 @@ class TestConfigMockConfigDir(CommandTestCase):
             mock.assert_called_once_with(None)
 
     def test_fail_if_error_occurs_while_writing_cfg_file(self):
-        with patch('__builtin__.open', mock_open()) as m:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as m:
             m.return_value.write.side_effect = IOError
 
             with patch('pyrpkg.Commands._cleanup_tmp_dir') as mock:
@@ -875,7 +875,7 @@ class TestConfigMockConfigDirWithNecessaryFiles(CommandTestCase):
     def test_create_empty_cfg_files_if_not_exist_in_system_mock(self, exists):
         cmd = self.make_commands()
 
-        with patch('__builtin__.open', mock_open()) as m:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as m:
             cmd._config_dir_other('/path/to/config-dir')
 
             m.assert_has_calls([
@@ -903,7 +903,7 @@ class TestConfigMockConfigDirWithNecessaryFiles(CommandTestCase):
     def test_fail_if_error_when_write_empty_cfg_files(self, exists):
         cmd = self.make_commands()
 
-        with patch('__builtin__.open', mock_open()) as m:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as m:
             m.side_effect = IOError
             self.assertRaises(rpkgError,
                               cmd._config_dir_other, '/path/to/config-dir')

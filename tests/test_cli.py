@@ -947,14 +947,14 @@ class TestNew(CliTestCase):
         # diff is return from Commands.new as bytestring when using
         # GitPython<1.0. So, mock new method directly to test diff in
         #  bytestring can be printed correctly.
-        new.return_value = b'New content'
+        new.return_value = 'New content'
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'new']
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.new()
 
         output = sys.stdout.getvalue()
-        self.assertTrue(b'New content' in output)
+        self.assertTrue('New content' in output)
 
 
 class TestNewPrintUnicode(CliTestCase):
@@ -1625,7 +1625,7 @@ class TestPatch(CliTestCase):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'patch', 'fix']
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('__builtin__.open', mock_open()) as m:
+            with patch.object(six.moves.builtins, 'open', mock_open()) as m:
                 cli.patch()
                 m.return_value.write.assert_called_once_with('+ diff')
 
@@ -1669,8 +1669,8 @@ class TestPatch(CliTestCase):
                                                     cli.cmd.ver)
             copied_patch_file = '{0}~'.format(patch_file)
 
-            with patch('__builtin__.open',
-                       mock_open(read_data=origin_diff)) as m:
+            with patch.object(six.moves.builtins, 'open',
+                              mock_open(read_data=origin_diff)) as m:
                 with patch('os.path.exists', return_value=True) as exists:
                     cli.patch()
 
