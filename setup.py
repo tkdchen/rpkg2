@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import sys
 
 from setuptools import setup, find_packages
 
@@ -25,6 +26,7 @@ def read_requirements(requirements_file):
 
     return specifiers, dep_links
 
+
 setup_py_path = os.path.dirname(os.path.realpath(__file__))
 pypi_txt = os.path.join(setup_py_path, 'requirements', 'pypi.txt')
 test_pypi_txt = os.path.join(setup_py_path, 'requirements', 'test-pypi.txt')
@@ -32,6 +34,12 @@ test_pypi_txt = os.path.join(setup_py_path, 'requirements', 'test-pypi.txt')
 install_requires, dep_links = read_requirements(pypi_txt)
 tests_require, test_dep_links = read_requirements(test_pypi_txt)
 dep_links += test_dep_links
+
+ver = sys.version_info
+if ver.major <= 2 and ver.minor < 7:
+    install_requires.append('argparse==1.4.0')
+    tests_require.append('unittest2')
+
 
 setup(
     name="rpkg",

@@ -10,8 +10,8 @@ six >= 1.9.0
 # openidc-client # used for MBS OIDC authentication
 # requests-kerberos # used for MBS Kerberos authentication
 
-# Only required for <= Python 2.6
-argparse == 1.4.0 ; python_version < '2.7'
+# There are dependent packages for running with Python 2.6, and those will be
+# handled in setup.py.
 
 # setuptools support is supported since version 1.15.
 # Requires koji>=1.15.0
