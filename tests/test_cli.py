@@ -947,14 +947,14 @@ class TestNew(CliTestCase):
         # diff is return from Commands.new as bytestring when using
         # GitPython<1.0. So, mock new method directly to test diff in
         #  bytestring can be printed correctly.
-        new.return_value = b'New content'
+        new.return_value = 'New content'
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'new']
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.new()
 
         output = sys.stdout.getvalue()
-        self.assertTrue(b'New content' in output)
+        self.assertTrue('New content' in output)
 
 
 class TestNewPrintUnicode(CliTestCase):
@@ -1625,7 +1625,7 @@ class TestPatch(CliTestCase):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'patch', 'fix']
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('__builtin__.open', mock_open()) as m:
+            with patch.object(six.moves.builtins, 'open', mock_open()) as m:
                 cli.patch()
                 m.return_value.write.assert_called_once_with('+ diff')
 
@@ -1669,8 +1669,8 @@ class TestPatch(CliTestCase):
                                                     cli.cmd.ver)
             copied_patch_file = '{0}~'.format(patch_file)
 
-            with patch('__builtin__.open',
-                       mock_open(read_data=origin_diff)) as m:
+            with patch.object(six.moves.builtins, 'open',
+                              mock_open(read_data=origin_diff)) as m:
                 with patch('os.path.exists', return_value=True) as exists:
                     cli.patch()
 
@@ -1944,7 +1944,7 @@ class TestModulesCli(CliTestCase):
                    'module-builds/2150?verbose=true')
         mock_get.assert_called_once_with(exp_url, timeout=60)
         output = sys.stdout.getvalue().strip()
-        expected_output = """
+        expected_output = """\
 Name:           python3-ecosystem
 Stream:         master
 Version:        20171010145511
@@ -1969,8 +1969,10 @@ Components:
     NVR:        None
     State:      FAILED
     Koji Task:  
-""".strip()  # noqa: W291
-        self.assertEqual(expected_output, output)
+"""  # noqa
+        self.maxDiff = None
+        self.assertEqual(self.sort_lines(expected_output),
+                         self.sort_lines(output))
 
     @patch('sys.stdout', new=StringIO())
     @patch.object(Commands, 'kojiweburl',
@@ -2003,7 +2005,7 @@ Components:
         mock_get.assert_called_once_with(exp_url, timeout=60)
         mock_system.assert_called_once_with('clear')
         output = sys.stdout.getvalue().strip()
-        expected_output = """
+        expected_output = """\
 Failed:
    module-build-macros https://koji.fedoraproject.org/koji/taskinfo?taskID=22370514
    python-dns
@@ -2012,8 +2014,10 @@ Failed:
 Summary:
    3 components in the "failed" state
 torsava's build #2150 of python3-ecosystem-master is in the "failed" state (reason: Some error) (koji tag: "module-14050f52e62d955b")
-""".strip()  # noqa: E501
-        self.assertEqual(output, expected_output)
+"""  # noqa
+        self.maxDiff = None
+        self.assertEqual(self.sort_lines(expected_output),
+                         self.sort_lines(output))
 
     @patch('sys.stdout', new=StringIO())
     @patch('requests.get')

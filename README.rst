@@ -5,6 +5,8 @@ This is the rpkg project, which mostly is a python library for dealing with
 rpm packaging in a git source control.  pyrpkg is the base library that sites
 can subclass to create useful tools.
 
+rpkg now can work with Python 2.6, 2.7, 3.5 and 3.6.
+
 License
 =======
 

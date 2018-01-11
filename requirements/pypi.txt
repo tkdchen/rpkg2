@@ -1,8 +1,8 @@
 # List of Python packages that can be installed from PyPI.
 
 cccolutils >= 1.4
-GitPython >= 0.2.0
-pycurl >= 7.43
+GitPython >= 0.3.2
+pycurl >= 7.19
 requests
 rpm-py-installer
 six >= 1.9.0
@@ -10,17 +10,14 @@ six >= 1.9.0
 # openidc-client # used for MBS OIDC authentication
 # requests-kerberos # used for MBS Kerberos authentication
 
+# There are dependent packages for running with Python 2.6, and those will be
+# handled in setup.py.
 
-# Only required for <= Python 2.6
-argparse == 1.4.0
-
-# For running tests
-coverage == 4.4.1
-flake8 >= 2.5.5
-mock >= 2.0.0
-nose >= 1.3.7
-git+https://pagure.io/rpmfluff.git@0.5.1#egg=rpmfluff
-openidc-client # used in MBS tests
+# setuptools support is supported since version 1.15.
+# Requires koji>=1.15.0
+# Install koji from source code and tag koji-1.15.0 without waiting for Koji
+# developers to publish it to PyPI.
+git+https://pagure.io/koji.git@koji-1.15.0#egg=koji
 
 # Several package that are not available in PyPI are also listed here.
 # If rpkg runs from a Python virtualenv, you may need --site-packages to create
@@ -28,6 +25,3 @@ openidc-client # used in MBS tests
 #
 # Please see also fedora-py2.txt or fedora-py3.txt to install them in your
 # system.
-#
-# koji
-# mock
