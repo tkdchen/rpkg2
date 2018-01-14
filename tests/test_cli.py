@@ -13,6 +13,7 @@ import six
 import subprocess
 import sys
 import tempfile
+import koji_cli.lib
 
 try:
     import unittest2 as unittest
@@ -205,11 +206,13 @@ class TestContainerBuildWithKoji(CliTestCase):
                 'yum_repourls': None,
                 'git_branch': 'eng-rhel-7',
                 'arches': None,
+                'signing_intent': None,
+                'compose_ids': None
             },
             kojiconfig=None,
             kojiprofile='koji',
             build_client=utils.build_client,
-            koji_task_watcher=cli._watch_koji_tasks,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
             nowait=False
         )
 
@@ -230,11 +233,13 @@ class TestContainerBuildWithKoji(CliTestCase):
                 'yum_repourls': None,
                 'git_branch': 'eng-rhel-7',
                 'arches': None,
+                'signing_intent': None,
+                'compose_ids': None
             },
             kojiconfig=None,
             kojiprofile='koji',
             build_client=utils.build_client,
-            koji_task_watcher=cli._watch_koji_tasks,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
             nowait=False
         )
 
@@ -264,11 +269,13 @@ class TestContainerBuildWithKoji(CliTestCase):
                 'yum_repourls': None,
                 'git_branch': 'eng-rhel-7',
                 'arches': None,
+                'signing_intent': None,
+                'compose_ids': None
             },
             kojiconfig='/path/to/koji.conf',
             kojiprofile=None,
             build_client=utils.build_client,
-            koji_task_watcher=cli._watch_koji_tasks,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
             nowait=False
         )
 
@@ -940,14 +947,14 @@ class TestNew(CliTestCase):
         # diff is return from Commands.new as bytestring when using
         # GitPython<1.0. So, mock new method directly to test diff in
         #  bytestring can be printed correctly.
-        new.return_value = b'New content'
+        new.return_value = 'New content'
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'new']
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
             cli.new()
 
         output = sys.stdout.getvalue()
-        self.assertTrue(b'New content' in output)
+        self.assertTrue('New content' in output)
 
 
 class TestNewPrintUnicode(CliTestCase):
@@ -1618,7 +1625,7 @@ class TestPatch(CliTestCase):
         cli_cmd = ['rpkg', '--path', self.cloned_repo_path, 'patch', 'fix']
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
-            with patch('__builtin__.open', mock_open()) as m:
+            with patch.object(six.moves.builtins, 'open', mock_open()) as m:
                 cli.patch()
                 m.return_value.write.assert_called_once_with('+ diff')
 
@@ -1662,8 +1669,8 @@ class TestPatch(CliTestCase):
                                                     cli.cmd.ver)
             copied_patch_file = '{0}~'.format(patch_file)
 
-            with patch('__builtin__.open',
-                       mock_open(read_data=origin_diff)) as m:
+            with patch.object(six.moves.builtins, 'open',
+                              mock_open(read_data=origin_diff)) as m:
                 with patch('os.path.exists', return_value=True) as exists:
                     cli.patch()
 
@@ -1767,7 +1774,7 @@ class TestModulesCli(CliTestCase):
     }
 
     @patch('sys.stdout', new=StringIO())
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_build(self, mock_oidc_req):
         """
         Test a module build with an SCM URL and branch supplied
@@ -1806,7 +1813,7 @@ class TestModulesCli(CliTestCase):
         self.assertEqual(output, expected_output)
 
     @patch('sys.stdout', new=StringIO())
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_build_input(self, mock_oidc_req):
         """
         Test a module build with default parameters
@@ -1834,7 +1841,7 @@ class TestModulesCli(CliTestCase):
 
     @patch('sys.stdout', new=StringIO())
     @patch('requests.get')
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_cancel(self, mock_oidc_req, mock_get):
         """
         Test canceling a module build when the build exists
@@ -1873,7 +1880,7 @@ class TestModulesCli(CliTestCase):
         self.assertEqual(output, expected_output)
 
     @patch('requests.get')
-    @patch.object(openidc_client.OpenIDCClient, 'send_request')
+    @patch('openidc_client.OpenIDCClient.send_request')
     def test_module_cancel_not_found(self, mock_oidc_req, mock_get):
         """
         Test canceling a module build when the build doesn't exist
@@ -1937,7 +1944,7 @@ class TestModulesCli(CliTestCase):
                    'module-builds/2150?verbose=true')
         mock_get.assert_called_once_with(exp_url, timeout=60)
         output = sys.stdout.getvalue().strip()
-        expected_output = """
+        expected_output = """\
 Name:           python3-ecosystem
 Stream:         master
 Version:        20171010145511
@@ -1962,8 +1969,10 @@ Components:
     NVR:        None
     State:      FAILED
     Koji Task:  
-""".strip()  # noqa: W291
-        self.assertEqual(expected_output, output)
+"""  # noqa
+        self.maxDiff = None
+        self.assertEqual(self.sort_lines(expected_output),
+                         self.sort_lines(output))
 
     @patch('sys.stdout', new=StringIO())
     @patch.object(Commands, 'kojiweburl',
@@ -1996,7 +2005,7 @@ Components:
         mock_get.assert_called_once_with(exp_url, timeout=60)
         mock_system.assert_called_once_with('clear')
         output = sys.stdout.getvalue().strip()
-        expected_output = """
+        expected_output = """\
 Failed:
    module-build-macros https://koji.fedoraproject.org/koji/taskinfo?taskID=22370514
    python-dns
@@ -2005,8 +2014,10 @@ Failed:
 Summary:
    3 components in the "failed" state
 torsava's build #2150 of python3-ecosystem-master is in the "failed" state (reason: Some error) (koji tag: "module-14050f52e62d955b")
-""".strip()  # noqa: E501
-        self.assertEqual(output, expected_output)
+"""  # noqa
+        self.maxDiff = None
+        self.assertEqual(self.sort_lines(expected_output),
+                         self.sort_lines(output))
 
     @patch('sys.stdout', new=StringIO())
     @patch('requests.get')
@@ -2125,18 +2136,97 @@ State:    failed
             'rpkg',
             '--path',
             self.cloned_repo_path,
-            'module-build-local',
-            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
-            'master'
+            'module-build-local'
         ]
         mock_proc = Mock()
         mock_proc.returncode = 0
         mock_run.return_value = mock_proc
         with patch('sys.argv', new=cli_cmd):
             cli = self.new_cli()
+            file_path = os.path.join(self.cloned_repo_path, cli.cmd.module_name + '.yaml')
+            # we create an empty file for the purpose of this test so we don't raise an exception
+            open(file_path, 'a').close()
             cli.module_build_local()
-        mock_run.assert_called_once_with([
-            'mbs-manager',
-            'build_module_locally',
-            'git://pkgs.fedoraproject.org/modules/testmodule?#79d87a5a',
-            'master'])
+
+        mock_run.assert_called_once_with(['mbs-manager', 'build_module_locally', '--file',
+                                          file_path, '--stream', 'master'])
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local_file_not_found(self, mock_run):
+        """
+        Test submitting a local module build and raising an IOError exception
+        """
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            with self.assertRaises(IOError):
+                cli.module_build_local()
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local_with_params(self, mock_run):
+        """
+        Test submitting a local module build with parameters
+        """
+
+        file_path = os.path.join(self.cloned_repo_path, 'modulemd.yaml')
+
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local',
+            '--file',
+            file_path,
+            '--stream',
+            'test'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            # we create an empty file for the purpose of this test so we don't raise an exception
+            open(file_path, 'a').close()
+            cli.module_build_local()
+
+        mock_run.assert_called_once_with(['mbs-manager', 'build_module_locally', '--file',
+                                          file_path, '--stream', 'test'])
+
+    @patch.object(Commands, '_run_command')
+    def test_module_build_local_with_skiptests(self, mock_run):
+        """
+        Test submitting a local module build with parameters
+        """
+
+        file_path = os.path.join(self.cloned_repo_path, "modulemd.yaml")
+
+        cli_cmd = [
+            'rpkg',
+            '--path',
+            self.cloned_repo_path,
+            'module-build-local',
+            '--file',
+            file_path,
+            '--stream',
+            'test',
+            '--skip-tests'
+        ]
+        mock_proc = Mock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+        with patch('sys.argv', new=cli_cmd):
+            cli = self.new_cli()
+            # we create an empty file for the purpose of this test so we don't raise an exception
+            open(file_path, 'a').close()
+            cli.module_build_local()
+
+        mock_run.assert_called_once_with(['mbs-manager', 'build_module_locally', '--skiptests',
+                                          '--file', file_path, '--stream', 'test'])

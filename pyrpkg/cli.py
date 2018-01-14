@@ -22,12 +22,12 @@ import string
 import sys
 import time
 
-import koji
+import koji_cli.lib
 import pyrpkg.utils as utils
 import six
 
 from pyrpkg import rpkgError, log as rpkgLogger
-from six.moves import xmlrpc_client, configparser
+from six.moves import configparser
 
 
 def warning_deprecated_dist(value):
@@ -755,15 +755,16 @@ defined, packages will be built sequentially.""" % {'name': self.name})
         self.module_build_local_parser = self.subparsers.add_parser(
             'module-build-local', help=sub_help, description=sub_help)
         self.module_build_local_parser.add_argument(
-            'scm_url', nargs='?',
-            help='The module\'s SCM URL. This defaults to the current repo.')
+            '--file', nargs='?', dest='file_path',
+            help=('The module\'s modulemd yaml file. If not specified, a yaml file'
+                  ' with the same basename as the name of the repository will be used.'))
         self.module_build_local_parser.add_argument(
-            'branch', nargs='?',
-            help=('The module\'s SCM branch. This defaults to the current '
+            '--stream', nargs='?', dest='stream',
+            help=('The module\'s stream/SCM branch. This defaults to the current '
                   'checked-out branch.'))
         self.module_build_local_parser.add_argument(
             '--skip-tests', help='Adds a macro for skipping the check section',
-            action='store_true')
+            action='store_true', dest='skiptests')
         self.module_build_local_parser.add_argument(
             '--add-local-build', action='append', dest='local_builds_nsvs',
             metavar='BUILD_ID', type=int,
@@ -1026,11 +1027,25 @@ see API KEY section of copr-cli(1) man page.
             help='Build a container',
             description='Build a container')
 
-        self.container_build_parser.add_argument(
-            '--repo-url',
-            metavar="URL",
-            help=('URL of yum repo file'),
-            nargs='*')
+        group = self.container_build_parser.add_mutually_exclusive_group()
+        group.add_argument(
+                           '--compose-id',
+                           dest='compose_ids',
+                           metavar='COMPOSE_ID',
+                           type=int,
+                           help='ODCS composes used. '
+                                'Cannot be used with --signing-intent or --repo-url',
+                           nargs='*')
+        group.add_argument(
+                          '--signing-intent',
+                          help='Signing intent of the ODCS composes. Cannot be '
+                               'used with --compose-id or --repo-url')
+        group.add_argument(
+                          '--repo-url',
+                          metavar="URL",
+                          help='URL of yum repo file'
+                               'Cannot be used with --signing-intent or --compose-id',
+                          nargs='*')
 
         self.container_build_parser.add_argument(
             '--target',
@@ -1102,7 +1117,7 @@ see API KEY section of copr-cli(1) man page.
             # Figure out if we want a verbose output or not
             callback = None
             if not self.args.q:
-                callback = self._progress_callback
+                callback = koji_cli.lib._progress_callback
             # define a unique path for this upload.  Stolen from /usr/bin/koji
             uniquepath = ('cli-build/%r.%s'
                           % (time.time(),
@@ -1130,7 +1145,7 @@ see API KEY section of copr-cli(1) man page.
             return
 
         # Pass info off to our koji task watcher
-        return self._watch_koji_tasks(self.cmd.kojisession, [task_id])
+        return koji_cli.lib.watch_tasks(self.cmd.kojisession, [task_id])
 
     def chainbuild(self):
         if self.cmd.module_name in self.args.package:
@@ -1156,7 +1171,10 @@ see API KEY section of copr-cli(1) man page.
             else:
                 # Figure out the scm url to build from package name
                 hash = self.cmd.get_latest_commit(component, self.cmd.repo.branch_merge)
-                url = self.cmd.anongiturl % {'module': component} + '#%s' % hash
+                # Passing given package name to module_name parameter directly without
+                # guessing namespace as no way to guess that. rpms/ will be
+                # added by default if namespace is not given.
+                url = self.cmd.construct_build_url(component, hash)
                 # If there are no ':' in the chain list, treat each object as
                 # an individual chain
                 if ':' in self.args.package:
@@ -1277,7 +1295,9 @@ see API KEY section of copr-cli(1) man page.
                 "quiet": self.args.q,
                 "yum_repourls": self.args.repo_url,
                 "git_branch": self.cmd.branch_merge,
-                "arches": self.args.arches}
+                "arches": self.args.arches,
+                "compose_ids": self.args.compose_ids,
+                "signing_intent": self.args.signing_intent}
 
         section_name = "%s.container-build" % self.name
         err_msg = "Missing %(option)s option in [%(plugin.section)s] section. " \
@@ -1308,12 +1328,14 @@ see API KEY section of copr-cli(1) man page.
             self.log.debug(err_msg % err_args)
             build_client = self.config.get(self.name, "build_client")
 
-        self.cmd.container_build_koji(target_override, opts=opts,
-                                      kojiconfig=kojiconfig,
-                                      kojiprofile=kojiprofile,
-                                      build_client=build_client,
-                                      koji_task_watcher=self._watch_koji_tasks,
-                                      nowait=self.args.nowait)
+        self.cmd.container_build_koji(
+            target_override,
+            opts=opts,
+            kojiconfig=kojiconfig,
+            kojiprofile=kojiprofile,
+            build_client=build_client,
+            koji_task_watcher=koji_cli.lib.watch_tasks,
+            nowait=self.args.nowait)
 
     def container_build_setup(self):
         self.cmd.container_build_setup(get_autorebuild=self.args.get_autorebuild,
@@ -1460,11 +1482,23 @@ see API KEY section of copr-cli(1) man page.
         :return: None
         """
         self.module_validate_config()
-        scm_url, branch = self.cmd.module_get_scm_info(
-            self.args.scm_url, self.args.branch)
+
+        if not self.args.stream:
+            _, stream = self.cmd.module_get_scm_info()
+        else:
+            stream = self.args.stream
+
+        if not self.args.file_path:
+            file_path = os.path.join(self.cmd.path, self.cmd.module_name + ".yaml")
+        else:
+            file_path = self.args.file_path
+
+        if not os.path.isfile(file_path):
+            raise IOError("Module metadata yaml file %s not found!" % file_path)
+
         self.cmd.module_local_build(
-            scm_url, branch, self.args.local_builds_nsvs,
-            self.args.skip_tests, verbose=self.args.v, debug=self.args.debug)
+            file_path, stream, self.args.local_builds_nsvs,
+            verbose=self.args.v, debug=self.args.debug, skip_tests=self.args.skiptests)
 
     def module_get_auth_config(self):
         """
@@ -1670,142 +1704,7 @@ see API KEY section of copr-cli(1) man page.
         print('%s-%s-%s' % (self.cmd.module_name, self.cmd.ver,
                             self.cmd.rel))
 
-    # Other class stuff goes here
-    # The next 6 functions come from the koji project, from /usr/bin/koji
-    # They should be in a library somewhere, but I have to steal them.
-    # The code is licensed LGPLv2.1 and thus my (slightly) derived code
-    # is as well.
-    def _display_tasklist_status(self, tasks):
-        free = 0
-        open = 0
-        failed = 0
-        done = 0
-        for task_id in tasks.keys():
-            status = tasks[task_id].info['state']
-            if status == koji.TASK_STATES['FAILED']:
-                failed += 1
-            elif status in (koji.TASK_STATES['CLOSED'],
-                            koji.TASK_STATES['CANCELED']):
-                done += 1
-            elif status in (koji.TASK_STATES['OPEN'],
-                            koji.TASK_STATES['ASSIGNED']):
-                open += 1
-            elif status == koji.TASK_STATES['FREE']:
-                free += 1
-        self.log.info("  %d free  %d open  %d done  %d failed",
-                      free, open, done, failed)
-
-    def _display_task_results(self, tasks):
-        for task in [task for task in tasks.values() if task.level == 0]:
-            state = task.info['state']
-            task_label = task.str()
-
-            if state == koji.TASK_STATES['CLOSED']:
-                self.log.info('%s completed successfully', task_label)
-            elif state == koji.TASK_STATES['FAILED']:
-                self.log.info('%s failed', task_label)
-            elif state == koji.TASK_STATES['CANCELED']:
-                self.log.info('%s was canceled', task_label)
-            else:
-                # shouldn't happen
-                self.log.info('%s has not completed', task_label)
-
-    def _watch_koji_tasks(self, session, tasklist):
-        if not tasklist:
-            return
-        self.log.info('Watching tasks (this may be safely interrupted)...')
-        # Place holder for return value
-        rv = 0
-        try:
-            tasks = {}
-            for task_id in tasklist:
-                tasks[task_id] = TaskWatcher(task_id, session, self.log,
-                                             quiet=self.args.q)
-            while True:
-                all_done = True
-                for task_id, task in list(tasks.items()):
-                    changed = task.update()
-                    if not task.is_done():
-                        all_done = False
-                    else:
-                        if changed:
-                            # task is done and state just changed
-                            if not self.args.q:
-                                self._display_tasklist_status(tasks)
-                        if not task.is_success():
-                            rv = 1
-                    for child in session.getTaskChildren(task_id):
-                        child_id = child['id']
-                        if child_id not in tasks.keys():
-                            tasks[child_id] = TaskWatcher(child_id,
-                                                          session,
-                                                          self.log,
-                                                          task.level + 1,
-                                                          quiet=self.args.q)
-                            tasks[child_id].update()
-                            # If we found new children, go through the list
-                            # again, in case they have children also
-                            all_done = False
-                if all_done:
-                    if not self.args.q:
-                        print("")
-                        self._display_task_results(tasks)
-                    break
-
-                time.sleep(1)
-        except (KeyboardInterrupt):
-            if tasks:
-                self.log.info("""
-Tasks still running. You can continue to watch with the '%s watch-task' command.
-    Running Tasks:
-    %s"""
-                              % (self.config.get(self.name, 'build_client'),
-                                 '\n'.join(['%s: %s' % (t.str(),
-                                                        t.display_state(t.info))
-                                            for t in tasks.values()
-                                            if not t.is_done()])))
-            # A ^c should return non-zero so that it doesn't continue
-            # on to any && commands.
-            rv = 1
-        return rv
-
     # Stole these three functions from /usr/bin/koji
-    def _format_size(self, size):
-        if (size / 1073741824 >= 1):
-            return "%0.2f GiB" % (size / 1073741824.0)
-        if (size / 1048576 >= 1):
-            return "%0.2f MiB" % (size / 1048576.0)
-        if (size / 1024 >= 1):
-            return "%0.2f KiB" % (size / 1024.0)
-        return "%0.2f B" % (size)
-
-    def _format_secs(self, t):
-        h = t / 3600
-        t = t % 3600
-        m = t / 60
-        s = t % 60
-        return "%02d:%02d:%02d" % (h, m, s)
-
-    def _progress_callback(self, uploaded, total, piece, time, total_time):
-        percent_done = float(uploaded)/float(total)
-        percent_done_str = "%02d%%" % (percent_done * 100)
-        data_done = self._format_size(uploaded)
-        elapsed = self._format_secs(total_time)
-
-        speed = "- B/sec"
-        if (time):
-            if (uploaded != total):
-                speed = self._format_size(float(piece)/float(time)) + "/sec"
-            else:
-                speed = self._format_size(float(total)/float(total_time)) + \
-                    "/sec"
-
-        # write formatted string and flush
-        sys.stdout.write("[% -36s] % 4s % 8s % 10s % 14s\r" %
-                         ('='*(int(percent_done*36)),
-                          percent_done_str, elapsed, data_done, speed))
-        sys.stdout.flush()
-
     def setupLogging(self, log):
         """Setup the various logging stuff."""
 
@@ -1855,101 +1754,3 @@ Tasks still running. You can continue to watch with the '%s watch-task' command.
             self.user = self.args.user
         else:
             self.user = pwd.getpwuid(os.getuid())[0]
-
-
-# Add a class stolen from /usr/bin/koji to watch tasks
-# this was cut/pasted from koji, and then modified for local use.
-# The formatting is koji style, not the stile of this file.  Do not use these
-# functions as a style guide.
-# This is fragile and hopefully will be replaced by a real kojiclient lib.
-
-
-class TaskWatcher(object):
-
-    def __init__(self, task_id, session, log, level=0, quiet=False):
-        self.id = task_id
-        self.session = session
-        self.info = None
-        self.level = level
-        self.quiet = quiet
-        self.log = log
-
-    # XXX - a bunch of this stuff needs to adapt to different tasks
-
-    def str(self):
-        if self.info:
-            label = koji.taskLabel(self.info)
-            return "%s%d %s" % ('  ' * self.level, self.id, label)
-        else:
-            return "%s%d" % ('  ' * self.level, self.id)
-
-    def __str__(self):
-        return self.str()
-
-    def get_failure(self):
-        """Print information about task completion"""
-        if self.info['state'] != koji.TASK_STATES['FAILED']:
-            return ''
-        error = None
-        try:
-            self.session.getTaskResult(self.id)
-        except (xmlrpc_client.Fault, koji.GenericError) as e:
-            error = e
-        if error is None:
-            # print "%s: complete" % self.str()
-            # We already reported this task as complete in update()
-            return ''
-        else:
-            return '%s: %s' % (error.__class__.__name__, str(error).strip())
-
-    def update(self):
-        """Update info and log if needed.  Returns True on state change."""
-        if self.is_done():
-            # Already done, nothing else to report
-            return False
-        last = self.info
-        try:
-            self.info = self.session.getTaskInfo(self.id, request=True)
-        except koji.GenericError:
-            raise Exception("No such task id: %i" % self.id)
-        state = self.info['state']
-        if last:
-            # compare and note status changes
-            laststate = last['state']
-            if laststate != state:
-                self.log.info("%s: %s -> %s",
-                              self.str(), self.display_state(last), self.display_state(self.info))
-                return True
-            return False
-        else:
-            # First time we're seeing this task, so just show the current state
-            self.log.info("%s: %s", self.str(), self.display_state(self.info))
-            return False
-
-    def is_done(self):
-        if self.info is None:
-            return False
-        state = koji.TASK_STATES[self.info['state']]
-        return (state in ['CLOSED', 'CANCELED', 'FAILED'])
-
-    def is_success(self):
-        if self.info is None:
-            return False
-        state = koji.TASK_STATES[self.info['state']]
-        return (state == 'CLOSED')
-
-    def display_state(self, info):
-        # We can sometimes be passed a task that is not yet open, but
-        # not finished either.  info would be none.
-        if not info:
-            return 'unknown'
-        if info['state'] == koji.TASK_STATES['OPEN']:
-            if info['host_id']:
-                host = self.session.getHost(info['host_id'])
-                return 'open (%s)' % host['name']
-            else:
-                return 'open'
-        elif info['state'] == koji.TASK_STATES['FAILED']:
-            return 'FAILED: %s' % self.get_failure()
-        else:
-            return koji.TASK_STATES[info['state']].lower()

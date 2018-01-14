@@ -416,7 +416,7 @@ class Commands(object):
 
         try:
             session = koji.ClientSession(koji_config['server'], session_opts)
-        except:
+        except Exception:
             raise rpkgError('Could not initiate %s session' % os.path.basename(self.build_client))
         else:
             if anon:
@@ -990,7 +990,7 @@ class Commands(object):
             # anyway.
             if int(re.search(r'\d+', self.distval).group()) < 6:
                 return('md5')
-        except:
+        except Exception:
             # An error here is OK, don't bother the user.
             pass
 
@@ -1398,11 +1398,11 @@ class Commands(object):
             try:
                 output = subprocess.check_output(cmd)
                 hash = output.split()[0]
-            except:
+            except Exception:
                 # don't do anything here, we'll handle not having hash
                 # later
                 pass
-        elif buildsource.startswith('git://'):
+        elif buildsource.startswith('git://') or buildsource.startswith('git+https://'):
             # Match a 40 char block of text on the url line, that'll be
             # our hash
             hash = buildsource.rsplit('#')[-1]
@@ -1627,7 +1627,7 @@ class Commands(object):
         # see if our branch is tracking anything
         try:
             self.load_branch_merge()
-        except:
+        except Exception:
             self.log.warning('Current branch cannot be pushed anywhere!')
 
         untracked_patches = self.find_untracked_patches()
@@ -1730,11 +1730,22 @@ class Commands(object):
             raise rpkgError('Packages in destination tag %(dest_tag_name)s are not inherited by'
                             ' build tag %(build_tag_name)s' % build_target)
 
-    def construct_build_url(self):
-        """Construct build URL with namespaced anongiturl and commit hash"""
+    def construct_build_url(self, module_name=None, commit_hash=None):
+        """Construct build URL with namespaced anongiturl and commit hash
+
+        :param str module_name: name of the module part of the build URL. If
+            omitted, module name with namespace will be guessed from current
+            repository. The given module name will be used in URL directly
+            without guessing namespace.
+        :param str commit_hash: the commit hash appended to build URL. It
+            omitted, the latest commit hash got from current repository will be
+            used.
+        :return: URL built from anongiturl.
+        :rtype: str
+        """
         return '{0}?#{1}'.format(
-            self._get_namespace_anongiturl(self.ns_module_name),
-            self.commithash)
+            self._get_namespace_anongiturl(module_name or self.ns_module_name),
+            commit_hash or self.commithash)
 
     def build(self, skip_tag=False, scratch=False, background=False,
               url=None, chain=None, arches=None, sets=False, nvr_check=True):
@@ -1946,9 +1957,7 @@ class Commands(object):
     def giturl(self):
         """Return the git url that would be used for building"""
         self.repo.check(is_dirty=False, all_pushed=False)
-        url = self._get_namespace_anongiturl(self.ns_module_name) + \
-            '?#%s' % self.repo.commit_hash
-        return url
+        return self.construct_build_url()
 
     def koji_upload(self, file, path, callback=None):
         """Upload a file to koji
@@ -2013,16 +2022,13 @@ class Commands(object):
             log.warning('No srpm found')
 
         # Get the possible built arches
-        arches = self._get_build_arches_from_spec()
-        rpms = []
+        arches = set(self._get_build_arches_from_spec())
+        rpms = set()
         for arch in arches:
             if os.path.exists(os.path.join(self.path, arch)):
                 # For each available arch folder, lists file and keep
                 # those ending with .rpm
-                rpms.extend([os.path.join(self.path, arch, file)
-                             for file in os.listdir(os.path.join(self.path,
-                                                    arch))
-                             if file.endswith('.rpm')])
+                rpms.update(glob.glob(os.path.join(self.path, arch, '*.rpm')))
         if not rpms:
             log.warning('No rpm found')
         cmd = ['rpmlint']
@@ -2035,7 +2041,7 @@ class Commands(object):
         cmd.append(os.path.join(self.path, self.spec))
         if os.path.exists(os.path.join(self.path, srpm)):
             cmd.append(os.path.join(self.path, srpm))
-        cmd.extend(rpms)
+        cmd.extend(sorted(rpms))
         # Run the command
         self._run_command(cmd, shell=True)
 
@@ -2676,20 +2682,19 @@ class Commands(object):
             actual_scm_url = '{0}?#{1}'.format(actual_scm_url, self.commithash)
         return actual_scm_url, actual_branch
 
-    def module_local_build(self, scm_url, branch, local_builds_nsvs=None,
-                           skip_tests=False, verbose=False, debug=False):
+    def module_local_build(self, file_path, stream, local_builds_nsvs=None, verbose=False,
+                           debug=False, skip_tests=False):
         """
         A wrapper for `mbs-manager build_module_locally`.
-        :param scm_url: a string of the module's SCM URL.
-        :param branch: a string of the module's branch.
-        :kwarg local_builds_nsvs: a list of localbuilds to import into MBS
+        :param file_path: a string, path of the module's modulemd yaml file.
+        :param stream: a string, stream of the module.
+        :kwarg local_builds_nsvs: a list of localbuild ids to import into MBS
         before running this local build.
-        :kwarg skip_tests: a boolean determining if the check sections should
-        be skipped.
         :kwarg verbose: a boolean specifying if mbs-manager should be verbose.
         This is overridden by self.quiet.
         :kwarg debug: a boolean specifying if mbs-manager should be debug.
         This is overridden by self.quiet and verbose.
+        :kwarg skip_tests: a boolean determining if the check sections should be skipped
         :return: None
         """
         command = ['mbs-manager']
@@ -2700,14 +2705,17 @@ class Commands(object):
         elif debug:
             command.append('-d')
         command.append('build_module_locally')
-        if skip_tests:
-            command.append('--skiptests')
 
         if local_builds_nsvs:
             for build_id in local_builds_nsvs:
                 command += ['--add-local-build', build_id]
 
-        command.extend([scm_url, branch])
+        if skip_tests:
+            command.append('--skiptests')
+
+        command.extend(['--file', file_path])
+        command.extend(['--stream', stream])
+
         self._run_command(command)
 
     def module_overview(self, api_url, limit=10, finished=True):

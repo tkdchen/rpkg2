@@ -622,6 +622,20 @@ class TestConstructBuildURL(CommandTestCase):
             commithash.return_value)
         self.assertEqual(expected_url, url)
 
+    def test_construct_with_given_module_name_and_hash(self):
+        cmd = self.make_commands()
+
+        anongiturl = 'https://src.example.com/%(module)s'
+        with patch.object(cmd, 'anongiturl', new=anongiturl):
+            for module_name in ('extra-cmake-modules',
+                                'rpms/kf5-kfilemetadata'):
+                url = cmd.construct_build_url(module_name, '123456')
+
+                expected_url = '{0}?#{1}'.format(
+                    anongiturl % {'module': module_name},
+                    '123456')
+                self.assertEqual(expected_url, url)
+
 
 class TestCleanupTmpDir(CommandTestCase):
     """Test Commands._cleanup_tmp_dir for mockbuild command"""
@@ -687,7 +701,7 @@ class TestConfigMockConfigDir(CommandTestCase):
     @contextmanager
     def assert_file_op(self, filename, mode, write_data=None):
         """Assert file object operation"""
-        with patch('__builtin__.open', mock_open()) as mock:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as mock:
             yield
             mock.assert_called_once_with(filename, mode)
             if write_data is not None:
@@ -745,7 +759,7 @@ class TestConfigMockConfigDir(CommandTestCase):
             mock.assert_called_once_with(None)
 
     def test_fail_if_error_occurs_while_writing_cfg_file(self):
-        with patch('__builtin__.open', mock_open()) as m:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as m:
             m.return_value.write.side_effect = IOError
 
             with patch('pyrpkg.Commands._cleanup_tmp_dir') as mock:
@@ -786,7 +800,7 @@ class TestConfigMockConfigDirWithNecessaryFiles(CommandTestCase):
     def test_create_empty_cfg_files_if_not_exist_in_system_mock(self, exists):
         cmd = self.make_commands()
 
-        with patch('__builtin__.open', mock_open()) as m:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as m:
             cmd._config_dir_other('/path/to/config-dir')
 
             m.assert_has_calls([
@@ -814,7 +828,45 @@ class TestConfigMockConfigDirWithNecessaryFiles(CommandTestCase):
     def test_fail_if_error_when_write_empty_cfg_files(self, exists):
         cmd = self.make_commands()
 
-        with patch('__builtin__.open', mock_open()) as m:
+        with patch.object(six.moves.builtins, 'open', mock_open()) as m:
             m.side_effect = IOError
             self.assertRaises(rpkgError,
                               cmd._config_dir_other, '/path/to/config-dir')
+
+
+class TestLint(CommandTestCase):
+    @patch('glob.glob')
+    @patch('os.path.exists')
+    @patch('pyrpkg.Commands._run_command')
+    @patch('pyrpkg.Commands.load_rpmdefines', new=mock_load_rpmdefines)
+    @patch('pyrpkg.Commands.rel', new_callable=PropertyMock)
+    def test_lint_each_file_once(self, rel, run, exists, glob):
+        rel.return_value = '2.fc26'
+
+        cmd = self.make_commands()
+        srpm_path = os.path.join(cmd.path, 'docpkg-1.2-2.fc26.src.rpm')
+        bin_path = os.path.join(cmd.path, 'x86_64', 'docpkg-1.2-2.fc26.x86_64.rpm')
+
+        def _mock_exists(path):
+            return path in [
+                srpm_path,
+                os.path.join(cmd.path, 'x86_64'),
+            ]
+
+        def _mock_glob(g):
+            return {
+                os.path.join(cmd.path, 'x86_64', '*.rpm'): [bin_path],
+            }[g]
+        exists.side_effect = _mock_exists
+        glob.side_effect = _mock_glob
+        cmd._get_build_arches_from_spec = Mock(return_value=['x86_64', 'x86_64'])
+
+        cmd.lint()
+
+        self.assertEqual(
+            run.call_args_list,
+            [call(['rpmlint',
+                   os.path.join(cmd.path, 'docpkg.spec'),
+                   srpm_path,
+                   bin_path,
+                   ], shell=True)])
